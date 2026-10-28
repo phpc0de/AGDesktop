@@ -17,6 +17,7 @@
 #include "ayu/features/forward/ayu_forward.h"
 #include "ayu/features/forward/ayu_forward_rich.h"
 #include "ayu/utils/ayu_log.h"
+#include "ayu/ui/toasts.h"
 #include "ayu/ui/context_menu/menu_item_subtext.h"
 #include "ayu/ui/message_history/history_section.h"
 #include "ayu/ui/settings/filters/edit_filter.h"
@@ -266,9 +267,6 @@ void AddAyuGramActions(PeerData *peerData,
 	const auto topicId = topic ? topic->rootId().bare : 0;
 	const auto checkpoint = AyuMessages::getCheckpoint(peerData, topicId);
 	const auto hasCheckpoint = checkpoint && checkpoint->messageId > 0;
-	if (!showFilters && !saveDeletedMessages && !hasCheckpoint) {
-		return;
-	}
 
 	addCallback(Window::PeerMenuCallback::Args{
 		.text = u"AyuGram"_q,
@@ -276,6 +274,57 @@ void AddAyuGramActions(PeerData *peerData,
 		.icon = &st::menuIconGroupReactions,
 		.fillSubmenu = [=](not_null<Ui::PopupMenu*> menu) {
 			const auto addAction = Ui::Menu::CreateAddActionCallback(menu);
+			const auto buildDiagnostics = [=] {
+				auto lines = QStringList();
+				lines << u"peer=%1 name=%2"_q
+					.arg(peerData->id.value)
+					.arg(peerData->name());
+				lines << u"type=%1"_q.arg(
+					peerData->isUser()
+						? u"user"_q
+						: peerData->isBroadcast()
+						? u"channel"_q
+						: peerData->isMegagroup()
+						? u"megagroup"_q
+						: u"group"_q);
+				const auto noForwards = peerData->isUser()
+					? peerData->asUser()->isAyuNoForwards()
+					: peerData->isChannel()
+					? peerData->asChannel()->isAyuNoForwards()
+					: peerData->asChat()->isAyuNoForwards();
+				lines << u"ayuNoForwards=%1"_q.arg(noForwards);
+				const auto &reasons = peerData->unavailableReasons();
+				if (reasons.empty()) {
+					lines << u"restrictions=none"_q;
+				} else {
+					for (const auto &reason : reasons) {
+						lines << u"restriction %1: %2"_q
+							.arg(reason.reason, reason.text);
+					}
+				}
+				const auto computed = peerData->computeUnavailableReason();
+				lines << u"computed=%1"_q.arg(
+					computed.isEmpty() ? u"empty"_q : computed);
+				lines << u"checkpoint=%1"_q.arg(
+					hasCheckpoint
+						? u"topic=%1 msg=%2 date=%3"_q
+						.arg(checkpoint->topicId)
+						.arg(checkpoint->messageId)
+						.arg(checkpoint->date)
+						: u"none"_q);
+				return lines.join(u"\n"_q);
+			};
+			addAction(
+				tr::ayu_CopyChatDiagnosticsMenuText(tr::now),
+				[=]
+				{
+					const auto details = buildDiagnostics();
+					Ayu::Log::Write(u"diagnostics"_q, details);
+					Ayu::Ui::ShowCopyableDetails(
+						tr::ayu_CopyChatDiagnosticsMenuText(tr::now),
+						details);
+				},
+				&st::menuIconInfo);
 			if (showFilters) {
 				addAction(
 					tr::ayu_ViewFiltersMenuText(tr::now),
