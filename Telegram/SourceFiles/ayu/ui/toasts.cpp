@@ -1,8 +1,13 @@
 #include "ayu/ui/toasts.h"
 
+#include "ayu/utils/ayu_log.h"
+#include "base/qt/qt_common.h"
+#include "lang_auto.h"
 #include "styles/style_chat.h"
+#include "ui/text/text_entity.h"
 #include "ui/widgets/buttons.h"
 
+#include <QGuiApplication>
 #include <memory>
 
 namespace Ayu::Ui {
@@ -61,6 +66,20 @@ void ShowToastWithAction(
 		callback();
 		hideToast();
 	});
+}
+
+void ShowCopyableDetails(const QString &title, const QString &details) {
+	Ayu::Log::Write(u"toast"_q, title + u": "_q + details);
+	auto config = Ui::Toast::Config{
+		.text = TextWithEntities{title},
+		.duration = 5 * crl::time(1000),
+	};
+	ShowToastWithAction(
+		std::move(config),
+		tr::ayu_Copy(tr::now),
+		[=] {
+			QGuiApplication::clipboard()->setText(details);
+		});
 }
 
 }

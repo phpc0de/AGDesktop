@@ -9,4 +9,6 @@ void ShowToastWithAction(
 	const QString &buttonText,
 	Fn<void()> callback);
 
+void ShowCopyableDetails(const QString &title, const QString &details);
+
 }

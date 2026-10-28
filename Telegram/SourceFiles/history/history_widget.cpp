@@ -223,6 +223,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ayu/utils/telegram_helpers.h"
 #include "ayu/features/message_shot/message_shot.h"
 #include "ayu/features/forward/ayu_forward.h"
+#include "ayu/ui/toasts.h"
 #include "boxes/abstract_box.h"
 
 
@@ -6769,9 +6770,13 @@ bool HistoryWidget::insertBotCommand(const QString &cmd) {
 
 void HistoryWidget::insertTextAtCursor(const QString &text) {
 	if (!_canSendTexts) {
+		Ayu::Ui::ShowCopyableDetails(
+			tr::ayu_EditAndResendMenuText(tr::now),
+			text);
 		return;
 	}
 	Menu::InsertTextAtCursor(_field, text);
+	_field->setFocus();
 }
 
 bool HistoryWidget::eventFilter(QObject *obj, QEvent *e) {

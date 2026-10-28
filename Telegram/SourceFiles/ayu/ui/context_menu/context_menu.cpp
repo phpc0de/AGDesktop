@@ -16,6 +16,7 @@
 #include "ayu/features/filters/filters_controller.h"
 #include "ayu/features/forward/ayu_forward.h"
 #include "ayu/features/forward/ayu_forward_rich.h"
+#include "ayu/utils/ayu_log.h"
 #include "ayu/ui/context_menu/menu_item_subtext.h"
 #include "ayu/ui/message_history/history_section.h"
 #include "ayu/ui/settings/filters/edit_filter.h"
@@ -1062,6 +1063,11 @@ void AddEditAndResendAction(
 		tr::ayu_EditAndResendMenuText(tr::now),
 		[=]
 		{
+			Ayu::Log::Write(
+				u"editresend"_q,
+				u"click peer=%1 len=%2"_q
+					.arg(item->history()->peer->id.value)
+					.arg(text.text.size()));
 			insertText(text.text);
 		},
 		&st::menuIconEdit);

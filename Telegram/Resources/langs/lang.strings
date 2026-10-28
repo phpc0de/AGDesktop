@@ -9072,6 +9072,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "ayu_ClearCheckpointMenuText" = "Clear AG Checkpoint";
 "ayu_SaveCheckpointOnDoubleRightClickText" = "Save checkpoint on double right-click";
 "ayu_EditAndResendMenuText" = "Edit & Resend";
+"ayu_Copy" = "Copy";
 "ayu_ViewDeletedMenuText" = "View Deleted";
 "ayu_ViewFiltersMenuText" = "View Filters";
 "ayu_ShowFilteredMessagesMenuText" = "Show Filtered";

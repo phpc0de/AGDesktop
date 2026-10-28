@@ -136,6 +136,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 // AyuGram includes
 #include "ayu/ayu_settings.h"
 #include "ayu/features/message_shot/message_shot.h"
+#include "ayu/ui/toasts.h"
 #include "base/unixtime.h"
 
 
@@ -710,6 +711,11 @@ ChatWidget::ChatWidget(
 	_inner->setInsertTextCallback([=](const QString &text) {
 		if (const auto field = _composeControls->fieldForMention()) {
 			Menu::InsertTextAtCursor(field, text);
+			field->setFocus();
+		} else {
+			Ayu::Ui::ShowCopyableDetails(
+				tr::ayu_EditAndResendMenuText(tr::now),
+				text);
 		}
 	});
 
