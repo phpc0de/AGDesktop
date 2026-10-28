@@ -934,6 +934,11 @@ topBarCloseChoose: IconButton(topBarSearch) {
 	rippleAreaPosition: point(7px, 7px);
 }
 topBarSkip: -5px;
+topBarAyuCheckpoint: IconButton(topBarSearch) {
+	icon: icon {{ "menu/show_in_chat", menuIconFg }};
+	iconOver: icon {{ "menu/show_in_chat", menuIconFgOver }};
+	iconPosition: point(8px, 10px);
+}
 topBarCallSkip: -1px;
 topBarMenuToggle: IconButton(topBarSearch) {
 	width: 44px;

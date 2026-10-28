@@ -155,6 +155,7 @@ private:
 	void updateInfoButtonVisibility();
 	void refreshLang();
 	void updateSearchVisibility();
+	void jumpToCheckpoint();
 	void updateSearchJumpToDateVisibility();
 	[[nodiscard]] bool searchJumpToDateFits() const;
 	void updateChooseFromUserGeometry();
@@ -258,6 +259,7 @@ private:
 	object_ptr<Ui::IconButton> _call;
 	object_ptr<Ui::IconButton> _groupCall;
 	object_ptr<Ui::IconButton> _search;
+	object_ptr<Ui::IconButton> _jumpCheckpoint;
 	object_ptr<Ui::IconButton> _infoToggle;
 	object_ptr<Ui::IconButton> _menuToggle;
 	object_ptr<Ui::IconButton> _recentActions;

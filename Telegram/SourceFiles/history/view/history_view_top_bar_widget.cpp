@@ -74,6 +74,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "ayu/ayu_settings.h"
+#include "ayu/data/entities.h"
+#include "ayu/data/messages_storage.h"
+#include "ayu/ui/toasts.h"
+#include "ayu/utils/ayu_log.h"
 #include "boxes/peers/edit_participants_box.h"
 #include "data/data_chat_filters.h"
 #include "history/admin_log/history_admin_log_section.h"
@@ -136,6 +140,7 @@ TopBarWidget::TopBarWidget(
 , _call(this, st::topBarCall)
 , _groupCall(this, st::topBarGroupCall)
 , _search(this, st::topBarSearch)
+, _jumpCheckpoint(this, st::topBarAyuCheckpoint)
 , _infoToggle(this, st::topBarInfo)
 , _menuToggle(this, st::topBarMenuToggle)
 , _recentActions(this, st::topBarRecentActions)
@@ -175,6 +180,8 @@ TopBarWidget::TopBarWidget(
 	_menuToggle->addClickHandler([=](auto) { showPeerMenu(); });
 	_menuToggle->setAcceptBoth(true, true);
 	_infoToggle->setClickedCallback([=] { toggleInfoSection(); });
+	_jumpCheckpoint->setClickedCallback([=] { jumpToCheckpoint(); });
+	_jumpCheckpoint->setToolTip(tr::ayu_JumpToCheckpointMenuText(tr::now));
 
 	_recentActions->setClickedCallback([=]
 	{
@@ -1151,7 +1158,46 @@ void TopBarWidget::updateSearchVisibility() {
 			&& !pinnedInSavedMessages)
 		|| (_activeChat.section == Section::SavedSublist
 			&& _activeChat.key.sublist());
+	_jumpCheckpoint->setVisible(searchAllowedMode && !_chooseForReportReason);
 	_search->setVisible(searchAllowedMode && !_chooseForReportReason);
+}
+
+void TopBarWidget::jumpToCheckpoint() {
+	const auto peer = _activeChat.key.peer();
+	if (!peer) {
+		return;
+	}
+	const auto topic = _activeChat.key.topic();
+	const auto topicId = topic ? topic->rootId() : 0;
+	auto checkpoint = AyuMessages::getCheckpoint(peer, topicId);
+	if (!checkpoint && topic) {
+		checkpoint = AyuMessages::getLatestCheckpoint(peer);
+	}
+	if (!checkpoint) {
+		Ayu::Log::Write(
+			u"checkpoint"_q,
+			u"topbar jump none peer=%1"_q.arg(peer->id.value));
+		Ayu::Ui::ShowCopyableDetails(
+			tr::ayu_JumpToCheckpointMenuText(tr::now),
+			u"No checkpoint saved for this chat"_q);
+		return;
+	}
+	Ayu::Log::Write(
+		u"checkpoint"_q,
+		u"topbar jump peer=%1 msg=%2"_q
+			.arg(peer->id.value)
+			.arg(checkpoint->messageId));
+	if (topic) {
+		_controller->showTopic(
+			topic,
+			MsgId(checkpoint->messageId),
+			Window::SectionShow::Way::ClearStack);
+	} else {
+		_controller->showPeerHistory(
+			peer,
+			Window::SectionShow::Way::ClearStack,
+			MsgId(checkpoint->messageId));
+	}
 }
 
 void TopBarWidget::updateInfoButtonVisibility() {
@@ -1336,6 +1382,11 @@ void TopBarWidget::updateControlsGeometry() {
 	_admins->moveToRight(_rightTaken, otherButtonsTop);
 	if (!_admins->isHidden()) {
 		_rightTaken += _admins->width();
+	}
+
+	_jumpCheckpoint->moveToRight(_rightTaken, otherButtonsTop);
+	if (!_jumpCheckpoint->isHidden()) {
+		_rightTaken += _jumpCheckpoint->width();
 	}
 
 	_search->moveToRight(_rightTaken, otherButtonsTop);
