@@ -150,7 +150,7 @@ namespace {
 
 constexpr auto kScrollDateHideTimeout = 800;
 
-constexpr auto kCheckpointGestureInterval = 500;
+constexpr auto kCheckpointGestureInterval = 250;
 constexpr auto kScrollDateHideOnDayCrossingTimeout = crl::time(3000);
 constexpr auto kUnloadHeavyPartsPages = 2;
 constexpr auto kClearUserpicsAfter = 50;
