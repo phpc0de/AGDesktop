@@ -60,6 +60,7 @@ jobs:
           key: libs-win64-full-${{ hashFiles('.gitmodules', 'Telegram/build/prepare/prepare.py', 'Telegram/build/qt_version.py', 'Telegram/CMakeLists.txt') }}
 
       - name: Prepare libraries
+        id: prepare
         shell: pwsh
         env:
           Platform: x64
@@ -90,15 +91,40 @@ jobs:
         if: always()
         shell: pwsh
         run: |
+          $summary = $env:GITHUB_STEP_SUMMARY
+          if ('${{ steps.prepare.outcome }}' -eq 'success') {
+            "### prepare 成功" | Out-File -Append -Encoding UTF8 $summary
+            "所有库准备步骤通过，完整日志见 ``prepare-log`` 附件。" |
+              Out-File -Append -Encoding UTF8 $summary
+            exit 0
+          }
+
           $log = "$env:GITHUB_WORKSPACE/prepare.log"
+          "### prepare 失败" | Out-File -Append -Encoding UTF8 $summary
           if (Test-Path $log) {
-            "### prepare 日志摘要" | Out-File -Append -Encoding UTF8 $env:GITHUB_STEP_SUMMARY
-            Select-String -Path $log -Pattern 'FAILED' -SimpleMatch |
-              ForEach-Object { "- ``$($_.Line.Trim())``" } |
-              Out-File -Append -Encoding UTF8 $env:GITHUB_STEP_SUMMARY
-            '```' | Out-File -Append -Encoding UTF8 $env:GITHUB_STEP_SUMMARY
-            Get-Content $log -Tail 120 | Out-File -Append -Encoding UTF8 $env:GITHUB_STEP_SUMMARY
-            '```' | Out-File -Append -Encoding UTF8 $env:GITHUB_STEP_SUMMARY
+            $skip = @(
+              '-- Performing Test',
+              '-- Check size of',
+              'Applying patch',
+              'NOT FOUND, BUILDING',
+              'echo ERROR'
+            )
+            $hits = @(Select-String -Path $log -Pattern 'error|failed|fatal' |
+              Where-Object {
+                $line = $_.Line
+                -not ($skip | Where-Object { $line.Contains($_) })
+              } |
+              Select-Object -Last 40 |
+              ForEach-Object { "- ``$($_.Line.Trim())``" })
+            if ($hits.Count -gt 0) {
+              $hits | Out-File -Append -Encoding UTF8 $summary
+            } else {
+              "未匹配到具体错误，见下方日志尾部。" |
+                Out-File -Append -Encoding UTF8 $summary
+            }
+            '```' | Out-File -Append -Encoding UTF8 $summary
+            Get-Content $log -Tail 120 | Out-File -Append -Encoding UTF8 $summary
+            '```' | Out-File -Append -Encoding UTF8 $summary
           }
 
       - name: Upload prepare log
