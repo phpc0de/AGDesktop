@@ -170,3 +170,23 @@
 - 換會話請先讀 **`HANDOFF.md`**（§1 現狀、§2 環境事實、§3 需求1~8真實狀態、§4 改動清單、§5 複審/已修BUG、§6 缺口、§7 需求7阻塞分析、§8 檔案地圖、§9 下一步、§10 工作紀律）。
 - 已提交 3 commit（`6ac8e67915` 源碼+文檔、`98c7dd830f` CI errors.txt、`8c530f0d50` 交接同步），基線 `db3b9891cb`；**尚未 push / 尚未打 tag**；權威變更集 = `git log --oneline db3b9891cb..HEAD`。
 - 2025-10-22 收盤：GitHub Actions 發布流水線（`.github/workflows/release-win-amd64.yml`）就位；新會話請先讀 `HANDOFF.md` §11/§12 與 `docs/build-package/github-actions.md`。
+
+## 14. 交付后反馈轮 1（2025-10-28，v7.2.9-ayu.4 实测，/grill 分诊）
+明细见根目录 `1.txt`（2025-10-28 段）。
+- **0 右键变慢**：根因=双击右键手势 500ms 定时器（`history_inner_widget.cpp:153,414,2864-2886`）。**拍板：延迟降 250ms，手势保留**。
+- **1 顶栏跳转按钮**（需求 1/5 UI 变更）：`history_view_top_bar` 群名右、搜索左；有检查点才亮；消息菜单入口保留。
+- **2 解锁转发失败**：合并后钩子均在（apiwrap:3878-3889、share_box:1877-1894）。复现=右键→转发→选目标（分流覆盖内）→ 失败点收窄为判定 false / AyuForward 内部失败回退。行动=AyuLog 五点埋桩+可复制 toast。
+- **3 ToS 封禁频道**：服务端封锁不可突破；上限=本地缓存回看+可复制错误。
+- **4 重放一期无反应根因实锤**：菜单回调走 `list->insertTextAtCursor` → `_insertTextCallback`（空则静默，`history_view_list_widget.cpp:5957-5960`）；全仓唯一接线在 `history_view_chat_section.cpp:710` 且接 `fieldForMention()`（普通聊天为 null）；经典界面无人接线。修复=双路接主输入框+传 TextWithEntities+setFocus+四点日志。二期未写，CI 绿可排期。编辑他人消息不可行。
+- **5 调试工具箱**：8 条提案见 1.txt（AyuLog/可复制 toast/诊断复制/错误透传/回包查看器/诊断面板/launch log/诊断包导出）。
+- **6 文件夹标签**：premium 门控（settings_folders.cpp:1090-1106），待确认账号 premium。
+
+## 15. 反馈轮 1 夜批（2025-10-28 深夜，全程自动 commit，未 push）
+- `052a5132a0` 手势延迟 500→250ms（项 0）。
+- `a507177480` 解锁转发五点 AyuLog 埋桩（项 2）。
+- `c95c8bbcc3` E&R 双路接主输入框 + `ShowCopyableDetails` 复制回退 toast（项 4）。
+- `cd16a39170` 顶栏检查点跳转按钮：`topBarAyuCheckpoint`（show_in_chat 图标）置于搜索左侧，`TopBarWidget::jumpToCheckpoint()`（topic→showTopic，否则 showPeerHistory，ClearStack；无检查点→日志+可复制提示）（项 1）。
+- `b2b2f36290` AyuGram 会话子菜单新增「Copy Chat Diagnostics」：peer id/type/转发锁/限制原因/检查点 一键复制+toast，子菜单不再因无检查点而隐藏（项 5）。
+- `b82f6226b7` 发现上游把 `UnavailableReason::Extract/Compute` 桩成空（限制原因完全不落地）；在 data_session 两处解析点记录服务端原始 restriction_reason（项 3 证据链）。
+- `f423cda581` `processCallback` handleError 落 AyuLog：req id/code/type/desc（项 2/5，服务端拒绝全量留痕）。
+- 待办：push dev + 打 tag（v7.2.9-ayu.6，远端已有 .5）；E&R 二期（经典+新 UI 之外的发送路径）未排期。
