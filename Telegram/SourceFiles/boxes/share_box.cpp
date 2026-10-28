@@ -69,6 +69,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "ayu/features/forward/ayu_forward.h"
+#include "ayu/utils/ayu_log.h"
 
 
 class ShareBox::Inner final : public Ui::RpWidget {
@@ -1874,6 +1875,11 @@ ShareBox::SubmitCallback ShareBox::DefaultForwardCallback(
 			}
 		};
 
+		Ayu::Log::Write(
+			u"forward"_q,
+			u"share dispatch items=%1 peer=%2"_q
+				.arg(items.size())
+				.arg(items.front()->history()->peer->id.value));
 		if (AyuForward::isFullAyuForwardNeeded(items.front())) {
 			crl::async([=]{
 				for (const auto thread : result) {

@@ -120,6 +120,8 @@ set(ayugram_files
         ayu/ayu_lang.h
         ayu/ayu_infra.cpp
         ayu/ayu_infra.h
+        ayu/utils/ayu_log.cpp
+        ayu/utils/ayu_log.h
         ayu/utils/ayu_mapper.cpp
         ayu/utils/ayu_mapper.h
         ayu/utils/qt_key_modifiers_extended.h

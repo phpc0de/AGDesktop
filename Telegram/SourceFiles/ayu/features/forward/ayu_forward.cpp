@@ -10,6 +10,7 @@
 #include "lang_auto.h"
 #include "ayu/features/forward/ayu_forward_rich.h"
 #include "ayu/features/forward/ayu_sync.h"
+#include "ayu/utils/ayu_log.h"
 #include "ayu/utils/telegram_helpers.h"
 #include "base/random.h"
 #include "base/unixtime.h"
@@ -344,6 +345,14 @@ void forwardMessages(
 
 	forwardStates[peer->id] = state;
 
+	Ayu::Log::Write(
+		u"forward"_q,
+		u"ayu start src=%1 author=%2 dest=%3 items=%4"_q
+			.arg(items.front()->history()->peer->id.value)
+			.arg(items.front()->from()->id.value)
+			.arg(peer->id.value)
+			.arg(items.size()));
+
 	std::unordered_map<uint64, uint64> groupIds;
 
 	std::vector<not_null<HistoryItem*>> toBeDownloaded;
@@ -372,6 +381,7 @@ void forwardMessages(
 			[state] { return state->stopRequested.load(); });
 	}
 	if (state->stopRequested) {
+		Ayu::Log::Write(u"forward"_q, u"ayu stopped before send dest=%1"_q.arg(peer->id.value));
 		state->updateBottomBar(*session, &peer->id, ForwardState::State::Finished);
 		return;
 	}
@@ -506,6 +516,7 @@ void forwardMessages(
 		// if there are grouped messages
 		// "i" is incremented in prepareMedia
 	}
+	Ayu::Log::Write(u"forward"_q, u"ayu finished dest=%1 sent=%2"_q.arg(peer->id.value).arg(state->sentMessages));
 	state->updateBottomBar(*session, &peer->id, ForwardState::State::Finished);
 }
 

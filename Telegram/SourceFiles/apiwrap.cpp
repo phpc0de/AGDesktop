@@ -112,6 +112,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ayu/ayu_settings.h"
 #include "ayu/ayu_worker.h"
 #include "ayu/utils/telegram_helpers.h"
+#include "ayu/utils/ayu_log.h"
 #include "ayu/features/forward/ayu_forward.h"
 
 
@@ -586,6 +587,9 @@ void ApiWrap::sendMessageFail(
 			}
 		}
 	} else if (show && error == u"CHAT_FORWARDS_RESTRICTED"_q) {
+		Ayu::Log::Write(
+			u"forward"_q,
+			u"CHAT_FORWARDS_RESTRICTED peer=%1"_q.arg(peer->id.value));
 		show->showToast(peer->isBroadcast()
 			? tr::lng_error_noforwards_channel(tr::now)
 			: peer->isUser()
@@ -3876,6 +3880,15 @@ void ApiWrap::forwardMessages(
 	Expects(!draft.items.empty());
 
 	const auto fullAyuForward = AyuForward::isFullAyuForwardNeeded(draft.items.front());
+	const auto ayuIntelligentForwardNeeded = AyuForward::isAyuForwardNeeded(draft.items);
+	Ayu::Log::Write(
+		u"forward"_q,
+		u"dispatch items=%1 peer=%2 peerNoForwards=%3 full=%4 intelligent=%5"_q
+			.arg(draft.items.size())
+			.arg(draft.items.front()->history()->peer->id.value)
+			.arg(draft.items.front()->history()->peer->isAyuNoForwards() ? 1 : 0)
+			.arg(fullAyuForward ? 1 : 0)
+			.arg(ayuIntelligentForwardNeeded ? 1 : 0));
 	if (fullAyuForward) {
 		crl::async([=] {
 			AyuForward::forwardMessages(_session, action, false, draft);
@@ -3883,7 +3896,6 @@ void ApiWrap::forwardMessages(
 		return;
 	}
 
-	const auto ayuIntelligentForwardNeeded = AyuForward::isAyuForwardNeeded(draft.items);
 	if (ayuIntelligentForwardNeeded) {
 		crl::async([=] {
 			AyuForward::intelligentForward(_session, action, draft);
