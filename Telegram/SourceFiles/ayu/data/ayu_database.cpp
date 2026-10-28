@@ -147,6 +147,12 @@ auto storage = make_storage(
 		make_column("messageId", &SpyMessageContentsRead::messageId),
 		make_column("entityCreateDate", &SpyMessageContentsRead::entityCreateDate)
 	),
+	// WHY: schema objects are iterated in reverse, so an index must precede
+	// its table or sync_schema creates it while the table is still missing.
+	make_index("idx_checkpoint_userId_dialogId_topicId",
+			   column<Checkpoint>(&Checkpoint::userId),
+			   column<Checkpoint>(&Checkpoint::dialogId),
+			   column<Checkpoint>(&Checkpoint::topicId)),
 	make_table<Checkpoint>(
 		"Checkpoint",
 		make_column("fakeId", &Checkpoint::fakeId, primary_key().autoincrement()),
@@ -155,11 +161,7 @@ auto storage = make_storage(
 		make_column("topicId", &Checkpoint::topicId),
 		make_column("messageId", &Checkpoint::messageId),
 		make_column("date", &Checkpoint::date)
-	),
-	make_index("idx_checkpoint_userId_dialogId_topicId",
-			   column<Checkpoint>(&Checkpoint::userId),
-			   column<Checkpoint>(&Checkpoint::dialogId),
-			   column<Checkpoint>(&Checkpoint::topicId))
+	)
 );
 
 namespace AyuMigrations {
@@ -254,9 +256,14 @@ void initialize() {
 		LOG(("Database initialization failed: %1").arg(ex.what()));
 		moveCurrentDatabase();
 
-		storage.sync_schema(true);
-		if (!storage.get_pointer<SchemaVersion>(1)) {
-			storage.insert(SchemaVersion{1, 0});
+		// WHY: a broken schema must not abort startup, callers already degrade.
+		try {
+			storage.sync_schema(true);
+			if (!storage.get_pointer<SchemaVersion>(1)) {
+				storage.insert(SchemaVersion{1, 0});
+			}
+		} catch (const std::exception &recoveryError) {
+			LOG(("Database recovery failed: %1").arg(recoveryError.what()));
 		}
 	}
 
