@@ -98,6 +98,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ayu/data/ayu_database.h"
 #include "ayu/data/messages_storage.h"
 #include "ayu/features/filters/filters_controller.h"
+#include "ayu/utils/ayu_log.h"
 #include "ayu/utils/telegram_helpers.h"
 
 
@@ -799,6 +800,19 @@ not_null<UserData*> Session::processUser(const MTPUser &data) {
 					? PeerData::StoriesState::HasUnread
 					: PeerData::StoriesState::HasRead);
 			}
+			if (!data.vrestriction_reason().v.isEmpty()) {
+				auto desc = QStringList();
+				for (const auto &reason : data.vrestriction_reason().v) {
+					reason.match([&](const MTPDrestrictionReason &d) {
+						desc << qs(d.vplatform()) + u":"_q
+							+ qs(d.vreason()) + u":"_q + qs(d.vtext());
+					});
+				}
+				Ayu::Log::Write(
+					u"restrict"_q,
+					u"peer=%1 %2"_q.arg(result->id.value)
+						.arg(desc.join(u" | "_q)));
+			}
 			result->setUnavailableReasons(Data::UnavailableReason::Extract(
 				data.vrestriction_reason()));
 		}
@@ -1094,6 +1108,19 @@ not_null<PeerData*> Session::processChat(const MTPChat &data) {
 				channel->setRestrictions(ChatRestrictionsInfo());
 			}
 			channel->date = data.vdate().v;
+			if (!data.vrestriction_reason().v.isEmpty()) {
+				auto desc = QStringList();
+				for (const auto &reason : data.vrestriction_reason().v) {
+					reason.match([&](const MTPDrestrictionReason &d) {
+						desc << qs(d.vplatform()) + u":"_q
+							+ qs(d.vreason()) + u":"_q + qs(d.vtext());
+					});
+				}
+				Ayu::Log::Write(
+					u"restrict"_q,
+					u"channel=%1 %2"_q.arg(channel->id.value)
+						.arg(desc.join(u" | "_q)));
+			}
 			channel->setUnavailableReasons(Data::UnavailableReason::Extract(
 				data.vrestriction_reason()));
 		}
