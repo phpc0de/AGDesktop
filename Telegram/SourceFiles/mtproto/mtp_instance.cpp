@@ -28,6 +28,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/network_reachability.h"
 #include "test/test_rpc_retry.h"
 
+// AyuGram includes
+#include "ayu/utils/ayu_log.h"
+
 namespace MTP {
 namespace {
 
@@ -1163,6 +1166,13 @@ void Instance::Private::processCallback(const Response &response) {
 					QString::number(error.code()),
 					error.type(),
 					error.description()));
+			Ayu::Log::Write(
+				u"rpc"_q,
+				u"error req=%1 code=%2 type=%3 desc=%4"_q
+					.arg(requestId)
+					.arg(error.code())
+					.arg(error.type())
+					.arg(error.description()));
 			const auto guard = QPointer<Instance>(_instance);
 			if (rpcErrorOccured(response, handler, error) && guard) {
 				unregisterRequest(requestId);
