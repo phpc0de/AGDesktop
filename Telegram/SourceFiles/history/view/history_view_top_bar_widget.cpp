@@ -1168,7 +1168,7 @@ void TopBarWidget::jumpToCheckpoint() {
 		return;
 	}
 	const auto topic = _activeChat.key.topic();
-	const auto topicId = topic ? topic->rootId() : 0;
+	const auto topicId = topic ? topic->rootId().bare : 0;
 	auto checkpoint = AyuMessages::getCheckpoint(peer, topicId);
 	if (!checkpoint && topic) {
 		checkpoint = AyuMessages::getLatestCheckpoint(peer);

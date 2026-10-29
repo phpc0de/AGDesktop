@@ -293,18 +293,9 @@ void AddAyuGramActions(PeerData *peerData,
 					? peerData->asChannel()->isAyuNoForwards()
 					: peerData->asChat()->isAyuNoForwards();
 				lines << u"ayuNoForwards=%1"_q.arg(noForwards);
-				const auto &reasons = peerData->unavailableReasons();
-				if (reasons.empty()) {
-					lines << u"restrictions=none"_q;
-				} else {
-					for (const auto &reason : reasons) {
-						lines << u"restriction %1: %2"_q
-							.arg(reason.reason, reason.text);
-					}
-				}
 				const auto computed = peerData->computeUnavailableReason();
-				lines << u"computed=%1"_q.arg(
-					computed.isEmpty() ? u"empty"_q : computed);
+				lines << u"restrictions=%1"_q.arg(
+					computed.isEmpty() ? u"none"_q : computed);
 				lines << u"checkpoint=%1"_q.arg(
 					hasCheckpoint
 						? u"topic=%1 msg=%2 date=%3"_q

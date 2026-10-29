@@ -800,9 +800,9 @@ not_null<UserData*> Session::processUser(const MTPUser &data) {
 					? PeerData::StoriesState::HasUnread
 					: PeerData::StoriesState::HasRead);
 			}
-			if (!data.vrestriction_reason().v.isEmpty()) {
+			if (const auto reasons = data.vrestriction_reason()) {
 				auto desc = QStringList();
-				for (const auto &reason : data.vrestriction_reason().v) {
+				for (const auto &reason : reasons->v) {
 					reason.match([&](const MTPDrestrictionReason &d) {
 						desc << qs(d.vplatform()) + u":"_q
 							+ qs(d.vreason()) + u":"_q + qs(d.vtext());
@@ -1108,9 +1108,9 @@ not_null<PeerData*> Session::processChat(const MTPChat &data) {
 				channel->setRestrictions(ChatRestrictionsInfo());
 			}
 			channel->date = data.vdate().v;
-			if (!data.vrestriction_reason().v.isEmpty()) {
+			if (const auto reasons = data.vrestriction_reason()) {
 				auto desc = QStringList();
-				for (const auto &reason : data.vrestriction_reason().v) {
+				for (const auto &reason : reasons->v) {
 					reason.match([&](const MTPDrestrictionReason &d) {
 						desc << qs(d.vplatform()) + u":"_q
 							+ qs(d.vreason()) + u":"_q + qs(d.vtext());

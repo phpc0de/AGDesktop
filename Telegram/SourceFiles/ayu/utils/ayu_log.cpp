@@ -1,7 +1,5 @@
 #include "ayu/utils/ayu_log.h"
 
-#include "base/qt/qt_common.h"
-
 #include <QDateTime>
 #include <QDir>
 #include <QFile>
