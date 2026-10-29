@@ -84,6 +84,21 @@ void BuildFiltersSettings(SectionBuilder &builder) {
 		}, sharedButton->lifetime());
 	}
 
+	const auto folderTagsButton = builder.addButton({
+		.id = u"ayu/folderTagsForce"_q,
+		.title = tr::ayu_FolderTagsForce(),
+		.st = &st::settingsButtonNoIcon,
+		.toggled = rpl::single(settings->folderTagsForce()),
+	});
+	if (folderTagsButton) {
+		folderTagsButton->toggledValue(
+		) | rpl::filter([=](bool enabled) {
+			return (enabled != settings->folderTagsForce());
+		}) | on_next([=](bool enabled) {
+			AyuSettings::getInstance().setFolderTagsForce(enabled);
+		}, folderTagsButton->lifetime());
+	}
+
 	const auto blockedButton = builder.addButton({
 		.id = u"ayu/hideFromBlocked"_q,
 		.title = tr::ayu_FiltersHideFromBlocked(),

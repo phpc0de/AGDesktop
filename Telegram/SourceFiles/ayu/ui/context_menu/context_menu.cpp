@@ -17,6 +17,7 @@
 #include "ayu/features/forward/ayu_forward.h"
 #include "ayu/features/forward/ayu_forward_rich.h"
 #include "ayu/utils/ayu_log.h"
+#include "ayu/debug/mtp_devtools.h"
 #include "ayu/ui/toasts.h"
 #include "ayu/ui/context_menu/menu_item_subtext.h"
 #include "ayu/ui/message_history/history_section.h"
@@ -316,6 +317,13 @@ void AddAyuGramActions(PeerData *peerData,
 						details);
 				},
 				&st::menuIconInfo);
+			addAction(
+				tr::ayu_MtpDevtoolsMenuText(tr::now),
+				[=]
+				{
+					Ayu::Debug::ShowMtpDevtools();
+				},
+				&st::menuIconSettings);
 			if (showFilters) {
 				addAction(
 					tr::ayu_ViewFiltersMenuText(tr::now),

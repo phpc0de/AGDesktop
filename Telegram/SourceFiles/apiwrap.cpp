@@ -3943,6 +3943,8 @@ void ApiWrap::forwardMessages(
 	if (successCallback) {
 		shared->callback = std::move(successCallback);
 	}
+	const auto fallbackItems = std::make_shared<HistoryItemsList>(draft.items);
+	const auto fallbackOptions = draft.options;
 
 	const auto count = int(draft.items.size());
 	const auto genClientSideMessage = action.generateLocal
@@ -4098,6 +4100,23 @@ void ApiWrap::forwardMessages(
 				}
 			},
 			[=](const MTP::Error &error, const MTP::Response &) {
+				if (error.type() == u"CHAT_FORWARDS_RESTRICTED"_q) {
+					Ayu::Log::Write(
+						u"forward"_q,
+						u"plain rejected, retry as content copy items=%1"_q
+							.arg(fallbackItems->size()));
+					crl::async([=] {
+						AyuForward::forwardMessages(
+							_session,
+							action,
+							false,
+							Data::ResolvedForwardDraft{
+								.items = *fallbackItems,
+								.options = fallbackOptions,
+							});
+					});
+					return;
+				}
 				if (idsCopy) {
 					for (const auto &[randomId, itemId] : *idsCopy) {
 						_session->api().sendMessageFail(

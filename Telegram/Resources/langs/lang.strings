@@ -9074,6 +9074,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "ayu_EditAndResendMenuText" = "Edit & Resend";
 "ayu_Copy" = "Copy";
 "ayu_CopyChatDiagnosticsMenuText" = "Copy Chat Diagnostics";
+"ayu_MtpDevtoolsMenuText" = "MTP Devtools";
+"ayu_FolderTagsForce" = "Force folder tags (bypass premium)";
 "ayu_ViewDeletedMenuText" = "View Deleted";
 "ayu_ViewFiltersMenuText" = "View Filters";
 "ayu_ShowFilteredMessagesMenuText" = "Show Filtered";

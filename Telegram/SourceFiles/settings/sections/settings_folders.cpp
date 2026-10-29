@@ -52,6 +52,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_settings.h"
 #include "styles/style_stickers_box.h"
 
+// AyuGram includes
+#include "ayu/ayu_settings.h"
+
 namespace Settings {
 namespace {
 
@@ -994,7 +997,8 @@ void BuildFoldersListSection(
 }
 
 void BuildTagsSection(SectionBuilder &builder, not_null<FoldersState*> state) {
-	if (!builder.session()->premiumPossible()) {
+	const auto tagsForce = AyuSettings::getInstance().folderTagsForce();
+	if (!builder.session()->premiumPossible() && !tagsForce) {
 		return;
 	}
 
@@ -1030,7 +1034,7 @@ void BuildTagsSection(SectionBuilder &builder, not_null<FoldersState*> state) {
 				rpl::mappers::_1 && rpl::mappers::_2),
 			tagsState->tagsTurnOff.events()));
 		rpl::duplicate(premium) | rpl::on_next([=](bool value) {
-			tagsButton->setToggleLocked(!value);
+			tagsButton->setToggleLocked(!(value || tagsForce));
 		}, tagsButton->lifetime());
 
 		const auto send = [=,
@@ -1044,7 +1048,7 @@ void BuildTagsSection(SectionBuilder &builder, not_null<FoldersState*> state) {
 
 		tagsButton->toggledValue(
 		) | rpl::filter([=](bool checked) {
-			const auto premium = session->premium();
+			const auto premium = session->premium() || tagsForce;
 			if (checked && !premium) {
 				ShowPremiumPreviewToBuy(controller, PremiumFeature::FilterTags);
 				tagsState->tagsTurnOff.fire(false);

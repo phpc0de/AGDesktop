@@ -29,6 +29,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "test/test_rpc_retry.h"
 
 // AyuGram includes
+#include "ayu/debug/mtp_devtools.h"
 #include "ayu/utils/ayu_log.h"
 
 namespace MTP {
@@ -1022,6 +1023,7 @@ void Instance::Private::sendRequest(
 		mtpRequestId afterRequestId) {
 	const auto session = getSession(shiftedDcId);
 
+	Ayu::Debug::RecordMtpRequest(requestId, request);
 	request->requestId = requestId;
 	storeRequest(requestId, request, std::move(callbacks));
 
@@ -1173,6 +1175,7 @@ void Instance::Private::processCallback(const Response &response) {
 					.arg(error.code())
 					.arg(error.type())
 					.arg(error.description()));
+			Ayu::Debug::RecordMtpError(requestId, error);
 			const auto guard = QPointer<Instance>(_instance);
 			if (rpcErrorOccured(response, handler, error) && guard) {
 				unregisterRequest(requestId);
@@ -1197,6 +1200,7 @@ void Instance::Private::processCallback(const Response &response) {
 						"Error parse failed.")));
 		} else {
 			const auto guard = QPointer<Instance>(_instance);
+			Ayu::Debug::RecordMtpResponse(requestId, response.reply);
 			if (handler.done && !handler.done(response) && guard) {
 				handleError(Error::Local(
 					"RESPONSE_PARSE_FAILED",

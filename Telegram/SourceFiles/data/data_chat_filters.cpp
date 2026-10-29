@@ -27,6 +27,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "ayu/ayu_settings.h"
+#include "ayu/utils/ayu_log.h"
 
 
 namespace Data {
@@ -486,7 +487,8 @@ void ChatFilters::load(bool force) {
 }
 
 bool ChatFilters::tagsEnabled() const {
-	return _tagsEnabled.current();
+	return _tagsEnabled.current()
+		|| AyuSettings::getInstance().folderTagsForce();
 }
 
 rpl::producer<bool> ChatFilters::tagsEnabledValue() const {
@@ -510,6 +512,13 @@ void ChatFilters::requestToggleTags(bool value, Fn<void()> fail) {
 		const auto message = error.type();
 		_toggleTagsRequestId = 0;
 		LOG(("API Error: Toggle Tags - %1").arg(message));
+		Ayu::Log::Write(
+			u"foldertags"_q,
+			u"toggle %1 rejected: %2"_q.arg(value ? 1 : 0).arg(message));
+		if (AyuSettings::getInstance().folderTagsForce()) {
+			_tagsEnabled = value;
+			return;
+		}
 		fail();
 	}).send();
 }
