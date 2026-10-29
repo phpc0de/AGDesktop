@@ -228,17 +228,26 @@ jobs:
         env:
           Platform: x64
         run: |
+          $log = "$env:GITHUB_WORKSPACE/build.log"
           function Invoke-Build([string]$m) {
-            cmake --build out --config Release --target Telegram -- "/m:$m" /v:m /p:MultiProcessorCompilation=false 2>&1 |
-              Tee-Object -FilePath "$env:GITHUB_WORKSPACE/build.log" -Append
+            # WHY: Tee-Object streams every msbuild line through .NET pipeline
+            # objects and the pwsh process itself died of OOM on error floods;
+            # cmd redirection writes straight to disk with no buffering.
+            cmd /c "cmake --build out --config Release --target Telegram -- /m:$m /v:m /p:MultiProcessorCompilation=false > ""$log"" 2>&1"
             return $LASTEXITCODE
           }
+          function Show-Tail {
+            if (Test-Path $log) {
+              Get-Content $log -Tail 400
+            }
+          }
           $code = Invoke-Build 2
-          if ($code -ne 0 -and (Test-Path build.log) -and
-              (Select-String -Path build.log -Pattern 'C1060' -SimpleMatch -Quiet)) {
+          if ($code -ne 0 -and (Test-Path $log) -and
+              (Select-String -Path $log -Pattern 'C1060' -SimpleMatch -Quiet)) {
             Write-Host "C1060 (out of heap space) detected - retrying with /m:1"
             $code = Invoke-Build 1
           }
+          Show-Tail
           exit $code
 
       - name: Extract compile errors

@@ -69,7 +69,7 @@ void ShowToastWithAction(
 
 void ShowCopyableDetails(const QString &title, const QString &details) {
 	Ayu::Log::Write(u"toast"_q, title + u": "_q + details);
-	auto config = Ui::Toast::Config{
+	auto config = ::Ui::Toast::Config{
 		.text = TextWithEntities{title},
 		.duration = 5 * crl::time(1000),
 	};
