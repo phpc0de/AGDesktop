@@ -4103,13 +4103,12 @@ void ApiWrap::forwardMessages(
 				if (error.type() == u"CHAT_FORWARDS_RESTRICTED"_q) {
 					Ayu::Log::Write(
 						u"forward"_q,
-						u"plain rejected, retry as content copy items=%1"_q
+						u"plain rejected, retry zero-cost copy items=%1"_q
 							.arg(fallbackItems->size()));
 					crl::async([=] {
-						AyuForward::forwardMessages(
+						AyuForward::zeroCostForward(
 							_session,
 							action,
-							false,
 							Data::ResolvedForwardDraft{
 								.items = *fallbackItems,
 								.options = fallbackOptions,

@@ -64,5 +64,9 @@ void forwardMessages(
 	const Api::SendAction &action,
 	bool forwardState,
 	const Data::ResolvedForwardDraft &draft);
+void zeroCostForward(
+	not_null<Main::Session*> session,
+	const Api::SendAction &action,
+	const Data::ResolvedForwardDraft &draft);
 
 }

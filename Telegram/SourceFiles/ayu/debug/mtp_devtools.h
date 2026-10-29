@@ -32,9 +32,18 @@ void RecordMtpRequest(
 	mtpRequestId id,
 	const MTP::details::SerializedRequest &request);
 void RecordMtpResponse(mtpRequestId id, const mtpBuffer &reply);
+void RecordMtpResponse(
+	mtpRequestId id,
+	const mtpPrime *from,
+	const mtpPrime *end);
 void RecordMtpError(mtpRequestId id, const MTP::Error &error);
-void ReplayMtpRequest(mtpRequestId id);
+void ReplayMtpRequest(
+	mtpRequestId id,
+	const QVector<mtpPrime> *overrideBody = nullptr);
 void ClearMtpEntries();
 void ShowMtpDevtools();
+
+[[nodiscard]] QStringList RawConsolePresetNames();
+void SendRawConsoleRequest(const QString &preset, const QString &json);
 
 } // namespace Ayu::Debug

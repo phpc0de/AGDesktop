@@ -7,6 +7,7 @@
 #include "ayu/features/forward/ayu_forward.h"
 
 #include "apiwrap.h"
+#include "api/api_sending.h"
 #include "lang_auto.h"
 #include "ayu/features/forward/ayu_forward_rich.h"
 #include "ayu/features/forward/ayu_sync.h"
@@ -518,6 +519,86 @@ void forwardMessages(
 	}
 	Ayu::Log::Write(u"forward"_q, u"ayu finished dest=%1 sent=%2"_q.arg(peer->id.value).arg(state->sentMessages));
 	state->updateBottomBar(*session, &peer->id, ForwardState::State::Finished);
+}
+
+void zeroCostForward(
+		not_null<Main::Session*> session,
+		const Api::SendAction &action,
+		const Data::ResolvedForwardDraft &draft) {
+	const auto items = draft.items;
+	const auto history = action.history;
+	const auto peer = history->peer;
+	Ayu::Log::Write(
+		u"forward"_q,
+		u"zerocost start dest=%1 items=%2"_q
+			.arg(peer->id.value)
+			.arg(items.size()));
+
+	auto state = std::make_shared<ForwardState>(1);
+	forwardStates[peer->id] = state;
+	state->state = ForwardState::State::Sending;
+	state->totalMessages = int(items.size());
+	state->updateBottomBar(*session, &peer->id, ForwardState::State::Sending);
+
+	std::vector<not_null<HistoryItem*>> toFullForward;
+
+	for (const auto item : items) {
+		const auto media = item->media();
+		if (media && (media->poll() || media->ttlSeconds())) {
+			toFullForward.push_back(item);
+			continue;
+		}
+		auto extracted = extractText(item);
+		auto message = Api::MessageToSend(action);
+		message.action.options.invertCaption = item->invertMedia();
+		message.action.options.scheduled = 0;
+		message.action.options.suggest = {};
+		message.action.options.effectId = 0;
+		message.replaceMediaOf = 0;
+		if (draft.options != Data::ForwardOptions::NoNamesAndCaptions) {
+			message.textWithTags = extracted;
+		}
+
+		if (!media) {
+			if (extracted.empty()) {
+				continue;
+			}
+			session->api().sendMessage(std::move(message));
+			state->sentMessages++;
+			continue;
+		}
+		if (media->photo()) {
+			Api::SendExistingPhoto(std::move(message), media->photo());
+			state->sentMessages++;
+			continue;
+		}
+		if (media->document()) {
+			Api::SendExistingDocument(std::move(message), media->document());
+			state->sentMessages++;
+			continue;
+		}
+		toFullForward.push_back(item);
+	}
+
+	Ayu::Log::Write(
+		u"forward"_q,
+		u"zerocost sent=%1 fullfallback=%2 dest=%3"_q
+			.arg(state->sentMessages)
+			.arg(toFullForward.size())
+			.arg(peer->id.value));
+	state->state = ForwardState::State::Finished;
+	state->updateBottomBar(*session, &peer->id, ForwardState::State::Finished);
+
+	if (!toFullForward.empty()) {
+		forwardMessages(
+			session,
+			action,
+			false,
+			Data::ResolvedForwardDraft{
+				.items = toFullForward,
+				.options = draft.options,
+			});
+	}
 }
 
 } // namespace AyuForward
