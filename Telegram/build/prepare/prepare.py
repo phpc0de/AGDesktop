@@ -475,8 +475,14 @@ win:
     msys64.exe
     del msys64.exe
 
-    bash -c "pacman-key --init; pacman-key --populate; for i in 1 2 3 4 5 6 7 8; do pacman -Syu --noconfirm && exit 0; echo RETRY-ATTEMPT-$i; sleep 10; done; exit 1"
-    bash -c "for i in 1 2 3 4 5 6 7 8; do pacman -Syu --noconfirm make mingw-w64-x86_64-gperf mingw-w64-x86_64-nasm mingw-w64-x86_64-perl mingw-w64-x86_64-pkgconf msys/diffutils && exit 0; echo RETRY-ATTEMPT-$i; sleep 10; done; exit 1"
+    bash -c "pacman-key --init; pacman-key --populate; pacman -Syu --noconfirm"
+    pacman -Syu --noconfirm ^
+        make ^
+        mingw-w64-x86_64-gperf ^
+        mingw-w64-x86_64-nasm ^
+        mingw-w64-x86_64-perl ^
+        mingw-w64-x86_64-pkgconf ^
+        msys/diffutils
     where diff
 """, 'ThirdParty')
 
