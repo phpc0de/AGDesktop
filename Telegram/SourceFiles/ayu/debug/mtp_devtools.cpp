@@ -106,9 +106,9 @@ MTPInputChannel ChannelOf(
 		not_null<Main::Session*> session,
 		const QJsonObject &o) {
 	const auto channel = o.value(u"channel"_q).toVariant().toLongLong();
-	const auto peer = channel
-		? session->data().peer(PeerId(ChannelId(channel)))
-		: nullptr;
+	auto peer = channel
+		? session->data().peer(PeerId(ChannelId(channel))).get()
+		: static_cast<PeerData *>(nullptr);
 	return (peer && peer->asChannel())
 		? peer->asChannel()->inputChannel()
 		: MTP_inputChannelEmpty();
