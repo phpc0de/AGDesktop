@@ -554,7 +554,7 @@ void zeroCostForward(
 		message.action.options.scheduled = 0;
 		message.action.options.suggest = {};
 		message.action.options.effectId = 0;
-		message.replaceMediaOf = 0;
+		message.action.replaceMediaOf = 0;
 		if (draft.options != Data::ForwardOptions::NoNamesAndCaptions) {
 			message.textWithTags = extracted;
 		}

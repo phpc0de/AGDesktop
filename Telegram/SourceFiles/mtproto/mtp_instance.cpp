@@ -1023,7 +1023,7 @@ void Instance::Private::sendRequest(
 		mtpRequestId afterRequestId) {
 	const auto session = getSession(shiftedDcId);
 
-	Ayu::Debug::RecordMtpRequest(requestId, request);
+	Ayu::Debug::RecordMtpRequest(requestId, request, shiftedDcId);
 	request->requestId = requestId;
 	storeRequest(requestId, request, std::move(callbacks));
 

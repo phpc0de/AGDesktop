@@ -10,6 +10,7 @@
 #include "ayu/utils/ayu_log.h"
 #include "base/random.h"
 #include "core/application.h"
+#include "data/data_channel.h"
 #include "data/data_peer.h"
 #include "data/data_peer_id.h"
 #include "data/data_session.h"
@@ -80,7 +81,7 @@ struct RawPreset {
 };
 
 int IntOf(const QJsonObject &o, const QString &key, int fallback = 0) {
-	return o.value(key).toVariant().toInt(fallback);
+	return o.value(key).toInt(fallback);
 }
 
 MTPInputPeer PeerOf(not_null<Main::Session*> session, const QJsonObject &o) {
@@ -200,7 +201,6 @@ const std::vector<RawPreset> &RawPresets() {
 				return MTP::details::SerializedRequest::Serialize(
 					MTPmessages_DeleteMessages(
 						MTP_flags(flags),
-						MTP_bool(o.value(u"revoke"_q).toBool()),
 						MTP_vector<MTPint>(IntVectorOf(o, u"id"_q))));
 			},
 		},
@@ -438,7 +438,7 @@ public:
 			}
 			ReplayMtpRequest(requestId, &body);
 		});
-		connect(_consolePreset, &QComboBox::currentIndexChanged, this, [=](int index) {
+		connect(_consolePreset, qOverload<int>(&QComboBox::currentIndexChanged), this, [=](int index) {
 			const auto &presets = RawPresets();
 			if (index >= 0 && index < int(presets.size())) {
 				_consoleParams->setPlainText(presets[index].sample);
@@ -542,7 +542,8 @@ rpl::producer<> MtpEntriesUpdates() {
 
 void RecordMtpRequest(
 		mtpRequestId id,
-		const MTP::details::SerializedRequest &request) {
+		const MTP::details::SerializedRequest &request,
+		MTP::ShiftedDcId dc) {
 	if (!request || id <= 0) {
 		return;
 	}
@@ -554,7 +555,7 @@ void RecordMtpRequest(
 		.requestId = id,
 		.when = crl::now(),
 		.kind = 0,
-		.dc = 0,
+		.dc = dc,
 	};
 	const auto count = buffer.size()
 		- MTP::details::SerializedRequest::kMessageBodyPosition;

@@ -11,7 +11,7 @@
 #include "rpl/event_stream.h"
 
 namespace MTP {
-struct Error;
+class Error;
 } // namespace MTP
 
 namespace Ayu::Debug {
@@ -23,14 +23,15 @@ struct MtpEntry {
 	QString name;
 	QString text;
 	QVector<mtpPrime> body;
-	ShiftedDcId dc = 0;
+	MTP::ShiftedDcId dc = 0;
 };
 
 [[nodiscard]] std::vector<MtpEntry> MtpEntriesSnapshot();
 [[nodiscard]] rpl::producer<> MtpEntriesUpdates();
 void RecordMtpRequest(
 	mtpRequestId id,
-	const MTP::details::SerializedRequest &request);
+	const MTP::details::SerializedRequest &request,
+	MTP::ShiftedDcId dc = 0);
 void RecordMtpResponse(mtpRequestId id, const mtpBuffer &reply);
 void RecordMtpResponse(
 	mtpRequestId id,
