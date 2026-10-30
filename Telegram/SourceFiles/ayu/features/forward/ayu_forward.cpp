@@ -558,10 +558,15 @@ void zeroCostForward(
 			units.push_back({{item}});
 			continue;
 		}
-		if (!units.empty()
-			&& !units.back().items.front()->media()->poll()
-			&& !units.back().items.front()->media()->ttlSeconds()
-			&& units.back().items.front()->groupId() == gid) {
+		const auto prev = units.empty()
+			? nullptr
+			: units.back().items.front();
+		const auto prevMedia = prev ? prev->media() : nullptr;
+		if (prevMedia
+			&& !prevMedia->poll()
+			&& !prevMedia->ttlSeconds()
+			&& (prevMedia->photo() || prevMedia->document())
+			&& prev->groupId() == gid) {
 			units.back().items.push_back(item);
 			continue;
 		}
@@ -651,7 +656,7 @@ void zeroCostForward(
 		const auto caption = captionOf(item);
 		const auto entities = Api::EntitiesToMTP(
 			session,
-			caption,
+			caption.entities,
 			Api::ConvertOption::SkipLocal);
 		if (unit.items.size() == 1) {
 			(*remaining)++;
@@ -707,7 +712,7 @@ void zeroCostForward(
 				MTP_string(groupCaption.text),
 				Api::EntitiesToMTP(
 					session,
-					groupCaption,
+					groupCaption.entities,
 					Api::ConvertOption::SkipLocal)));
 		}
 		(*remaining)++;

@@ -9,6 +9,7 @@ https://<obf:github-repo-ref>/blob/dev/LEGAL
 
 #include "ayu/debug/mtp_scheme_table.h"
 #include "core/application.h"
+#include "mtproto/scheme.h"
 #include "data/data_peer.h"
 #include "data/data_peer_id.h"
 #include "data/data_session.h"
@@ -69,10 +70,6 @@ constexpr auto kMaxRawHexChars = 4096;
 		|| type == u"bytes"_q
 		|| type == u"Bool"_q
 		|| type == u"true"_q;
-}
-
-[[nodiscard]] bool IsPoly(const QString &type) {
-	return type.isEmpty() || type == u"X"_q;
 }
 
 [[nodiscard]] QString EscapeBytes(const QByteArray &bytes) {
@@ -422,7 +419,7 @@ void PackBytes(const QByteArray &bytes, QVector<mtpPrime> &out) {
 			const auto value = uint32_t(*reader.from++);
 			return pad + u"%1%2\n"_q
 				.arg(prefix)
-				.arg(value == boolTrue ? u"true"_q : u"false"_q);
+				.arg(value == mtpc_boolTrue ? u"true"_q : u"false"_q);
 		}
 		if (expect == u"true"_q) {
 			return pad + u"%1true\n"_q.arg(prefix);
@@ -631,9 +628,9 @@ private:
 			PackBytes(bytes, out);
 		} else if (type == u"Bool"_q || type == u"true"_q) {
 			if (value == u"true"_q) {
-				out.push_back(mtpPrime(boolTrue));
+				out.push_back(mtpPrime(mtpc_boolTrue));
 			} else if (value == u"false"_q) {
-				out.push_back(mtpPrime(boolFalse));
+				out.push_back(mtpPrime(mtpc_boolFalse));
 			} else {
 				return fail(u"expected true/false"_q);
 			}

@@ -8,6 +8,8 @@
 
 #include "ayu/debug/mtp_tl_codec.h"
 
+#include <QtGui/QFontDatabase>
+
 #include "ayu/ui/toasts.h"
 #include "ayu/utils/ayu_log.h"
 #include "base/random.h"
@@ -369,6 +371,13 @@ public:
 		consoleRow->addWidget(_consoleSend);
 		root->addLayout(consoleRow);
 
+		_replay->setToolTip(
+			u"Resend the selected request packet as-is (request rows only)."_q);
+		_editReplay->setToolTip(
+			u"Edit the decoded TL tree, flags bits are recomputed, then resend."_q);
+		_hexView->setToolTip(
+			u"Show raw 32-bit words instead of the decoded TL tree."_q);
+		_copyHex->setToolTip(u"Copy raw 32-bit words of the packet."_q);
 		_consoleParams = new QPlainTextEdit(this);
 		_consoleParams->setMaximumHeight(110);
 		_consoleParams->setPlaceholderText(u"JSON params (peer: {\"user\":id} / {\"chat\":id} / {\"channel\":id})"_q);
@@ -394,6 +403,7 @@ public:
 			}
 			_selectedKey = entryKey(*entry);
 			_detail->setPlainText(entryText(*entry));
+			updateButtons();
 		});
 		connect(_hexView, &QPushButton::toggled, this, [=] {
 			const auto entry = entryAt(_list->currentRow());
@@ -435,6 +445,10 @@ public:
 			dialog->resize(760, 560);
 			dialog->setAttribute(Qt::WA_DeleteOnClose);
 			auto *layout = new QVBoxLayout(dialog);
+			auto *hint = new QLabel(dialog);
+			hint->setText(u"Edit fields below, then press Encode & Replay. Flags bits are recomputed from which optional fields are present; keep the constructor name on the first line."_q);
+			hint->setWordWrap(true);
+			layout->addWidget(hint);
 			auto *editor = new QPlainTextEdit(dialog);
 			editor->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
 			editor->setPlainText(entry->text);
@@ -493,6 +507,16 @@ private:
 		return entry.requestId * 4 + entry.kind;
 	}
 
+	void updateButtons() {
+		const auto entry = entryAt(_list->currentRow());
+		const auto replayable = entry
+			&& entry->kind == 0
+			&& !entry->body.isEmpty();
+		_replay->setEnabled(replayable);
+		_editReplay->setEnabled(replayable);
+		_copyHex->setEnabled(entry && !entry->body.isEmpty());
+	}
+
 	[[nodiscard]] QString entryText(const MtpEntry &entry) const {
 		if (!_hexView->isChecked() || entry.body.isEmpty()) {
 			return entry.text;
@@ -544,6 +568,7 @@ private:
 			_rows.push_back(entry);
 			_list->addItem(line);
 		}
+		updateButtons();
 	}
 
 	rpl::lifetime _lifetime;
