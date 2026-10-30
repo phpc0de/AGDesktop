@@ -574,6 +574,12 @@ void AyuSettings::setFolderTagsForce(bool val) {
 	save();
 }
 
+void AyuSettings::setShowUnavailableChannels(bool val) {
+	if (_showUnavailableChannels.current() == val) return;
+	_showUnavailableChannels = val;
+	save();
+}
+
 void AyuSettings::setHideFromBlocked(bool val) {
 	if (_hideFromBlocked.current() == val) return;
 	_hideFromBlocked = val;
@@ -1098,6 +1104,7 @@ void to_json(nlohmann::json &j, const AyuSettings &s) {
 		{"filtersEnabled", s._filtersEnabled.current()},
 		{"filtersEnabledInChats", s._filtersEnabledInChats.current()},
 		{"folderTagsForce", s._folderTagsForce.current()},
+		{"showUnavailableChannels", s._showUnavailableChannels.current()},
 		{"hideFromBlocked", s._hideFromBlocked.current()},
 		{"semiTransparentDeletedMessages", s._semiTransparentDeletedMessages.current()},
 		{"disableAds", s._disableAds.current()},
@@ -1204,6 +1211,7 @@ void from_json(const nlohmann::json &j, AyuSettings &s) {
 	s._filtersEnabled = j.value("filtersEnabled", defaults._filtersEnabled.current());
 	s._filtersEnabledInChats = j.value("filtersEnabledInChats", defaults._filtersEnabledInChats.current());
 	s._folderTagsForce = j.value("folderTagsForce", defaults._folderTagsForce.current());
+	s._showUnavailableChannels = j.value("showUnavailableChannels", defaults._showUnavailableChannels.current());
 	s._hideFromBlocked = j.value("hideFromBlocked", defaults._hideFromBlocked.current());
 	s._semiTransparentDeletedMessages = j.value("semiTransparentDeletedMessages", defaults._semiTransparentDeletedMessages.current());
 	s._disableAds = j.value("disableAds", defaults._disableAds.current());

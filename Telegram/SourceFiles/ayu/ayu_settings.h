@@ -274,6 +274,7 @@ public:
 	[[nodiscard]] bool filtersEnabled() const { return _filtersEnabled.current(); }
 	[[nodiscard]] bool filtersEnabledInChats() const { return _filtersEnabledInChats.current(); }
 	[[nodiscard]] bool folderTagsForce() const { return _folderTagsForce.current(); }
+	[[nodiscard]] bool showUnavailableChannels() const { return _showUnavailableChannels.current(); }
 	[[nodiscard]] bool hideFromBlocked() const { return _hideFromBlocked.current(); }
 	[[nodiscard]] bool semiTransparentDeletedMessages() const { return _semiTransparentDeletedMessages.current(); }
 	[[nodiscard]] bool disableAds() const { return _disableAds.current(); }
@@ -363,6 +364,7 @@ public:
 	void setFiltersEnabled(bool val);
 	void setFiltersEnabledInChats(bool val);
 	void setFolderTagsForce(bool val);
+	void setShowUnavailableChannels(bool val);
 	void setHideFromBlocked(bool val);
 	void setSemiTransparentDeletedMessages(bool val);
 	void setDisableAds(bool val);
@@ -638,6 +640,7 @@ private:
 	rpl::variable<bool> _filtersEnabled = false;
 	rpl::variable<bool> _filtersEnabledInChats = false;
 	rpl::variable<bool> _folderTagsForce = false;
+	rpl::variable<bool> _showUnavailableChannels = false;
 	rpl::variable<bool> _hideFromBlocked = false;
 	rpl::variable<bool> _semiTransparentDeletedMessages = false;
 	rpl::variable<bool> _disableAds = true;

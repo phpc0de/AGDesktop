@@ -707,6 +707,11 @@ bool ChannelData::lastParticipantsRequestNeeded() const {
 
 auto ChannelData::unavailableReasons() const
 -> const std::vector<Data::UnavailableReason> & {
+	if (AyuSettings::getInstance().showUnavailableChannels()) {
+		static const auto empty =
+			std::vector<Data::UnavailableReason>();
+		return empty;
+	}
 	return _unavailableReasons;
 }
 

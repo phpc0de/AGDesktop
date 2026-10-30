@@ -474,7 +474,8 @@ void ChatFilters::load(bool force) {
 	api.request(_loadRequestId).cancel();
 	_loadRequestId = api.request(MTPmessages_GetDialogFilters(
 	)).done([=](const MTPmessages_DialogFilters &result) {
-		_tagsEnabled = result.data().is_tags_enabled();
+		_tagsEnabled = result.data().is_tags_enabled()
+			|| AyuSettings::getInstance().folderTagsForce();
 		received(result.data().vfilters().v);
 		_loadRequestId = 0;
 	}).fail([=] {
