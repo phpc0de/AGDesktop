@@ -6,6 +6,8 @@
 // Copyright @Radolyn, 2026
 #include "ayu/debug/mtp_devtools.h"
 
+#include "ayu/debug/mtp_tl_codec.h"
+
 #include "ayu/ui/toasts.h"
 #include "ayu/utils/ayu_log.h"
 #include "base/random.h"
@@ -327,8 +329,11 @@ public:
 		_filter->setPlaceholderText(u"filter (name / id / text)"_q);
 		_pin = new QPushButton(u"Pin"_q, this);
 		_pin->setCheckable(true);
+		_hexView = new QPushButton(u"Hex"_q, this);
+		_hexView->setCheckable(true);
 		_clear = new QPushButton(u"Clear"_q, this);
 		top->addWidget(_filter, 1);
+		top->addWidget(_hexView);
 		top->addWidget(_pin);
 		top->addWidget(_clear);
 		root->addLayout(top);
@@ -339,6 +344,7 @@ public:
 		_detail = new QPlainTextEdit(this);
 		_detail->setReadOnly(true);
 		_detail->setLineWrapMode(QPlainTextEdit::NoWrap);
+		_detail->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
 		split->addWidget(_list, 2);
 		split->addWidget(_detail, 3);
 		root->addLayout(split, 1);
@@ -381,7 +387,19 @@ public:
 		});
 		connect(_list, &QListWidget::currentRowChanged, this, [=](int row) {
 			const auto entry = entryAt(row);
-			_detail->setPlainText(entry ? entry->text : QString());
+			if (!entry) {
+				_selectedKey = -1;
+				_detail->setPlainText(QString());
+				return;
+			}
+			_selectedKey = entryKey(*entry);
+			_detail->setPlainText(entryText(*entry));
+		});
+		connect(_hexView, &QPushButton::toggled, this, [=] {
+			const auto entry = entryAt(_list->currentRow());
+			if (entry) {
+				_detail->setPlainText(entryText(*entry));
+			}
 		});
 		connect(_copyText, &QPushButton::clicked, this, [=] {
 			QApplication::clipboard()->setText(_detail->toPlainText());
@@ -410,33 +428,42 @@ public:
 			if (!entry || entry->kind != 0 || entry->body.isEmpty()) {
 				return;
 			}
-			// WHY: the modal dialog lets live traffic reallocate _rows.
+			// WHY: the non-modal dialog lets live traffic keep flowing.
 			const auto requestId = entry->requestId;
-			auto words = QStringList();
-			words.reserve(entry->body.size());
-			for (const auto prime : entry->body) {
-				words << u"%1"_q.arg(quint32(prime), 8, 16, QChar(u'0'));
-			}
-			const auto edited = QInputDialog::getMultiLineText(
-				this,
-				u"Edit primes (hex)"_q,
-				u"32-bit prime words, space separated"_q,
-				words.join(u" "_q));
-			if (edited.isEmpty()) {
-				return;
-			}
-			auto body = QVector<mtpPrime>();
-			for (const auto &token : edited.simplified().split(u' ')) {
-				auto ok = false;
-				const auto value = token.toUInt(&ok, 16);
-				if (ok) {
-					body.push_back(mtpPrime(value));
+			auto dialog = new QDialog(this);
+			dialog->setWindowTitle(u"Edit TL & replay #"_q + QString::number(requestId));
+			dialog->resize(760, 560);
+			dialog->setAttribute(Qt::WA_DeleteOnClose);
+			auto *layout = new QVBoxLayout(dialog);
+			auto *editor = new QPlainTextEdit(dialog);
+			editor->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
+			editor->setPlainText(entry->text);
+			layout->addWidget(editor, 1);
+			auto *row = new QHBoxLayout();
+			auto *send = new QPushButton(u"Encode & Replay"_q, dialog);
+			auto *cancel = new QPushButton(u"Cancel"_q, dialog);
+			row->addStretch(1);
+			row->addWidget(send);
+			row->addWidget(cancel);
+			layout->addLayout(row);
+			QObject::connect(
+				cancel,
+				&QPushButton::clicked,
+				dialog,
+				&QDialog::reject);
+			QObject::connect(send, &QPushButton::clicked, dialog, [=] {
+				auto body = QVector<mtpPrime>();
+				auto error = QString();
+				if (!ParseTlText(editor->toPlainText(), body, error)) {
+					Ayu::Log::Write(
+						u"mtpdev"_q,
+						u"edit replay parse fail: %1"_q.arg(error));
+					return;
 				}
-			}
-			if (body.isEmpty()) {
-				return;
-			}
-			ReplayMtpRequest(requestId, &body);
+				dialog->accept();
+				ReplayMtpRequest(requestId, &body);
+			});
+			dialog->show();
 		});
 		connect(_consolePreset, qOverload<int>(&QComboBox::currentIndexChanged), this, [=](int index) {
 			const auto &presets = RawPresets();
@@ -462,6 +489,18 @@ public:
 	}
 
 private:
+	[[nodiscard]] static qint64 entryKey(const MtpEntry &entry) {
+		return entry.requestId * 4 + entry.kind;
+	}
+
+	[[nodiscard]] QString entryText(const MtpEntry &entry) const {
+		if (!_hexView->isChecked() || entry.body.isEmpty()) {
+			return entry.text;
+		}
+		const auto *from = entry.body.constData();
+		return DumpPrimes(from, from + entry.body.size());
+	}
+
 	[[nodiscard]] const MtpEntry *entryAt(int row) const {
 		if (row < 0 || row >= int(_rows.size())) {
 			return nullptr;
@@ -470,10 +509,16 @@ private:
 	}
 
 	void refreshSoft() {
-		const auto id = _list->currentRow();
+		const auto key = _selectedKey;
 		refresh();
-		if (id >= 0 && id < _list->count()) {
-			_list->setCurrentRow(id);
+		if (key >= 0) {
+			for (auto i = 0; i != _list->count(); ++i) {
+				const auto entry = entryAt(i);
+				if (entry && entryKey(*entry) == key) {
+					_list->setCurrentRow(i);
+					break;
+				}
+			}
 		}
 		_list->scrollToBottom();
 	}
@@ -503,7 +548,9 @@ private:
 
 	rpl::lifetime _lifetime;
 	std::vector<MtpEntry> _rows;
+	qint64 _selectedKey = -1;
 	QLineEdit *_filter = nullptr;
+	QPushButton *_hexView = nullptr;
 	QPushButton *_pin = nullptr;
 	QPushButton *_clear = nullptr;
 	QListWidget *_list = nullptr;
@@ -567,8 +614,11 @@ void RecordMtpRequest(
 	}
 	const auto *from = entry.body.constData();
 	const auto *end = from + entry.body.size();
-	entry.text = DumpPrimes(from, end);
-	entry.name = FirstLine(entry.text);
+	entry.text = DecodeTlBody(from, end);
+	entry.name = DecodeTlRowName(entry.body);
+	if (entry.name.isEmpty()) {
+		entry.name = FirstLine(entry.text);
+	}
 	Push(std::move(entry));
 }
 
@@ -586,8 +636,13 @@ void RecordMtpResponse(
 		.when = crl::now(),
 		.kind = 1,
 	};
-	entry.text = DumpPrimes(from, end);
-	entry.name = FirstLine(entry.text);
+	StripTlEnvelope(from, end);
+	entry.body = QVector<mtpPrime>(from, end);
+	entry.text = DecodeTlBody(from, end);
+	entry.name = DecodeTlRowName(entry.body);
+	if (entry.name.isEmpty()) {
+		entry.name = FirstLine(entry.text);
+	}
 	Push(std::move(entry));
 }
 

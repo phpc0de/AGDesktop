@@ -122,6 +122,8 @@ set(ayugram_files
         ayu/ayu_infra.h
         ayu/debug/mtp_devtools.cpp
         ayu/debug/mtp_devtools.h
+        ayu/debug/mtp_tl_codec.cpp
+        ayu/debug/mtp_tl_codec.h
         ayu/utils/ayu_log.cpp
         ayu/utils/ayu_log.h
         ayu/utils/ayu_mapper.cpp
