@@ -767,3 +767,16 @@ The `Error` template parameter defaults to `rpl::no_error`: `rpl::producer<Type,
 - Pass `rpl::lifetime` to `on_...` methods or store returned lifetime
 - Use `rpl::duplicate(producer)` to reuse a producer multiple times
 - Combined producers automatically unpack tuples in lambdas (works with `rpl::map`, `rpl::filter`, and `rpl::on_next`)
+
+## Release & Task-Closure Protocol (user-mandated)
+
+1. **End-of-task git commands**: every final reply that ends a work batch
+   must list the exact git commands that were run (push / tag), so the
+   user can see and reproduce them without opening the terminal history.
+2. **Release notes per tag**: before (re)pushing a version tag, write
+   formal release notes at `docs/release-notes/<tag>.md` with sections
+   Added / Changed / Fixed / Known Limits, covering every feature added,
+   changed, or bug fixed in that release. The user pastes these into the
+   GitHub Release description.
+3. Both steps are mandatory parts of "task finished" — not optional
+   polish. Skipping either counts as an incomplete task.
