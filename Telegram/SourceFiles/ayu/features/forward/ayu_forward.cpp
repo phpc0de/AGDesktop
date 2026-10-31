@@ -558,9 +558,9 @@ void zeroCostForward(
 			units.push_back({{item}});
 			continue;
 		}
-		const auto prev = units.empty()
+		HistoryItem *prev = units.empty()
 			? nullptr
-			: units.back().items.front();
+			: units.back().items.front().get();
 		const auto prevMedia = prev ? prev->media() : nullptr;
 		if (prevMedia
 			&& !prevMedia->poll()

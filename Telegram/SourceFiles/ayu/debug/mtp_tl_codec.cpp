@@ -296,7 +296,7 @@ void PackBytes(const QByteArray &bytes, QVector<mtpPrime> &out) {
 			}
 			out += pad + u"  flags: 0x%1"_q.arg(flags, 8, 16, QChar(u'0'));
 			if (!names.isEmpty()) {
-				out += u" // "_q + names.join(u','_q);
+				out += u" // "_q + names.join(QChar(u','));
 			}
 			out += u"\n"_q;
 			continue;
