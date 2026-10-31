@@ -227,6 +227,8 @@ jobs:
         shell: pwsh
         env:
           Platform: x64
+          # WHY: one codegen thread per cl keeps heavy -O2 TUs below the heap limit.
+          CL: /cgthreads1
         run: |
           $log = "$env:GITHUB_WORKSPACE/build.log"
           function Invoke-Build([string]$m) {
@@ -241,10 +243,13 @@ jobs:
               Get-Content $log -Tail 400
             }
           }
-          $code = Invoke-Build 2
-          if ($code -ne 0 -and (Test-Path $log) -and
-              (Select-String -Path $log -Pattern 'C1060' -SimpleMatch -Quiet)) {
-            Write-Host "C1060 (out of heap space) detected - retrying with /m:1"
+          # WHY: msbuild is incremental, so each /m:1 retry only recompiles
+          # the TUs that ran out of heap; passes converge instead of flooding
+          # thousands of bogus C1060/C1076/C3859 errors.
+          $code = Invoke-Build 1
+          for ($i = 1; $i -le 3 -and $code -ne 0 -and
+              (Select-String -Path $log -Pattern 'C1060','C1076','C3859' -SimpleMatch -Quiet); $i++) {
+            Write-Host "compiler OOM detected - incremental retry $i/3"
             $code = Invoke-Build 1
           }
           Show-Tail
