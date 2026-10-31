@@ -623,7 +623,7 @@ void zeroCostForward(
 		if (draft.options == Data::ForwardOptions::NoNamesAndCaptions) {
 			return TextWithEntities();
 		}
-		return extractText(item);
+		return item->originalText();
 	};
 
 	for (const auto &unit : units) {
@@ -680,7 +680,7 @@ void zeroCostForward(
 				Ayu::Log::Write(
 					u"forward"_q,
 					u"zerocost media ok item=%1 dest=%2"_q
-						.arg(item->id)
+						.arg(item->id.bare)
 						.arg(peer->id.value));
 				session->api().applyUpdates(result);
 				state->sentMessages++;
@@ -690,7 +690,7 @@ void zeroCostForward(
 				Ayu::Log::Write(
 					u"forward"_q,
 					u"zerocost media FAILED item=%1 dest=%2 type=%3"_q
-						.arg(item->id)
+						.arg(item->id.bare)
 						.arg(peer->id.value)
 						.arg(error.type()));
 				fallback->push_back(item);
@@ -722,7 +722,6 @@ void zeroCostForward(
 			MTPInputReplyTo(),
 			MTP_vector<MTPInputSingleMedia>(std::move(singles)),
 			MTP_int(0), // schedule_date
-			MTP_int(0), // schedule_repeat_period
 			MTP_inputPeerEmpty(), // send_as
 			MTPInputQuickReplyShortcut(),
 			MTP_long(0), // effect

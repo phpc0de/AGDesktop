@@ -9,12 +9,12 @@ https://<obf:github-repo-ref>/blob/dev/LEGAL
 
 #include "ayu/debug/mtp_scheme_table.h"
 #include "core/application.h"
-#include "mtproto/scheme.h"
 #include "data/data_peer.h"
 #include "data/data_peer_id.h"
 #include "data/data_session.h"
 #include "main/main_account.h"
 #include "main/main_session.h"
+#include "scheme.h"
 
 #include <QtCore/QByteArray>
 #include <QtCore/QStringList>
