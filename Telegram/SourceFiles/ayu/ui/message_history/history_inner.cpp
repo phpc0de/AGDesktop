@@ -11,6 +11,7 @@
 #include "mainwindow.h"
 #include "api/api_attached_stickers.h"
 #include "ayu/data/messages_storage.h"
+#include "ayu/sexcat/sexcat_save_hook.h"
 #include "ayu/ui/message_history/history_section.h"
 #include "base/call_delayed.h"
 #include "base/unixtime.h"
@@ -1177,6 +1178,7 @@ void InnerWidget::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 								   ? link->property(kPeerLinkPeerIdProperty).toULongLong()
 								   : 0);
 	if (lnkPhoto || lnkDocument) {
+		const auto itemId = view ? view->data()->fullId() : FullMsgId();
 		if (isUponSelected > 0) {
 			_menu->addAction(tr::lng_context_copy_selected(tr::now),
 							 [=]
@@ -1193,7 +1195,7 @@ void InnerWidget::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 												  this,
 												  [=]
 												  {
-													  savePhotoToFile(lnkPhoto);
+													  savePhotoToFile(lnkPhoto, itemId);
 												  }),
 								 &st::menuIconSaveImage);
 				_menu->addAction(tr::lng_context_copy_image(tr::now),
@@ -1265,9 +1267,9 @@ void InnerWidget::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 												   : tr::lng_context_save_file(tr::now))),
 								 base::fn_delayed(st::defaultDropdownMenu.menu.ripple.hideDuration,
 												  this,
-												  [this, lnkDocument]
+												  [this, lnkDocument, itemId]
 												  {
-													  saveDocumentToFile(lnkDocument);
+													  saveDocumentToFile(itemId, lnkDocument);
 												  }),
 								 &st::menuIconDownload);
 
@@ -1318,9 +1320,9 @@ void InnerWidget::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 						_menu->addAction(tr::lng_context_save_image(tr::now),
 										 base::fn_delayed(st::defaultDropdownMenu.menu.ripple.hideDuration,
 														  this,
-														  [this, document]
+														  [this, document, itemId]
 														  {
-															  saveDocumentToFile(document);
+															  saveDocumentToFile(itemId, document);
 														  }),
 										 &st::menuIconDownload);
 					}
@@ -1362,7 +1364,9 @@ void InnerWidget::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 	}
 }
 
-void InnerWidget::savePhotoToFile(not_null<PhotoData*> photo) {
+void InnerWidget::savePhotoToFile(
+		not_null<PhotoData*> photo,
+		FullMsgId contextId) {
 	const auto media = photo->activeMediaView();
 	if (photo->isNull() || !media || !media->loaded()) {
 		return;
@@ -1377,15 +1381,17 @@ void InnerWidget::savePhotoToFile(not_null<PhotoData*> photo) {
 		crl::guard(this,
 				   [=](const QString &result)
 				   {
-					   if (!result.isEmpty()) {
-						   media->saveToFile(result);
+					   if (!result.isEmpty() && media->saveToFile(result)) {
+						   SexCat::RecordPhotoSaveAttempt(result, photo, contextId);
 					   }
 				   }));
 }
 
-void InnerWidget::saveDocumentToFile(not_null<DocumentData*> document) {
+void InnerWidget::saveDocumentToFile(
+		FullMsgId contextId,
+		not_null<DocumentData*> document) {
 	DocumentSaveClickHandler::Save(
-		Data::FileOrigin(),
+		Data::FileOrigin(contextId),
 		document,
 		DocumentSaveClickHandler::Mode::ToNewFile);
 }

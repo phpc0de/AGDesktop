@@ -275,6 +275,7 @@ public:
 	[[nodiscard]] bool filtersEnabledInChats() const { return _filtersEnabledInChats.current(); }
 	[[nodiscard]] bool folderTagsForce() const { return _folderTagsForce.current(); }
 	[[nodiscard]] bool showUnavailableChannels() const { return _showUnavailableChannels.current(); }
+	[[nodiscard]] bool sexcatEnabled() const { return _sexcatEnabled.current(); }
 	[[nodiscard]] bool hideFromBlocked() const { return _hideFromBlocked.current(); }
 	[[nodiscard]] bool semiTransparentDeletedMessages() const { return _semiTransparentDeletedMessages.current(); }
 	[[nodiscard]] bool disableAds() const { return _disableAds.current(); }
@@ -365,6 +366,7 @@ public:
 	void setFiltersEnabledInChats(bool val);
 	void setFolderTagsForce(bool val);
 	void setShowUnavailableChannels(bool val);
+	void setSexcatEnabled(bool val);
 	void setHideFromBlocked(bool val);
 	void setSemiTransparentDeletedMessages(bool val);
 	void setDisableAds(bool val);
@@ -461,6 +463,8 @@ public:
 	[[nodiscard]] rpl::producer<bool> filtersEnabledChanges() const { return _filtersEnabled.changes(); }
 	[[nodiscard]] rpl::producer<bool> filtersEnabledInChatsValue() const { return _filtersEnabledInChats.value(); }
 	[[nodiscard]] rpl::producer<bool> filtersEnabledInChatsChanges() const { return _filtersEnabledInChats.changes(); }
+	[[nodiscard]] rpl::producer<bool> sexcatEnabledValue() const { return _sexcatEnabled.value(); }
+	[[nodiscard]] rpl::producer<bool> sexcatEnabledChanges() const { return _sexcatEnabled.changes(); }
 	[[nodiscard]] rpl::producer<bool> hideFromBlockedValue() const { return _hideFromBlocked.value(); }
 	[[nodiscard]] rpl::producer<bool> hideFromBlockedChanges() const { return _hideFromBlocked.changes(); }
 	[[nodiscard]] rpl::producer<bool> semiTransparentDeletedMessagesValue() const { return _semiTransparentDeletedMessages.value(); }
@@ -641,6 +645,7 @@ private:
 	rpl::variable<bool> _filtersEnabledInChats = false;
 	rpl::variable<bool> _folderTagsForce = false;
 	rpl::variable<bool> _showUnavailableChannels = false;
+	rpl::variable<bool> _sexcatEnabled = true;
 	rpl::variable<bool> _hideFromBlocked = false;
 	rpl::variable<bool> _semiTransparentDeletedMessages = false;
 	rpl::variable<bool> _disableAds = true;

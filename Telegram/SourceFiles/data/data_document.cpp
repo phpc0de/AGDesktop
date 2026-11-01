@@ -46,6 +46,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtCore/QMimeType>
 #include <QtCore/QMimeDatabase>
 
+// AyuGram includes
+#include "ayu/sexcat/sexcat_save_hook.h"
+
+
 namespace {
 
 constexpr auto kDefaultCoverThumbnailSize = 100;
@@ -1046,6 +1050,7 @@ void DocumentData::automaticLoadSettingsChanged() {
 	if (!cancelled() || status != FileReady) {
 		return;
 	}
+	SexCat::ForgetDoctrineSaveAs(this);
 	_loader = nullptr;
 	resetCancelled();
 }
@@ -1065,12 +1070,14 @@ void DocumentData::finishLoad() {
 		media->setBytes(_loader->bytes());
 		media->checkStickerLarge(_loader.get());
 	}
+	SexCat::NotifyDocumentSaved(_loader->fileName(), this);
 }
 
 void DocumentData::destroyLoader() {
 	if (!_loader) {
 		return;
 	}
+	SexCat::ForgetDoctrineSaveAs(this);
 	const auto loader = base::take(_loader);
 	if (cancelled()) {
 		loader->cancel();
@@ -1251,6 +1258,7 @@ void DocumentData::save(
 				}
 				l.accessDisable();
 			}
+			SexCat::NotifyDocumentSaved(toFile, this);
 		}
 		return;
 	}

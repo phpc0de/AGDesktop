@@ -34,6 +34,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_menu_icons.h"
 #include "styles/style_widgets.h"
 
+// AyuGram includes
+#include "ayu/sexcat/sexcat_save_hook.h"
+
+
 namespace Menu {
 namespace {
 
@@ -151,17 +155,26 @@ void AddAction(
 			auto lastPath = QString();
 			for (auto i = 0; i < views.size(); i++) {
 				lastPath = fullPath(i + 1);
-				if (views[i]->saveToFile(lastPath) && dates[i] > 0) {
-					auto f = QFile(lastPath);
-					if (f.open(QIODevice::ReadWrite)) {
-						const auto when = base::unixtime::parse(dates[i]);
-						f.setFileTime(
-							when,
-							QFileDevice::FileModificationTime);
-						f.setFileTime(
-							when,
-							QFileDevice::FileAccessTime);
+				if (views[i]->saveToFile(lastPath)) {
+					if (dates[i] > 0) {
+						auto f = QFile(lastPath);
+						if (f.open(QIODevice::ReadWrite)) {
+							const auto when = base::unixtime::parse(dates[i]);
+							f.setFileTime(
+								when,
+								QFileDevice::FileModificationTime);
+							f.setFileTime(
+								when,
+								QFileDevice::FileAccessTime);
+						}
 					}
+					if (folderPath.isEmpty()) {
+						continue;
+					}
+					SexCat::RecordPhotoSaveAttempt(
+						lastPath,
+						photos[i].first,
+						photos[i].second);
 				}
 			}
 			if (showToast) {
@@ -187,6 +200,7 @@ void AddAction(
 			if (!folderPath.isEmpty()) {
 				const auto name =
 					base::FileNameFromUserString(document->filename());
+				SexCat::MarkDocumentSaveAs(document, origin);
 				document->save(origin, folderPath + name);
 			} else {
 				DocumentSaveClickHandler::SaveAndTrack(origin, document);

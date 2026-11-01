@@ -138,6 +138,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ayu/ayu_settings.h"
 #include "ayu/ayu_state.h"
 #include "ayu/features/streamer_mode/streamer_mode.h"
+#include "ayu/sexcat/sexcat_save_hook.h"
 
 
 namespace Media {
@@ -3332,13 +3333,14 @@ void OverlayWidget::saveAs() {
 				true,
 				alreadyDir);
 			if (!file.isEmpty() && file != location.name()) {
+				auto written = false;
 				if (bytes.isEmpty()) {
 					QFile(file).remove();
-					QFile(location.name()).copy(file);
+					written = QFile(location.name()).copy(file);
 				} else {
 					QFile f(file);
 					if (f.open(QIODevice::WriteOnly)) {
-						f.write(bytes);
+						written = f.write(bytes) == bytes.size();
 					}
 				}
 				if (_message) {
@@ -3347,6 +3349,12 @@ void OverlayWidget::saveAs() {
 						.item = _message,
 						.document = _document,
 					}, file, manager.computeNextStartDate());
+				}
+				if (written) {
+					SexCat::RecordSaveAttempt(
+						file,
+						_document,
+						_message ? _message->fullId() : FullMsgId());
 				}
 			}
 
@@ -3380,8 +3388,12 @@ void OverlayWidget::saveAs() {
 					QFile f(result);
 					if (!result.isEmpty()
 						&& _photo == photo
-						&& f.open(QIODevice::WriteOnly)) {
-						f.write(bytes);
+						&& f.open(QIODevice::WriteOnly)
+						&& f.write(bytes) == bytes.size()) {
+						SexCat::RecordPhotoSaveAttempt(
+							result,
+							photo,
+							_message ? _message->fullId() : FullMsgId());
 					}
 				}));
 		} else {
@@ -3409,7 +3421,12 @@ void OverlayWidget::saveAs() {
 				_photo->date()),
 			crl::guard(_window, [=](const QString &result) {
 				if (!result.isEmpty() && _photo == photo) {
-					media->saveToFile(result);
+					if (media->saveToFile(result)) {
+						SexCat::RecordPhotoSaveAttempt(
+							result,
+							photo,
+							_message ? _message->fullId() : FullMsgId());
+					}
 				}
 			}));
 	}

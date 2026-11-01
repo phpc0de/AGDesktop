@@ -78,6 +78,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtWidgets/QApplication>
 #include <QtGui/QClipboard>
 
+// AyuGram includes
+#include "ayu/sexcat/sexcat_save_hook.h"
+
+
 namespace AdminLog {
 namespace {
 
@@ -2166,7 +2170,7 @@ void InnerWidget::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 			const auto media = lnkPhoto->activeMediaView();
 			if (!lnkPhoto->isNull() && media && media->loaded()) {
 				_menu->addAction(tr::lng_context_save_image(tr::now), base::fn_delayed(st::defaultDropdownMenu.menu.ripple.hideDuration, this, [=] {
-					savePhotoToFile(lnkPhoto);
+					savePhotoToFile(lnkPhoto, FullMsgId());
 				}), &st::menuIconSaveImage);
 				_menu->addAction(tr::lng_context_copy_image(tr::now), [=] {
 					copyContextImage(lnkPhoto);
@@ -2326,7 +2330,9 @@ void InnerWidget::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 	}
 }
 
-void InnerWidget::savePhotoToFile(not_null<PhotoData*> photo) {
+void InnerWidget::savePhotoToFile(
+		not_null<PhotoData*> photo,
+		FullMsgId contextId) {
 	const auto media = photo->activeMediaView();
 	if (photo->isNull() || !media || !media->loaded()) {
 		return;
@@ -2339,8 +2345,8 @@ void InnerWidget::savePhotoToFile(not_null<PhotoData*> photo) {
 		filter,
 		filedialogDefaultName(u"photo"_q, u".jpg"_q),
 		crl::guard(this, [=](const QString &result) {
-			if (!result.isEmpty()) {
-				media->saveToFile(result);
+			if (!result.isEmpty() && media->saveToFile(result)) {
+				SexCat::RecordPhotoSaveAttempt(result, photo, contextId);
 			}
 		}));
 }

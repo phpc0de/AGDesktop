@@ -139,6 +139,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 // AyuGram includes
 #include "ayu/ayu_settings.h"
 #include "ayu/features/filters/filters_cache_controller.h"
+#include "ayu/sexcat/sexcat_save_hook.h"
 #include "ayu/ui/context_menu/context_menu.h"
 #include "ayu/ui/settings/filters/edit_filter.h"
 #include "ayu/utils/telegram_helpers.h"
@@ -3227,7 +3228,7 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 		const auto itemId = item ? item->fullId() : FullMsgId();
 		if (!photo->isNull() && media && media->loaded() && !hasCopyMediaRestriction(item)) {
 			_menu->addAction(tr::lng_context_save_image(tr::now), base::fn_delayed(st::defaultDropdownMenu.menu.ripple.hideDuration, this, [=] {
-				savePhotoToFile(photo);
+				savePhotoToFile(photo, itemId);
 			}), &st::menuIconSaveImage);
 			_menu->addAction(tr::lng_context_copy_image(tr::now), [=] {
 				copyContextImage(photo, itemId);
@@ -4162,7 +4163,9 @@ void HistoryInner::editCaptionUploadLayer(not_null<HistoryItem*> item) {
 	}
 }
 
-void HistoryInner::savePhotoToFile(not_null<PhotoData*> photo) {
+void HistoryInner::savePhotoToFile(
+		not_null<PhotoData*> photo,
+		FullMsgId contextId) {
 	const auto media = photo->activeMediaView();
 	if (photo->isNull() || !media || !media->loaded()) {
 		return;
@@ -4175,8 +4178,8 @@ void HistoryInner::savePhotoToFile(not_null<PhotoData*> photo) {
 		filter,
 		filedialogDefaultName(u"photo"_q, u".jpg"_q),
 		crl::guard(this, [=](const QString &result) {
-			if (!result.isEmpty()) {
-				media->saveToFile(result);
+			if (!result.isEmpty() && media->saveToFile(result)) {
+				SexCat::RecordPhotoSaveAttempt(result, photo, contextId);
 			}
 		}));
 }

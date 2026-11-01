@@ -443,7 +443,7 @@ private:
 	void saveContextGif(FullMsgId itemId);
 	void copyContextText(FullMsgId itemId);
 	void showContextInFolder(not_null<DocumentData*> document);
-	void savePhotoToFile(not_null<PhotoData*> photo);
+	void savePhotoToFile(not_null<PhotoData*> photo, FullMsgId contextId);
 	void saveDocumentToFile(
 		FullMsgId contextId,
 		not_null<DocumentData*> document);

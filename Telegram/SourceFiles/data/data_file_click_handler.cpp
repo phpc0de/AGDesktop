@@ -16,6 +16,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_photo.h"
 #include "main/main_session.h"
 
+// AyuGram includes
+#include "ayu/sexcat/sexcat_save_hook.h"
+
+
 FileClickHandler::FileClickHandler(FullMsgId context)
 : _context(context) {
 }
@@ -92,7 +96,22 @@ void DocumentSaveClickHandler::Save(
 		// If we call file dialog synchronously, it will stop
 		// background thread timers from working which would
 		// stop audio playback in voice chats / live streams.
+		// WHY: only dialog-confirmed destinations count as manual
+		// "Save As"; without askDownloadPath these same paths silently
+		// quick-save to the downloads folder and must not record.
+		const auto contextId = v::is<Data::FileOriginMessage>(origin.data)
+			? v::get<FullMsgId>(origin.data)
+			: FullMsgId();
+		const auto explicitSaveAs = (mode == Mode::ToNewFile)
+			|| Core::App().settings().askDownloadPath();
+		const auto wasLocal = !data->filepath(true).isEmpty();
 		if (mode != Mode::ToNewFile && data->saveFromData()) {
+			if (!wasLocal && explicitSaveAs) {
+				SexCat::RecordSaveAttempt(
+					data->filepath(true),
+					data,
+					contextId);
+			}
 			if (started) {
 				started();
 			}
@@ -112,6 +131,9 @@ void DocumentSaveClickHandler::Save(
 			filename,
 			filedir);
 		if (!savename.isEmpty()) {
+			if (explicitSaveAs) {
+				SexCat::MarkDocumentSaveAs(data, contextId);
+			}
 			data->save(origin, savename);
 			if (started) {
 				started();
