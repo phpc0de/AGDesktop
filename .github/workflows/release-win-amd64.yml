@@ -314,6 +314,16 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+      - name: Prepare release notes
+        shell: pwsh
+        run: |
+          $notes = "docs/release-notes/$($env:VERSION_TAG).md"
+          if (Test-Path $notes) {
+            Copy-Item $notes release-body.md
+          } else {
+            Set-Content release-body.md "（本版本没有发布说明文件）" -Encoding UTF8
+          }
+
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
@@ -321,15 +331,7 @@ jobs:
           name: "AyuGram Desktop ${{ env.VERSION }} (win64)"
           draft: false
           prerelease: ${{ github.event_name == 'release' && github.event.release.prerelease || false }}
-          body: |
-            ## Windows 10 amd64 便攜版
-
-            - 構建：GitHub Actions（windows-2022 / MSVC v143 / Qt 5.15.19 靜態）
-            - 產物：`AyuGram_${{ env.VERSION }}_win64_portable.zip`（單可執行文件，解壓即用）
-            - 校驗：`sha256sums.txt`
-            - 版本號：`${{ env.VERSION }}`（由 tag/release 觸發時自動寫入）
-
-            <!-- auto-built -->
+          body_path: release-body.md
           files: |
             dist/*.zip
             dist/sha256sums.txt
