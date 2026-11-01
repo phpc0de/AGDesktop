@@ -31,6 +31,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 // AyuGram includes
 #include "ayu/ayu_settings.h"
 #include "ayu/features/message_shot/message_shot.h"
+#include "ayu/sexcat/sexcat_badge.h"
 
 
 namespace HistoryView {
@@ -562,6 +563,19 @@ void GroupedMedia::draw(Painter &p, const PaintContext &context) const {
 		drawPurchasedTag(p, fullRect, context);
 	}
 
+	if (!inWebPage
+		&& _parent->media() == this
+		&& !AyuFeatures::MessageShot::isTakingShot()) {
+		const auto fullId = _parent->data()->fullId();
+		SexCat::Badge::PaintBadge(
+			p,
+			fullId.peer,
+			fullId.msg,
+			QRect(0, 0, width(), height()),
+			fullSelection,
+			crl::guard(_parent, [parent = _parent] { parent->repaint(); }));
+	}
+
 	// date
 	if (_parent->media() == this && (!_parent->hasBubble() || isBubbleBottom())) {
 		auto fullRight = width();
@@ -621,6 +635,22 @@ PointState GroupedMedia::pointState(QPoint point) const {
 
 TextState GroupedMedia::textState(QPoint point, StateRequest request) const {
 	const auto groupPadding = groupedPadding();
+	const auto fullId = _parent->data()->fullId();
+	if (SexCat::Badge::ShouldShowBadge(fullId.peer, fullId.msg)
+		&& SexCat::Badge::BadgeRect(QRect(0, 0, width(), height())).contains(point)) {
+		if (SexCat::Badge::SetHovered(fullId.peer, fullId.msg, true)) {
+			_parent->repaint();
+		}
+		auto result = TextState(_parent->data());
+		result.customTooltip = true;
+		result.customTooltipText = tr::lng_sexcat_badge_tooltip(
+			tr::now,
+			lt_path,
+			SexCat::Badge::LastSavedPath(fullId.peer, fullId.msg));
+		return result;
+	} else if (SexCat::Badge::SetHovered(fullId.peer, fullId.msg, false)) {
+		_parent->repaint();
+	}
 	auto result = getPartState(point - QPoint(0, groupPadding.top()), request);
 	if (const auto tagged = lookupSpoilerTagMedia()) {
 		if (QRect(0, 0, width(), height()).contains(point)) {

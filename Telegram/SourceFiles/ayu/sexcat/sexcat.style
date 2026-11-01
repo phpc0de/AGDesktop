@@ -1,0 +1,35 @@
+// This is the source code of AyuGram for Desktop.
+//
+// We do not and cannot prevent the use of our code,
+// but be respectful and credit the original author.
+//
+// Copyright @Radolyn, 2026
+
+using "ui/basic.style";
+using "ui/colors.palette";
+
+sexcatBadgeSize: 14px;
+sexcatBadgeShift: margins(6px, 6px, 6px, 6px);
+sexcatBadgeFg: msgOutDateFg;
+sexcatBadgeFgHover: msgOutDateFgSelected;
+sexcatBadgeFgSelected: msgOutDateFgSelected;
+sexcatBadgeBg: msgServiceFg;
+sexcatBadgeBgHover: msgServiceFg;
+sexcatBadgeBgSelected: msgServiceFg;
+
+sexcatBadgeIcon: icon {
+	{ size(14px, 14px), sexcatBadgeBg },
+	{ "sexcat/saved", sexcatBadgeFg },
+};
+
+sexcatBadgeIconHover: icon {
+	{ size(14px, 14px), sexcatBadgeBgHover },
+	{ "sexcat/saved", sexcatBadgeFgHover },
+};
+
+sexcatBadgeIconSelected: icon {
+	{ size(14px, 14px), sexcatBadgeBgSelected },
+	{ "sexcat/saved", sexcatBadgeFgSelected },
+};
+
+sexcatHistoryWindowSize: size(960px, 640px);

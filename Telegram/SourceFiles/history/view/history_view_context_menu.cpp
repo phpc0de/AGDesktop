@@ -124,6 +124,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 // AyuGram includes
 #include "ayu/ayu_settings.h"
 #include "ayu/features/forward/ayu_forward.h"
+#include "ayu/sexcat/sexcat_badge.h"
+#include "ayu/sexcat/sexcat_save_hook.h"
 #include "ayu/ui/context_menu/context_menu.h"
 
 
@@ -328,7 +330,7 @@ bool HasEditMessageAction(
 	return true;
 }
 
-void SavePhotoToFile(not_null<PhotoData*> photo) {
+void SavePhotoToFile(not_null<PhotoData*> photo, FullMsgId contextId) {
 	const auto media = photo->activeMediaView();
 	if (photo->isNull() || !media || !media->loaded()) {
 		return;
@@ -341,8 +343,8 @@ void SavePhotoToFile(not_null<PhotoData*> photo) {
 		u"JPEG Image (*.jpg);;"_q + FileDialog::AllFilesFilter(),
 		filedialogDefaultName(u"photo"_q, u".jpg"_q),
 		crl::guard(&photo->session(), [=](const QString &result) {
-			if (!result.isEmpty()) {
-				media->saveToFile(result);
+			if (!result.isEmpty() && media->saveToFile(result)) {
+				SexCat::RecordPhotoSaveAttempt(result, photo, contextId);
 			}
 		}));
 }
@@ -380,7 +382,7 @@ void AddPhotoActions(
 			base::fn_delayed(
 				st::defaultDropdownMenu.menu.ripple.hideDuration,
 				&photo->session(),
-				[=] { SavePhotoToFile(photo); }),
+				[=] { SavePhotoToFile(photo, contextId); }),
 			&st::menuIconSaveImage);
 		menu->addAction(tr::lng_context_copy_image(tr::now), [=] {
 			const auto item = photo->owner().message(contextId);
@@ -399,6 +401,9 @@ void AddPhotoActions(
 			tr::lng_context_attached_stickers(tr::now),
 			std::move(callback),
 			&st::menuIconStickers);
+	}
+	if (item) {
+		SexCat::Badge::AddContextMenuActions(menu, item);
 	}
 }
 
@@ -450,6 +455,9 @@ void AddDocumentActions(
 	const auto controller = list->controller();
 	const auto contextId = item ? item->fullId() : FullMsgId();
 	const auto session = &document->session();
+	if (item) {
+		SexCat::Badge::AddContextMenuActions(menu, item);
+	}
 	if (item && document->isGifv()) {
 		const auto notAutoplayedGif = !Data::AutoDownload::ShouldAutoPlay(
 			document->session().settings().autoDownload(),

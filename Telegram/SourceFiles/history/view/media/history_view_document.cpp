@@ -48,6 +48,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 // AyuGram includes
 #include "ayu/ayu_settings.h"
 #include "ayu/features/message_shot/message_shot.h"
+#include "ayu/sexcat/sexcat_badge.h"
 
 
 namespace HistoryView {
@@ -1120,6 +1121,19 @@ void Document::draw(
 			.useFullWidth = true,
 		});
 	}
+
+	if (mode != LayoutMode::Grouped
+		&& _parent->media() == this
+		&& !AyuFeatures::MessageShot::isTakingShot()) {
+		const auto fullId = _realParent->fullId();
+		SexCat::Badge::PaintBadge(
+			p,
+			fullId.peer,
+			fullId.msg,
+			QRect(0, 0, width, bottom),
+			context.selected(),
+			crl::guard(_parent, [parent = _parent] { parent->repaint(); }));
+	}
 }
 
 Ui::BubbleRounding Document::thumbRounding(
@@ -1354,6 +1368,23 @@ TextState Document::textState(
 
 	const auto filenameMoused = QRect(nameleft, nametop, namewidth, st::semiboldFont->height).contains(point);
 	_tooltipFilename.setMoused(filenameMoused);
+
+	const auto fullId = _realParent->fullId();
+	if (mode != LayoutMode::Grouped
+		&& SexCat::Badge::ShouldShowBadge(fullId.peer, fullId.msg)
+		&& SexCat::Badge::BadgeRect(QRect(0, 0, width, bottom)).contains(point)) {
+		if (SexCat::Badge::SetHovered(fullId.peer, fullId.msg, true)) {
+			repaint();
+		}
+		result.customTooltip = true;
+		result.customTooltipText = tr::lng_sexcat_badge_tooltip(
+			tr::now,
+			lt_path,
+			SexCat::Badge::LastSavedPath(fullId.peer, fullId.msg));
+		return result;
+	} else if (SexCat::Badge::SetHovered(fullId.peer, fullId.msg, false)) {
+		repaint();
+	}
 	if (const auto thumbed = Get<HistoryDocumentThumbed>()) {
 		if ((_data->loading() || _data->uploading()) && rthumb.contains(point)) {
 			result.link = _cancell;
