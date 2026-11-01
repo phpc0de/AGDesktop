@@ -11,6 +11,8 @@
 #include "base/unixtime.h"
 #include "core/application.h"
 #include "core/file_utilities.h"
+#include "data/data_peer.h"
+#include "data/data_session.h"
 #include "lang/lang_keys.h"
 #include "main/main_account.h"
 #include "main/main_domain.h"
@@ -20,6 +22,7 @@
 #include "styles/style_windows.h"
 #include "ui/text/format_values.h"
 #include "ui/toast/toast.h"
+#include "window/window_controller.h"
 #include "window/window_session_controller.h"
 
 #include <QComboBox>

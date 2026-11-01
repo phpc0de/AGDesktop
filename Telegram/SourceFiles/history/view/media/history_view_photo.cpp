@@ -496,7 +496,7 @@ void Photo::draw(Painter &p, const PaintContext &context) const {
 		drawPurchasedTag(p, geometry, context);
 	}
 
-	if (!inWebPage && !MessageShot::isTakingShot()) {
+	if (!inWebPage && !AyuFeatures::MessageShot::isTakingShot()) {
 		const auto fullId = _realParent->fullId();
 		SexCat::Badge::PaintBadge(
 			p,

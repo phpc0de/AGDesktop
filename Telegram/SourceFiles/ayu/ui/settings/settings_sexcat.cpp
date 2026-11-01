@@ -14,6 +14,7 @@
 #include "settings/settings_common.h"
 #include "styles/style_menu_icons.h"
 #include "styles/style_settings.h"
+#include "ui/widgets/buttons.h"
 #include "ui/wrap/vertical_layout.h"
 #include "window/window_session_controller.h"
 

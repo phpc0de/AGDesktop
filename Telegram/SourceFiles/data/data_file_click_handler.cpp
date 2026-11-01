@@ -18,6 +18,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "ayu/sexcat/sexcat_save_hook.h"
+#include "core/core_settings.h"
 
 
 FileClickHandler::FileClickHandler(FullMsgId context)

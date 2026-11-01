@@ -18,6 +18,7 @@
 #include "ui/painter.h"
 #include "ui/rect.h"
 #include "ui/widgets/popup_menu.h"
+#include "styles/style_ayu_icons.h"
 #include "styles/style_menu_icons.h"
 #include "styles/style_sexcat.h"
 
@@ -263,7 +264,7 @@ void PaintBadge(
 		: IsHovered(peerId, msgId)
 		? st::sexcatBadgeIconHover
 		: st::sexcatBadgeIcon;
-	icon.paint(p, rect);
+	icon.paintInCenter(p, rect);
 }
 
 void AddContextMenuActions(

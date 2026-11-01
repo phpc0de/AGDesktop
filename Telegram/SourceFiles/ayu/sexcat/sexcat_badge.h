@@ -7,6 +7,7 @@
 #pragma once
 
 #include "base/basic_types.h"
+#include "data/data_msg_id.h"
 #include "data/data_peer_id.h"
 #include "rpl/lifetime.h"
 
