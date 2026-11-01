@@ -9201,3 +9201,24 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "ayu_AboutText1" = "ToS breaking Telegram client based on {api_link}.";
 "ayu_UpdateAyuGram" = "Update AyuGram";
 "ayu_UtilityRestartRequired" = "The app will close in 5 seconds.";
+
+"lng_sexcat_saved_toast" = "Saved · Source recorded";
+"lng_sexcat_badge_tooltip" = "Saved to {path}";
+"lng_sexcat_open_folder" = "Open folder";
+"lng_sexcat_view_history" = "Open download history";
+"lng_sexcat_reverify" = "Re-verify";
+"lng_sexcat_history_title" = "Download History";
+"lng_sexcat_col_time" = "Time";
+"lng_sexcat_col_name" = "File name";
+"lng_sexcat_col_source" = "Source";
+"lng_sexcat_col_path" = "Current path";
+"lng_sexcat_lost" = "Missing";
+"lng_sexcat_relocate" = "Relocate...";
+"lng_sexcat_verify" = "Verify selected";
+"lng_sexcat_settings_toggle" = "Record downloaded files";
+"lng_sexcat_hashing" = "Hashing...";
+"lng_sexcat_filter_all" = "All conversations";
+"lng_sexcat_verify_ok" = "Hash matches the original record.";
+"lng_sexcat_verify_failed" = "Hash mismatch: the file differs from the original.";
+"lng_sexcat_not_recorded" = "This file has no download record.";
+"lng_sexcat_source_gone" = "The source conversation is not available.";

@@ -258,6 +258,18 @@ set(ayugram_files
         ayu/data/entities.h
         ayu/data/ayu_database.cpp
         ayu/data/ayu_database.h
+        ayu/sexcat/sexcat_badge.cpp
+        ayu/sexcat/sexcat_badge.h
+        ayu/sexcat/sexcat_database.cpp
+        ayu/sexcat/sexcat_database.h
+        ayu/sexcat/sexcat_hash_store.cpp
+        ayu/sexcat/sexcat_hash_store.h
+        ayu/sexcat/sexcat_history_window.cpp
+        ayu/sexcat/sexcat_history_window.h
+        ayu/sexcat/sexcat_save_hook.cpp
+        ayu/sexcat/sexcat_save_hook.h
+        ayu/ui/settings/settings_sexcat.cpp
+        ayu/ui/settings/settings_sexcat.h
 
         info/profile/info_profile_music_button.cpp
         info/profile/info_profile_music_button.h
