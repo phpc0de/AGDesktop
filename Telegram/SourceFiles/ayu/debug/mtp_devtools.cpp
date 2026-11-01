@@ -19,6 +19,7 @@
 #include "data/data_peer_id.h"
 #include "data/data_session.h"
 #include "main/main_account.h"
+#include "main/main_domain.h"
 #include "main/main_session.h"
 #include "mtproto/details/mtproto_dump_to_text.h"
 #include "mtproto/mtproto_response.h"
@@ -273,7 +274,9 @@ void SendRawConsoleRequest(const QString &preset, const QString &json) {
 		Ayu::Log::Write(u"mtpdev"_q, u"raw console unknown preset %1"_q.arg(preset));
 		return;
 	}
-	const auto session = Core::App().activeAccount().maybeSession();
+	const auto session = Core::App().domain().started()
+		? Core::App().activeAccount().maybeSession()
+		: nullptr;
 	if (!session) {
 		Ayu::Log::Write(u"mtpdev"_q, u"raw console no session"_q);
 		return;
@@ -705,6 +708,10 @@ void ReplayMtpRequest(
 		Ayu::Log::Write(
 			u"mtpdev"_q,
 			u"replay empty body id=%1"_q.arg(id));
+		return;
+	}
+	if (!Core::App().domain().started()) {
+		Ayu::Log::Write(u"mtpdev"_q, u"replay no account id=%1"_q.arg(id));
 		return;
 	}
 	auto request = MTP::details::SerializedRequest::Prepare(

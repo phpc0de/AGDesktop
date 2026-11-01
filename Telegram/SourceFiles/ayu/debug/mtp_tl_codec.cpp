@@ -13,6 +13,7 @@ https://<obf:github-repo-ref>/blob/dev/LEGAL
 #include "data/data_peer_id.h"
 #include "data/data_session.h"
 #include "main/main_account.h"
+#include "main/main_domain.h"
 #include "main/main_session.h"
 #include "scheme.h"
 
@@ -142,7 +143,9 @@ constexpr auto kMaxRawHexChars = 4096;
 	if (!value) {
 		return {};
 	}
-	const auto session = Core::App().activeAccount().maybeSession();
+	const auto session = Core::App().domain().started()
+		? Core::App().activeAccount().maybeSession()
+		: nullptr;
 	if (!session) {
 		return {};
 	}
