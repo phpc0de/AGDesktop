@@ -243,12 +243,12 @@ jobs:
           }
           # WHY: the /m:2 bulk pass caches most objs fast, and the /m:1
           # retries are incremental, rebuilding only the heap-starved TUs
-          # with a lower per-cl peak, so the passes converge.
+          # and re-running the linker with a lower per-cl peak, so passes converge.
           $code = Invoke-Build 2
-          for ($i = 1; $i -le 3 -and $code -ne 0 -and
-              (Select-String -Path $log -Pattern 'C1060','C1076','C3859' -SimpleMatch -Quiet); $i++) {
+          for ($i = 1; $i -le 4 -and $code -ne 0 -and
+              (Select-String -Path $log -Pattern 'C1060','C1076','C3859','LNK1102','LNK1104','MSB6006' -SimpleMatch -Quiet); $i++) {
             $env:CL = '/cgthreads1'
-            Write-Host "compiler OOM detected - incremental retry $i/3 with /m:1"
+            Write-Host "compiler/linker OOM detected - incremental retry $i/4 with /m:1"
             $code = Invoke-Build 1
           }
           Show-Tail
