@@ -146,32 +146,35 @@ rpl::producer<Entry> Database::newSaved() const {
 	return _newSaved.events();
 }
 
-void Database::RecordSaved(Entry entry) {
+bool Database::RecordSaved(Entry entry) {
 	if (!_enabled || entry.sha256.isEmpty()) {
-		return;
+		return false;
 	}
 	if (entry.saved_at == 0) {
 		entry.saved_at = base::unixtime::now();
 	}
 	auto row = RowFromEntry(entry);
 	row.id = 0;
-	try {
+	{
 		std::lock_guard lock(storageMutex);
-		storage.begin_transaction();
-		row.id = storage.insert(row);
-		storage.commit();
-	} catch (const std::exception &ex) {
 		try {
-			storage.rollback();
-		} catch (...) {
+			storage.begin_transaction();
+			row.id = storage.insert(row);
+			storage.commit();
+		} catch (const std::exception &ex) {
+			try {
+				storage.rollback();
+			} catch (...) {
+			}
+			LogError(u"Failed to record saved file: %1"_q.arg(QString::fromUtf8(ex.what())));
+			return false;
 		}
-		LogError(u"Failed to record saved file: %1"_q.arg(QString::fromUtf8(ex.what())));
-		return;
 	}
 	auto saved = EntryFromRow(std::move(row));
 	crl::on_main([saved = std::move(saved)]() mutable {
 		instance()._newSaved.fire_copy(std::move(saved));
 	});
+	return true;
 }
 
 std::vector<Entry> Database::LookupByHash(QByteArray sha256) {

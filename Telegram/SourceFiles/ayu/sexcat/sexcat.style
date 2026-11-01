@@ -17,17 +17,17 @@ sexcatBadgeBg: msgServiceFg;
 sexcatBadgeBgHover: msgServiceFg;
 sexcatBadgeBgSelected: msgServiceFg;
 
-sexcatBadgeIcon: icon {
+sexcatBadgeIcon: icon{
 	{ size(14px, 14px), sexcatBadgeBg },
 	{ "sexcat/saved", sexcatBadgeFg },
 };
 
-sexcatBadgeIconHover: icon {
+sexcatBadgeIconHover: icon{
 	{ size(14px, 14px), sexcatBadgeBgHover },
 	{ "sexcat/saved", sexcatBadgeFgHover },
 };
 
-sexcatBadgeIconSelected: icon {
+sexcatBadgeIconSelected: icon{
 	{ size(14px, 14px), sexcatBadgeBgSelected },
 	{ "sexcat/saved", sexcatBadgeFgSelected },
 };

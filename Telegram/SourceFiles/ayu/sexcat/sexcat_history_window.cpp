@@ -197,7 +197,7 @@ private:
 		auto rows = std::vector<Row>();
 		for (const auto &entry : Database::instance().Recent(kRecentLimit, {})) {
 			auto row = Row{
-				.id = entry.id,
+				.id = uint64(entry.id),
 				.fileName = entry.file_name,
 				.srcTitle = entry.src_title,
 				.srcPeerId = PeerId(uint64(entry.src_peer_id)),
@@ -206,7 +206,7 @@ private:
 				.savedPath = entry.saved_path,
 				.fileSize = entry.file_size,
 				.sha256 = entry.sha256,
-				.savedAt = entry.saved_at,
+				.savedAt = TimeId(entry.saved_at),
 			};
 			row.lost = !QFileInfo::exists(row.savedPath);
 			rows.push_back(std::move(row));
@@ -405,9 +405,12 @@ private:
 			.src_msg_id = row->srcMsgId.bare,
 			.src_title = row->srcTitle,
 			.src_attach = row->srcAttach,
-			.savedAt = base::unixtime::now(),
+			.saved_at = base::unixtime::now(),
 		};
-		Database::instance().RecordSaved(updated);
+		if (!Database::instance().RecordSaved(std::move(updated))) {
+			Ui::Toast::Show(tr::lng_sexcat_verify_failed(tr::now));
+			return;
+		}
 		row->savedPath = file;
 		row->lost = false;
 		row->hashMismatch = false;

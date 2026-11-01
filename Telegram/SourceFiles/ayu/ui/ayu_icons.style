@@ -80,3 +80,5 @@ ayuHistoryFileOutPlugin: icon {{ "ayu/history_file_plugin", historyFileOutIconFg
 ayuHistoryFileOutPluginSelected: icon {{ "ayu/history_file_plugin", historyFileOutIconFgSelected }};
 
 menuIconClearAttention: icon {{ "menu/clear", menuIconAttentionColor }};
+
+menuIconRefresh: icon {{ "chat/refresh", menuIconColor }};

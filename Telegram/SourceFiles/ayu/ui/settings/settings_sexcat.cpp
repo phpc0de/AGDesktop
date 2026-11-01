@@ -9,6 +9,7 @@
 #include "lang_auto.h"
 #include "ayu/ayu_settings.h"
 #include "ayu/sexcat/sexcat_history_window.h"
+#include "ayu/ui/settings/settings_main.h"
 #include "settings/settings_builder.h"
 #include "settings/settings_common.h"
 #include "styles/style_menu_icons.h"
@@ -17,6 +18,8 @@
 #include "window/window_session_controller.h"
 
 namespace Settings {
+
+using namespace Builder;
 
 namespace {
 

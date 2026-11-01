@@ -131,7 +131,8 @@ void DocumentSaveClickHandler::Save(
 			filename,
 			filedir);
 		if (!savename.isEmpty()) {
-			if (explicitSaveAs) {
+			if (explicitSaveAs && !data->loading()) {
+				// in-flight saves land in the downloads dir, not a confirmed path
 				SexCat::MarkDocumentSaveAs(data, contextId);
 			}
 			data->save(origin, savename);

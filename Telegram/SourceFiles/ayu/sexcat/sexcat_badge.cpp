@@ -79,7 +79,6 @@ std::optional<BadgeKey> &Hovered() {
 	return result;
 }
 
-bool gFeatureEnabled = true;
 
 [[nodiscard]] BadgeKey MakeKey(PeerId peerId, MsgId msgId) {
 	return { peerId.value, msgId.bare };
@@ -123,7 +122,7 @@ void ApplyLookup(
 	auto best = BadgeEntry();
 	auto bestAt = int64(0);
 	for (const auto &record : records) {
-		if (record.saved_at >= bestAt) {
+		if (record.saved_at > bestAt) {
 			bestAt = record.saved_at;
 			best.saved = true;
 			best.lastPath = record.saved_path;
@@ -155,13 +154,9 @@ void EnsureSubscribed() {
 
 } // namespace
 
-void SetFeatureEnabled(bool enabled) {
-	gFeatureEnabled = enabled;
-}
 
 bool FeatureEnabled() {
-	return gFeatureEnabled
-		&& AyuSettings::getInstance().sexcatEnabled()
+	return AyuSettings::getInstance().sexcatEnabled()
 		&& Database::instance().Enabled();
 }
 
@@ -253,12 +248,13 @@ void PaintBadge(
 		PeerId peerId,
 		MsgId msgId,
 		const QRect &mediaRect,
-		bool selected) {
+		bool selected,
+		Fn<void()> refresh) {
 	if (!FeatureEnabled()) {
 		return;
 	}
 	if (!ShouldShowBadge(peerId, msgId)) {
-		Query(peerId, msgId, Lifetime());
+		Query(peerId, msgId, Lifetime(), std::move(refresh));
 		return;
 	}
 	const auto rect = BadgeRect(mediaRect);

@@ -43,7 +43,7 @@ public:
 	Database(const Database &other) = delete;
 	Database &operator=(const Database &other) = delete;
 
-	void RecordSaved(Entry entry);
+	[[nodiscard]] bool RecordSaved(Entry entry);
 	[[nodiscard]] std::vector<Entry> LookupByHash(QByteArray sha256);
 	[[nodiscard]] std::vector<Entry> LookupBySource(PeerId peer, MsgId msg);
 	[[nodiscard]] std::vector<Entry> Recent(int limit, Filter filter = {});

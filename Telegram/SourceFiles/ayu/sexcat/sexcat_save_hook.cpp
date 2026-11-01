@@ -102,7 +102,9 @@ void Persist(
 		.saved_at = base::unixtime::now(),
 	};
 	const auto sha = entry.sha256;
-	Database::instance().RecordSaved(std::move(entry));
+	if (!Database::instance().RecordSaved(std::move(entry))) {
+		return;
+	}
 	HashStore::WriteAds(
 		savedPath,
 		sha,

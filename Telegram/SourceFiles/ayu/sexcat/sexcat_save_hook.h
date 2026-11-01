@@ -13,8 +13,7 @@ class PhotoData;
 
 namespace SexCat {
 
-// Records a manual "Save As" once the file landed on disk; failures
-// only log, the save itself is never affected.
+// Failures only log, the save itself is never affected.
 void RecordSaveAttempt(
 	const QString &savedPath,
 	not_null<DocumentData*> document,
