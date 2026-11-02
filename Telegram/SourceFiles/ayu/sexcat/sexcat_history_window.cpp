@@ -153,7 +153,7 @@ public:
 		});
 		connect(
 			_filter,
-			&QComboBox::currentIndexChanged,
+			qOverload<int>(&QComboBox::currentIndexChanged),
 			this,
 			[=](int) { applyFilter(); });
 		connect(verify, &QPushButton::clicked, this, [=] {
