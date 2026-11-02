@@ -18,6 +18,8 @@
 #include <mutex>
 #include <utility>
 
+namespace SexCat {
+
 using namespace sqlite_orm;
 
 namespace {
@@ -115,8 +117,6 @@ std::string LikePattern(const QString &search) {
 }
 
 } // namespace
-
-namespace SexCat {
 
 Database &Database::instance() {
 	static auto result = Database();

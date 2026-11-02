@@ -262,6 +262,8 @@ set(ayugram_files
         ayu/sexcat/sexcat_badge.h
         ayu/sexcat/sexcat_database.cpp
         ayu/sexcat/sexcat_database.h
+        ayu/sexcat/sexcat_folder_scan.cpp
+        ayu/sexcat/sexcat_folder_scan.h
         ayu/sexcat/sexcat_hash_store.cpp
         ayu/sexcat/sexcat_hash_store.h
         ayu/sexcat/sexcat_history_window.cpp

@@ -7,6 +7,7 @@
 #include "ayu/sexcat/sexcat_history_window.h"
 
 #include "ayu/sexcat/sexcat_database.h"
+#include "ayu/sexcat/sexcat_folder_scan.h"
 #include "ayu/sexcat/sexcat_hash_store.h"
 #include "base/unixtime.h"
 #include "core/application.h"
@@ -19,7 +20,7 @@
 #include "main/main_session.h"
 #include "styles/style_boxes.h"
 #include "styles/style_sexcat.h"
-#include "styles/style_windows.h"
+#include "styles/style_window.h"
 #include "ui/text/format_values.h"
 #include "ui/toast/toast.h"
 #include "window/window_controller.h"
@@ -36,6 +37,8 @@
 #include <QLineEdit>
 #include <QMenu>
 #include <QSet>
+#include <QFileDialog>
+#include <QPointer>
 #include <QPushButton>
 #include <QSignalBlocker>
 #include <QTreeWidget>
@@ -110,9 +113,13 @@ public:
 		auto *verify = new QPushButton(
 			tr::lng_sexcat_verify(tr::now),
 			this);
+		auto *scan = new QPushButton(
+			tr::lng_sexcat_scan_folder(tr::now),
+			this);
 		top->addWidget(_filter, 1);
 		top->addWidget(_search, 2);
 		top->addWidget(verify);
+		top->addWidget(scan);
 		root->addLayout(top);
 
 		_tree = new QTreeWidget(this);
@@ -151,6 +158,46 @@ public:
 			[=](int) { applyFilter(); });
 		connect(verify, &QPushButton::clicked, this, [=] {
 			verifySelected();
+		});
+		connect(scan, &QPushButton::clicked, this, [=] {
+			const auto dir = QFileDialog::getExistingDirectory(
+				this,
+				tr::lng_sexcat_scan_folder(tr::now));
+			if (dir.isEmpty()) {
+				return;
+			}
+			const auto guard = QPointer<QPushButton>(scan);
+			const auto window = QPointer<HistoryWindow>(this);
+			scan->setEnabled(false);
+			SexCat::StartFolderScan(dir, [=](const ScanSummary &s) {
+				if (!guard) {
+					return;
+				}
+				if (s.finished) {
+					guard->setEnabled(true);
+					guard->setText(tr::lng_sexcat_scan_folder(tr::now));
+					Ui::Toast::Show(tr::lng_sexcat_scan_done(
+						tr::now,
+						lt_hashed,
+						QString::number(s.hashed),
+						lt_linked,
+						QString::number(s.linked),
+						lt_marked,
+						QString::number(s.marked),
+						lt_skipped,
+						QString::number(s.alreadyMarked),
+						lt_failed,
+						QString::number(s.failed)));
+					if (window) {
+						window->reload();
+					}
+					return;
+				}
+				guard->setText(tr::lng_sexcat_scan_progress(
+					tr::now,
+					lt_count,
+					QString::number(s.scanned)));
+			});
 		});
 		connect(_tree, &QTreeWidget::itemDoubleClicked, this, [=](
 				QTreeWidgetItem *item,

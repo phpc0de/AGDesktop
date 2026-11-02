@@ -150,6 +150,12 @@ Telegram/Resources/ui/sexcat.style
 - [ ] Commit: `Add sexcat download history window and settings`
 - [ ] 写 `docs/release-notes/v7.2.9-ayu.10.md`，交付 tag `.10`
 
+## 8. 文件夹扫描补录（feature 30）
+
+历史窗口「扫描文件夹」：递归枚举文件，三层哈希复用——已有 ADS/旁车 sha 的直接跳过；
+否则 1MB 分块哈希，sha 命中库记录时取最新记录的源信息回写 ADS 并补录条目（旧下载重链），
+未命中仅写 sha（源 0:0，供后续校验与去重）。超 512MB 与读取失败计入 failed，全程主线程回调。
+
 ## 7. 自测脚本（M4 交付前全过）
 
 1. 另存图片/文件/相册第 2 张 → toast 出现 3 秒消失，db/ADS 各有一条记录
