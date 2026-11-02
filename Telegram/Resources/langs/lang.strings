@@ -9223,5 +9223,5 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_sexcat_not_recorded" = "This file has no download record.";
 "lng_sexcat_source_gone" = "The source conversation is not available.";
 "lng_sexcat_scan_folder" = "Scan Folder";
-"lng_sexcat_scan_progress" = "Scanning… {count}";
+"lng_sexcat_scan_progress" = "Scanning... {processed}";
 "lng_sexcat_scan_done" = "Scan finished. Hashed: {hashed}, linked: {linked}, marked: {marked}, skipped: {skipped}, failed: {failed}.";

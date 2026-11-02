@@ -195,7 +195,7 @@ public:
 				}
 				guard->setText(tr::lng_sexcat_scan_progress(
 					tr::now,
-					lt_count,
+					lt_processed,
 					QString::number(s.scanned)));
 			});
 		});
