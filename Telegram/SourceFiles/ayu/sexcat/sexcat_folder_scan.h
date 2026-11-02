@@ -7,7 +7,6 @@
 #pragma once
 
 #include "base/basic_types.h"
-#include "base/lambda.h"
 
 #include <QString>
 
