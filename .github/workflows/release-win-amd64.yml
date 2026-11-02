@@ -223,6 +223,27 @@ jobs:
             Tee-Object -FilePath "$env:GITHUB_WORKSPACE/configure.log"
           exit $LASTEXITCODE
 
+      - name: Expand pagefile
+        shell: pwsh
+        run: |
+          # WHY: the final link peaks past physical RAM and a memory-stormed
+          # runner agent dies as "lost communication" instead of a build
+          # error; a large explicit pagefile carries the VM through the peak.
+          $cs = Get-CimInstance Win32_ComputerSystem
+          if ($cs.AutomaticManagedPagefile) {
+            Set-CimInstance -InputObject $cs -Property @{ AutomaticManagedPagefile = $false }
+          }
+          $pf = Get-CimInstance Win32_PageFileSetting | Select-Object -First 1
+          if ($pf) {
+            Set-CimInstance -InputObject $pf -Property @{ InitialSize = 8192; MaximumSize = 65536 }
+          } else {
+            New-CimInstance -ClassName Win32_PageFileSetting -Property @{
+              Name = 'C:\pagefile.sys'
+              InitialSize = 8192
+              MaximumSize = 65536
+            }
+          }
+
       - name: Build Telegram (Release, parallel, full log)
         shell: pwsh
         env:
@@ -233,7 +254,9 @@ jobs:
             # WHY: Tee-Object streams every msbuild line through .NET pipeline
             # objects and the pwsh process itself died of OOM on error floods;
             # cmd redirection writes straight to disk with no buffering.
+            Write-Host "build pass /m:$m start $(Get-Date -Format o)"
             cmd /c "cmake --build out --config Release --target Telegram -- /m:$m /v:m /p:MultiProcessorCompilation=false > ""$log"" 2>&1"
+            Write-Host "build pass /m:$m end $(Get-Date -Format o) exit=$LASTEXITCODE"
             return $LASTEXITCODE
           }
           function Show-Tail {
