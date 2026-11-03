@@ -627,6 +627,8 @@ public:
 	[[nodiscard]] rpl::producer<bool> singleCornerRadiusChanges() const { return _singleCornerRadius.changes(); }
 	[[nodiscard]] rpl::producer<bool> streamerModeValue() const { return _streamerMode.value(); }
 	[[nodiscard]] rpl::producer<bool> streamerModeChanges() const { return _streamerMode.changes(); }
+	[[nodiscard]] rpl::producer<bool> folderTagsForceValue() const { return _folderTagsForce.value(); }
+	[[nodiscard]] rpl::producer<bool> folderTagsForceChanges() const { return _folderTagsForce.changes(); }
 
 	friend void to_json(nlohmann::json &j, const AyuSettings &s);
 	friend void from_json(const nlohmann::json &j, AyuSettings &s);

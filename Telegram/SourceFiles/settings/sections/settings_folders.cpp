@@ -1030,8 +1030,10 @@ void BuildTagsSection(SectionBuilder &builder, not_null<FoldersState*> state) {
 		tagsButton->toggleOn(rpl::merge(
 			rpl::combine(
 				session->data().chatsFilters().tagsEnabledValue(),
-				rpl::duplicate(premium),
-				rpl::mappers::_1 && rpl::mappers::_2),
+				rpl::duplicate(premium)
+			) | rpl::map([tagsForce](bool enabled, bool premiumActive) {
+				return enabled && (premiumActive || tagsForce);
+			}),
 			tagsState->tagsTurnOff.events()));
 		rpl::duplicate(premium) | rpl::on_next([=](bool value) {
 			tagsButton->setToggleLocked(!(value || tagsForce));

@@ -448,7 +448,8 @@ void ChatFilters::setPreloaded(
 		const QVector<MTPDialogFilter> &result,
 		bool tagsEnabled) {
 	_loadRequestId = -1;
-	_tagsEnabled = tagsEnabled;
+	_tagsEnabled = tagsEnabled
+		|| AyuSettings::getInstance().folderTagsForce();
 	received(result);
 	crl::on_main(&_owner->session(), [=] {
 		if (_loadRequestId == -1) {
@@ -493,14 +494,29 @@ bool ChatFilters::tagsEnabled() const {
 }
 
 rpl::producer<bool> ChatFilters::tagsEnabledValue() const {
-	return _tagsEnabled.value();
+	return rpl::combine(
+		_tagsEnabled.value(),
+		AyuSettings::getInstance().folderTagsForceValue()
+	) | rpl::map([](bool enabled, bool force) {
+		return enabled || force;
+	});
 }
 
 rpl::producer<bool> ChatFilters::tagsEnabledChanges() const {
-	return _tagsEnabled.changes();
+	return rpl::merge(
+		_tagsEnabled.changes(),
+		AyuSettings::getInstance().folderTagsForceChanges()
+	) | rpl::map([=] {
+		return tagsEnabled();
+	});
 }
 
 void ChatFilters::requestToggleTags(bool value, Fn<void()> fail) {
+	// the toggle stays local in force mode: the server 403s non-premium
+	if (AyuSettings::getInstance().folderTagsForce()) {
+		_tagsEnabled = value;
+		return;
+	}
 	if (_toggleTagsRequestId) {
 		return;
 	}
