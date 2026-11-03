@@ -9,6 +9,7 @@
 #include "ayu/ayu_settings.h"
 #include "ayu/sexcat/sexcat_database.h"
 #include "ayu/sexcat/sexcat_hash_store.h"
+#include "ayu/sexcat/sexcat_shell_watch.h"
 #include "ayu/utils/ayu_log.h"
 #include "base/unixtime.h"
 #include "core/application.h"
@@ -318,6 +319,7 @@ void EnsureDownloadListener() {
 	) | rpl::on_next([=](not_null<const Data::DownloadedId*> id) {
 		HandleLoadedDownload(id);
 	}, lifetime);
+	StartShellWatch();
 }
 
 } // namespace SexCat

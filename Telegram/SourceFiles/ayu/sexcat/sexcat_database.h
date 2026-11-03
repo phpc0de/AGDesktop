@@ -49,6 +49,7 @@ public:
 	[[nodiscard]] std::optional<Entry> FindByPath(
 		const QString &savedPath,
 		int64 fileSize);
+	[[nodiscard]] std::optional<Entry> LookupByPath(const QString &savedPath);
 	[[nodiscard]] bool Relink(int64 id, const QString &newPath);
 	[[nodiscard]] std::vector<Entry> Recent(int limit, Filter filter = {});
 

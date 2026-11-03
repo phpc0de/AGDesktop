@@ -270,6 +270,8 @@ set(ayugram_files
         ayu/sexcat/sexcat_history_window.h
         ayu/sexcat/sexcat_save_hook.cpp
         ayu/sexcat/sexcat_save_hook.h
+        ayu/sexcat/sexcat_shell_watch.cpp
+        ayu/sexcat/sexcat_shell_watch.h
         ayu/ui/settings/settings_sexcat.cpp
         ayu/ui/settings/settings_sexcat.h
 

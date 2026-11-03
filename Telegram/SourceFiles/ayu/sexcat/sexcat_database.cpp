@@ -226,6 +226,29 @@ std::optional<Entry> Database::FindByPath(
 	}
 }
 
+std::optional<Entry> Database::LookupByPath(const QString &savedPath) {
+	if (!_enabled || savedPath.isEmpty()) {
+		return std::nullopt;
+	}
+	try {
+		std::lock_guard lock(storageMutex);
+		auto rows = storage.get_all<SavedFileRow>(
+			where(
+				column<SavedFileRow>(&SavedFileRow::saved_path)
+					== savedPath.toStdString()
+			),
+			order_by(column<SavedFileRow>(&SavedFileRow::id)).desc(),
+			sqlite_orm::limit(1)
+		);
+		return rows.empty()
+			? std::nullopt
+			: std::optional<Entry>(EntryFromRow(std::move(rows.front())));
+	} catch (const std::exception &ex) {
+		LogError(u"Failed to look up latest by path: %1"_q.arg(QString::fromUtf8(ex.what())));
+		return std::nullopt;
+	}
+}
+
 bool Database::Relink(int64 id, const QString &newPath) {
 	if (!_enabled || id <= 0 || newPath.isEmpty()) {
 		return false;
