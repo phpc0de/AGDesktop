@@ -41,6 +41,8 @@
 #include <QPlainTextEdit>
 #include <QPointer>
 #include <QPushButton>
+#include <QScrollBar>
+#include <QTimer>
 #include <QVBoxLayout>
 #include <crl/crl.h>
 
@@ -357,10 +359,12 @@ public:
 		auto *buttons = new QHBoxLayout();
 		_copyText = new QPushButton(u"Copy TL"_q, this);
 		_copyHex = new QPushButton(u"Copy hex"_q, this);
+		_copyAll = new QPushButton(u"Copy all"_q, this);
 		_replay = new QPushButton(u"Replay"_q, this);
 		_editReplay = new QPushButton(u"Edit & Replay"_q, this);
 		buttons->addWidget(_copyText);
 		buttons->addWidget(_copyHex);
+		buttons->addWidget(_copyAll);
 		buttons->addWidget(_replay);
 		buttons->addWidget(_editReplay);
 		buttons->addStretch(1);
@@ -381,6 +385,7 @@ public:
 		_hexView->setToolTip(
 			u"Show raw 32-bit words instead of the decoded TL tree."_q);
 		_copyHex->setToolTip(u"Copy raw 32-bit words of the packet."_q);
+		_copyAll->setToolTip(u"Copy every visible row with its header and text."_q);
 		_consoleParams = new QPlainTextEdit(this);
 		_consoleParams->setMaximumHeight(110);
 		_consoleParams->setPlaceholderText(u"JSON params (peer: {\"user\":id} / {\"chat\":id} / {\"channel\":id})"_q);
@@ -429,9 +434,15 @@ public:
 			}
 			QApplication::clipboard()->setText(parts.join(u" "_q));
 		});
+		connect(_copyAll, &QPushButton::clicked, this, [=] {
+			QApplication::clipboard()->setText(copyAllText());
+		});
 		connect(_replay, &QPushButton::clicked, this, [=] {
 			const auto entry = entryAt(_list->currentRow());
 			if (!entry || entry->kind != 0) {
+				Ayu::Log::Write(
+					u"mtpdev"_q,
+					u"replay click ignored: no request row selected"_q);
 				return;
 			}
 			ReplayMtpRequest(entry->requestId);
@@ -439,6 +450,9 @@ public:
 		connect(_editReplay, &QPushButton::clicked, this, [=] {
 			const auto entry = entryAt(_list->currentRow());
 			if (!entry || entry->kind != 0 || entry->body.isEmpty()) {
+				Ayu::Log::Write(
+					u"mtpdev"_q,
+					u"edit replay click ignored: no replayable row selected"_q);
 				return;
 			}
 			// WHY: the non-modal dialog lets live traffic keep flowing.
@@ -456,6 +470,14 @@ public:
 			editor->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
 			editor->setPlainText(entry->text);
 			layout->addWidget(editor, 1);
+			auto *errorLabel = new QLabel(dialog);
+			errorLabel->setWordWrap(true);
+			layout->addWidget(errorLabel);
+			auto *preview = new QPlainTextEdit(dialog);
+			preview->setReadOnly(true);
+			preview->setLineWrapMode(QPlainTextEdit::NoWrap);
+			preview->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
+			layout->addWidget(preview, 2);
 			auto *row = new QHBoxLayout();
 			auto *send = new QPushButton(u"Encode & Replay"_q, dialog);
 			auto *cancel = new QPushButton(u"Cancel"_q, dialog);
@@ -468,6 +490,29 @@ public:
 				&QPushButton::clicked,
 				dialog,
 				&QDialog::reject);
+			auto *debounce = new QTimer(dialog);
+			debounce->setSingleShot(true);
+			debounce->setInterval(300);
+			const auto updatePreview = [=] {
+				auto body = QVector<mtpPrime>();
+				auto error = QString();
+				if (!ParseTlText(editor->toPlainText(), body, error)) {
+					errorLabel->setText(error);
+					return;
+				}
+				if (body.isEmpty()) {
+					errorLabel->setText(u"Encoded body is empty."_q);
+					return;
+				}
+				const auto *from = body.constData();
+				preview->setPlainText(DecodeTlBody(from, from + body.size()));
+				errorLabel->clear();
+			};
+			QObject::connect(editor, &QPlainTextEdit::textChanged, dialog, [=] {
+				debounce->start();
+			});
+			QObject::connect(debounce, &QTimer::timeout, dialog, updatePreview);
+			updatePreview();
 			QObject::connect(send, &QPushButton::clicked, dialog, [=] {
 				auto body = QVector<mtpPrime>();
 				auto error = QString();
@@ -518,6 +563,7 @@ private:
 		_replay->setEnabled(replayable);
 		_editReplay->setEnabled(replayable);
 		_copyHex->setEnabled(entry && !entry->body.isEmpty());
+		_copyAll->setEnabled(!_rows.empty());
 	}
 
 	[[nodiscard]] QString entryText(const MtpEntry &entry) const {
@@ -535,7 +581,29 @@ private:
 		return &_rows[row];
 	}
 
+	[[nodiscard]] QString copyAllText() const {
+		auto blocks = QStringList();
+		blocks.reserve(int(_rows.size()) * 2);
+		for (const auto &entry : _rows) {
+			const auto time = QDateTime::fromMSecsSinceEpoch(entry.when)
+				.time().toString(u"HH:mm:ss.zzz"_q);
+			blocks << u"#%1  %2  %3  %4"_q
+				.arg(entry.requestId)
+				.arg(time)
+				.arg(KindName(entry.kind))
+				.arg(FirstLine(entry.name));
+			blocks << entry.text;
+		}
+		auto text = blocks.join(u"\n\n"_q);
+		if (text.size() > kMaxTextChars) {
+			text = text.left(kMaxTextChars) + u"\n... (truncated)"_q;
+		}
+		return text;
+	}
+
 	void refreshSoft() {
+		const auto bar = _list->verticalScrollBar();
+		const auto atBottom = bar && bar->value() >= bar->maximum();
 		const auto key = _selectedKey;
 		refresh();
 		if (key >= 0) {
@@ -547,7 +615,9 @@ private:
 				}
 			}
 		}
-		_list->scrollToBottom();
+		if (atBottom) {
+			_list->scrollToBottom();
+		}
 	}
 
 	void refresh() {
@@ -585,6 +655,7 @@ private:
 	QPlainTextEdit *_detail = nullptr;
 	QPushButton *_copyText = nullptr;
 	QPushButton *_copyHex = nullptr;
+	QPushButton *_copyAll = nullptr;
 	QPushButton *_replay = nullptr;
 	QPushButton *_editReplay = nullptr;
 	QComboBox *_consolePreset = nullptr;
@@ -701,6 +772,7 @@ void ReplayMtpRequest(
 		Ayu::Log::Write(
 			u"mtpdev"_q,
 			u"replay miss id=%1"_q.arg(id));
+		::Ui::Toast::Show(u"Replay skipped: entry evicted (600 cap)"_q);
 		return;
 	}
 	const auto &body = overrideBody ? *overrideBody : it->body;
@@ -708,10 +780,12 @@ void ReplayMtpRequest(
 		Ayu::Log::Write(
 			u"mtpdev"_q,
 			u"replay empty body id=%1"_q.arg(id));
+		::Ui::Toast::Show(u"Replay skipped: empty packet body"_q);
 		return;
 	}
 	if (!Core::App().domain().started()) {
 		Ayu::Log::Write(u"mtpdev"_q, u"replay no account id=%1"_q.arg(id));
+		::Ui::Toast::Show(u"Replay skipped: no active account"_q);
 		return;
 	}
 	auto request = MTP::details::SerializedRequest::Prepare(
@@ -741,6 +815,7 @@ void ReplayMtpRequest(
 						.arg(id)
 						.arg(newId)
 						.arg(error.type()));
+				::Ui::Toast::Show(u"Replay failed: %1"_q.arg(error.type()));
 				return false;
 			}},
 		it->dc,
