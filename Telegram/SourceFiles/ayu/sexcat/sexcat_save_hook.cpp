@@ -307,7 +307,7 @@ void MarkDocumentSaveAs(
 		FullMsgId contextId) {
 	PruneStalePending();
 	auto &map = PendingMap();
-	if (map.size() >= kPendingSaveAsMax) {
+	if (map.size() >= size_t(kPendingSaveAsMax)) {
 		map.clear();
 	}
 	map[document.get()] = PendingSaveAs{ contextId, crl::now() };

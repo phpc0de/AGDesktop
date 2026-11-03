@@ -602,7 +602,7 @@ private:
 				.arg(KindName(entry.kind))
 				.arg(FirstLine(entry.name));
 			blocks << entry.text;
-			total += entry.text.size() + 4;
+			total += int(entry.text.size()) + 4;
 			if (total > kMaxTextChars) {
 				break;
 			}
