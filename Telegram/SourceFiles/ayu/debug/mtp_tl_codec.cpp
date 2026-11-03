@@ -174,7 +174,7 @@ constexpr auto kMaxRawHexChars = 4096;
 	// WHY: generic `id` fields carry no kind in their name and the owner
 	// route can still miss, so id-like fields are probed user→chat→channel
 	// via peerLoaded; probing every value would mislabel dates and limits.
-	if (field.contains(u"id"_q)) {
+	if (field == u"id"_q || field.endsWith(u"_id"_q)) {
 		for (const auto kind : { u"user"_q, u"chat"_q, u"channel"_q }) {
 			push(kind);
 		}
