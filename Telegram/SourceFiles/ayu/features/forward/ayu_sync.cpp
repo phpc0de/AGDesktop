@@ -9,6 +9,7 @@
 #include "api/api_common.h"
 #include "api/api_sending.h"
 #include "apiwrap.h"
+#include "ayu/utils/ayu_log.h"
 #include "ayu/utils/telegram_helpers.h"
 #include "base/base_file_utilities.h"
 #include "core/application.h"
@@ -146,6 +147,11 @@ void ReleaseDocumentDownloadConsumer(
 			return DownloadWaitResult::Completed;
 		}
 	}
+}
+
+[[nodiscard]] qint64 ElapsedMs(std::chrono::steady_clock::time_point started) {
+	return std::chrono::duration_cast<std::chrono::milliseconds>(
+		std::chrono::steady_clock::now() - started).count();
 }
 
 [[nodiscard]] bool SameFilePath(const QString &left, const QString &right) {
@@ -415,11 +421,19 @@ QString loadDocumentSync(
 		}, state->lifetime);
 	});
 	registrationActive = false;
+	const auto waitStarted = std::chrono::steady_clock::now();
 	const auto waitResult = WaitForDownload(
 			registration.state->done,
 			kDocumentDownloadTimeout,
 			cancelled);
 	if (waitResult != DownloadWaitResult::Completed) {
+		if (waitResult == DownloadWaitResult::TimedOut) {
+			Ayu::Log::Write(
+				u"forward"_q,
+				u"loadDocumentSync timeout doc=%1 wait=%2ms"_q
+					.arg(data->id)
+					.arg(ElapsedMs(waitStarted)));
+		}
 		return {};
 	}
 	path = registration.state->readyPath;
@@ -490,7 +504,18 @@ void loadPhotoSync(
 								  *lifetime);
 	});
 
-	(void)WaitForDownload(*latch, std::chrono::minutes(5), cancelled);
+	const auto waitStarted = std::chrono::steady_clock::now();
+	const auto waitResult = WaitForDownload(
+		*latch,
+		std::chrono::minutes(5),
+		cancelled);
+	if (waitResult == DownloadWaitResult::TimedOut) {
+		Ayu::Log::Write(
+			u"forward"_q,
+			u"loadPhotoSync timeout photo=%1 wait=%2ms"_q
+				.arg(photo->id)
+				.arg(ElapsedMs(waitStarted)));
+	}
 	crl::on_main([lifetime = base::take(lifetime)]
 	{
 		lifetime->destroy();
@@ -529,7 +554,14 @@ void waitForMsgSync(not_null<Main::Session*> session, const Api::SendAction &act
 									  *lifetime);
 	});
 
-	latch->await(std::chrono::minutes(5));
+	const auto waitStarted = std::chrono::steady_clock::now();
+	if (!latch->await(std::chrono::minutes(5))) {
+		Ayu::Log::Write(
+			u"forward"_q,
+			u"waitForMsgSync timeout dest=%1 wait=%2ms"_q
+				.arg(action.history->peer->id.value)
+				.arg(ElapsedMs(waitStarted)));
+	}
 	crl::on_main([lifetime = base::take(lifetime)]
 	{
 		lifetime->destroy();

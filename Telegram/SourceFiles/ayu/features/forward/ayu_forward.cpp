@@ -577,6 +577,13 @@ void zeroCostForward(
 	auto fallback = std::make_shared<std::vector<not_null<HistoryItem*>>>();
 	auto finished = std::make_shared<bool>(false);
 	const auto settle = [=] {
+		Ayu::Log::Write(
+			u"forward"_q,
+			u"zerocost settle sent=%1 total=%2 fallback=%3 dest=%4"_q
+				.arg(state->sentMessages)
+				.arg(state->totalMessages)
+				.arg(fallback->size())
+				.arg(peer->id.value));
 		if (*finished || *remaining > 0) {
 			return;
 		}
@@ -593,14 +600,27 @@ void zeroCostForward(
 			Ayu::Log::Write(
 				u"forward"_q,
 				u"zerocost fallback full items=%1"_q.arg(fallback->size()));
-			forwardMessages(
+			auto items = std::move(*fallback);
+			Ayu::Log::Write(
+				u"forward"_q,
+				u"zerocost fallback async dispatch items=%1 dest=%2"_q
+					.arg(items.size())
+					.arg(peer->id.value));
+			crl::async([
 				session,
 				action,
-				false,
-				Data::ResolvedForwardDraft{
-					.items = std::move(*fallback),
-					.options = draft.options,
-				});
+				options = draft.options,
+				items = std::move(items)
+			]() mutable {
+				forwardMessages(
+					session,
+					action,
+					false,
+					Data::ResolvedForwardDraft{
+						.items = std::move(items),
+						.options = options,
+					});
+			});
 		}
 	};
 	const auto mediaToMtp = [](Data::Media *media) {
@@ -682,7 +702,9 @@ void zeroCostForward(
 					u"zerocost media ok item=%1 dest=%2"_q
 						.arg(item->id.bare)
 						.arg(peer->id.value));
-				session->api().applyUpdates(result);
+				crl::on_main([=] {
+					session->api().applyUpdates(result);
+				});
 				state->sentMessages++;
 				(*remaining)--;
 				settle();
@@ -732,7 +754,9 @@ void zeroCostForward(
 				u"zerocost album ok count=%1 dest=%2"_q
 					.arg(unit.items.size())
 					.arg(peer->id.value));
-			session->api().applyUpdates(result);
+			crl::on_main([=] {
+				session->api().applyUpdates(result);
+			});
 			state->sentMessages += int(unit.items.size());
 			(*remaining)--;
 			settle();
