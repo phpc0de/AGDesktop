@@ -939,6 +939,11 @@ topBarAyuCheckpoint: IconButton(topBarSearch) {
 	iconOver: icon {{ "menu/show_in_chat", menuIconFgOver }};
 	iconPosition: point(8px, 10px);
 }
+topBarAyuDownloads: IconButton(topBarAyuCheckpoint) {
+	icon: icon {{ "menu/download", menuIconFg }};
+	iconOver: icon {{ "menu/download", menuIconFgOver }};
+	iconPosition: point(8px, 10px);
+}
 topBarCallSkip: -1px;
 topBarMenuToggle: IconButton(topBarSearch) {
 	width: 44px;

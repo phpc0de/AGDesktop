@@ -9,6 +9,7 @@
 
 #include "ayu/sexcat/sexcat_database.h"
 #include "ayu/sexcat/sexcat_history_window.h"
+#include "ayu/sexcat/sexcat_save_hook.h"
 #include "crl/crl_async.h"
 #include "crl/crl_on_main.h"
 #include "data/data_msg_id.h"
@@ -188,6 +189,7 @@ void Query(PeerId peerId, MsgId msgId, rpl::lifetime &alive, Fn<void()> refresh)
 		return;
 	}
 	EnsureSubscribed();
+	EnsureDownloadListener();
 	const auto key = MakeKey(peerId, msgId);
 	if (CacheIndex().contains(key) || !Pending().insert(key).second) {
 		return;

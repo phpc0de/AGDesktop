@@ -1,4 +1,4 @@
-﻿// This is the source code of AyuGram for Desktop.
+// This is the source code of AyuGram for Desktop.
 //
 // We do not and cannot prevent the use of our code,
 // but be respectful and credit the original author.
@@ -10,14 +10,41 @@
 #include "ayu/utils/ayu_mapper.h"
 #include "ayu/utils/telegram_helpers.h"
 #include "base/unixtime.h"
+#include "core/application.h"
 #include "data/data_forum_topic.h"
 #include "data/data_session.h"
 #include "history/history.h"
 #include "history/history_item.h"
 #include "history/history_item_components.h"
+#include "lang_auto.h"
 #include "main/main_session.h"
+#include "ui/text/text_entity.h"
+#include "ui/toast/toast.h"
+#include "window/window_controller.h"
+#include "window/window_session_controller.h"
 
 namespace AyuMessages {
+
+namespace {
+
+constexpr auto kCheckpointToastDuration = crl::time(3000);
+
+void ShowCheckpointSavedToast() {
+	auto text = tr::lng_ayu_checkpoint_saved(tr::now);
+	auto config = Ui::Toast::Config{
+		.text = TextWithEntities{ std::move(text) },
+		.duration = kCheckpointToastDuration,
+	};
+	if (const auto window = Core::App().activeWindow()) {
+		if (const auto controller = window->sessionController()) {
+			controller->showToast(std::move(config));
+			return;
+		}
+	}
+	Ui::Toast::Show(std::move(config));
+}
+
+} // namespace
 
 template<typename DerivedMessage>
 std::vector<AyuMessageBase> convertToBase(const std::vector<DerivedMessage> &messages) {
@@ -146,15 +173,19 @@ void clearDeletedMessages(not_null<PeerData*> peer, ID topicId) {
 }
 
 
-void setCheckpoint(not_null<HistoryItem*> item) {
+bool setCheckpoint(not_null<HistoryItem*> item) {
 	const auto peer = item->history()->peer;
 	const ID userId = peer->session().userId().bare & PeerId::kChatTypeMask;
 	const ID topicId = item->topic() ? item->topicRootId().bare : 0;
-	AyuDatabase::setCheckpoint(
+	const auto ok = AyuDatabase::setCheckpoint(
 		userId,
 		getDialogIdFromPeer(peer),
 		topicId,
 		item->id.bare);
+	if (ok) {
+		ShowCheckpointSavedToast();
+	}
+	return ok;
 }
 
 std::optional<Checkpoint> getCheckpoint(not_null<PeerData*> peer, ID topicId) {

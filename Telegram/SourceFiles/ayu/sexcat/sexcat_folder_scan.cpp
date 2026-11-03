@@ -25,6 +25,35 @@ constexpr auto kMaxHashBytes = qint64(512 * 1024 * 1024);
 
 using Progress = Fn<void(const ScanSummary &)>;
 
+// WHY: NTFS moves on the same volume carry the ADS marker along, so an
+// already-marked file may still be the lost copy of a known record.
+[[nodiscard]] bool RelinkLostEntry(
+		const QString &path,
+		const HashHit &hit,
+		ScanSummary &summary) {
+	const auto hits = Database::instance().LookupByHash(hit.sha256);
+	const Entry *lost = nullptr;
+	for (const auto &entry : hits) {
+		if (!QFileInfo::exists(entry.saved_path)) {
+			lost = &entry;
+			break;
+		}
+	}
+	if (!lost) {
+		return false;
+	}
+	if (!Database::instance().Relink(lost->id, path)) {
+		return false;
+	}
+	const auto peer = PeerId(uint64(lost->src_peer_id));
+	const auto msg = MsgId(lost->src_msg_id);
+	if (!HashStore::WriteAds(path, hit.sha256, peer, msg)) {
+		HashStore::TrySidecar(path, hit.sha256, peer, msg);
+	}
+	summary.linked++;
+	return true;
+}
+
 void PumpNext(
 		const std::shared_ptr<ScanSummary> &summary,
 		const std::shared_ptr<QDirIterator> &iterator,
@@ -32,7 +61,12 @@ void PumpNext(
 	while (iterator->hasNext()) {
 		const auto path = iterator->next();
 		summary->scanned++;
-		if (HashStore::ReadAds(path)) {
+		if (const auto hit = HashStore::ReadAds(path)) {
+			if (hit->sha256.size() == 32
+				&& RelinkLostEntry(path, *hit, *summary)) {
+				progress(*summary);
+				continue;
+			}
 			summary->alreadyMarked++;
 			progress(*summary);
 			continue;

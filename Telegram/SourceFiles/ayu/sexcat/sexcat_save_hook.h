@@ -33,4 +33,7 @@ void NotifyDocumentSaved(
 	not_null<DocumentData*> document);
 void ForgetDoctrineSaveAs(not_null<DocumentData*> document);
 
+// Installs the download-manager hook once; safe to call repeatedly.
+void EnsureDownloadListener();
+
 } // namespace SexCat

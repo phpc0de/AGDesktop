@@ -647,7 +647,7 @@ bool hasPerDialogFilters() {
 	}
 }
 
-void setCheckpoint(ID userId, ID dialogId, ID topicId, ID messageId) {
+bool setCheckpoint(ID userId, ID dialogId, ID topicId, ID messageId) {
 	try {
 		storage.begin_transaction();
 		storage.remove_all<Checkpoint>(
@@ -665,12 +665,14 @@ void setCheckpoint(ID userId, ID dialogId, ID topicId, ID messageId) {
 		checkpoint.date = base::unixtime::now();
 		storage.insert(checkpoint);
 		storage.commit();
+		return true;
 	} catch (std::exception &ex) {
 		try {
 			storage.rollback();
 		} catch (...) {
 		}
 		LOG(("Failed to save checkpoint for some reason: %1").arg(ex.what()));
+		return false;
 	}
 }
 

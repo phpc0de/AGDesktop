@@ -9,6 +9,8 @@
 #include "ayu/sexcat/sexcat_database.h"
 #include "ayu/sexcat/sexcat_folder_scan.h"
 #include "ayu/sexcat/sexcat_hash_store.h"
+#include "ayu/sexcat/sexcat_save_hook.h"
+#include "ayu/ui/toasts.h"
 #include "base/unixtime.h"
 #include "core/application.h"
 #include "core/file_utilities.h"
@@ -54,7 +56,8 @@ constexpr auto kColTime = 0;
 constexpr auto kColName = 1;
 constexpr auto kColSource = 2;
 constexpr auto kColPath = 3;
-constexpr auto kColCount = 4;
+constexpr auto kColSha = 4;
+constexpr auto kColCount = 5;
 
 [[nodiscard]] QByteArray ComputeFileSha256(const QString &path) {
 	QFile file(path);
@@ -96,6 +99,20 @@ struct Row {
 	return text;
 }
 
+[[nodiscard]] QString ShaDisplayText(const QByteArray &sha256) {
+	if (sha256.isEmpty()) {
+		return u"—"_q;
+	}
+	const auto hex = QString::fromLatin1(sha256.toHex());
+	return (hex.size() > 20)
+		? (hex.left(8) + u"…"_q + hex.right(8))
+		: hex;
+}
+
+[[nodiscard]] QString ShaFullText(const QByteArray &sha256) {
+	return QString::fromLatin1(sha256.toHex());
+}
+
 class HistoryWindow final : public QWidget {
 public:
 	HistoryWindow() {
@@ -116,10 +133,14 @@ public:
 		auto *scan = new QPushButton(
 			tr::lng_sexcat_scan_folder(tr::now),
 			this);
+		auto *selectAll = new QPushButton(
+			tr::lng_sexcat_select_all(tr::now),
+			this);
 		top->addWidget(_filter, 1);
 		top->addWidget(_search, 2);
 		top->addWidget(verify);
 		top->addWidget(scan);
+		top->addWidget(selectAll);
 		root->addLayout(top);
 
 		_tree = new QTreeWidget(this);
@@ -129,6 +150,7 @@ public:
 			tr::lng_sexcat_col_name(tr::now),
 			tr::lng_sexcat_col_source(tr::now),
 			tr::lng_sexcat_col_path(tr::now),
+			tr::lng_sexcat_col_sha(tr::now),
 		});
 		_tree->setRootIsDecorated(false);
 		_tree->setUniformRowHeights(true);
@@ -143,6 +165,7 @@ public:
 			kColSource,
 			QHeaderView::ResizeToContents);
 		header->setSectionResizeMode(kColPath, QHeaderView::Stretch);
+		header->setSectionResizeMode(kColSha, QHeaderView::ResizeToContents);
 		root->addWidget(_tree, 1);
 
 		connect(this, &QObject::destroyed, [] {
@@ -176,7 +199,7 @@ public:
 				if (s.finished) {
 					guard->setEnabled(true);
 					guard->setText(tr::lng_sexcat_scan_folder(tr::now));
-					Ui::Toast::Show(tr::lng_sexcat_scan_done(
+					const auto text = tr::lng_sexcat_scan_done(
 						tr::now,
 						lt_hashed,
 						QString::number(s.hashed),
@@ -187,7 +210,12 @@ public:
 						lt_skipped,
 						QString::number(s.alreadyMarked),
 						lt_failed,
-						QString::number(s.failed)));
+						QString::number(s.failed));
+					if (window) {
+						Ui::Toast::Show(window.data(), text);
+					} else {
+						Ui::Toast::Show(text);
+					}
 					if (window) {
 						window->reload();
 					}
@@ -198,6 +226,9 @@ public:
 					lt_processed,
 					QString::number(s.scanned)));
 			});
+		});
+		connect(selectAll, &QPushButton::clicked, this, [=] {
+			_tree->selectAll();
 		});
 		connect(_tree, &QTreeWidget::itemDoubleClicked, this, [=](
 				QTreeWidgetItem *item,
@@ -327,6 +358,8 @@ private:
 			QString::number(row.srcPeerId.value));
 		item->setText(kColPath, RowPathText(row));
 		item->setToolTip(kColPath, row.savedPath);
+		item->setText(kColSha, ShaDisplayText(row.sha256));
+		item->setToolTip(kColSha, ShaFullText(row.sha256));
 		if (row.verifying) {
 			item->setText(kColPath, tr::lng_sexcat_hashing(tr::now));
 		}
@@ -541,6 +574,18 @@ private:
 		menu->addAction(tr::lng_sexcat_verify(tr::now), [=] {
 			startVerification(id);
 		});
+		if (!row->sha256.isEmpty()) {
+			const auto sha = row->sha256;
+			menu->addAction(tr::lng_sexcat_copy_sha(tr::now), [=] {
+				Ayu::Ui::ShowCopyableDetails(
+					tr::lng_sexcat_col_sha(tr::now),
+					ShaFullText(sha));
+			});
+		}
+		menu->addSeparator();
+		menu->addAction(tr::lng_sexcat_select_all(tr::now), [=] {
+			_tree->selectAll();
+		});
 		menu->popup(_tree->viewport()->mapToGlobal(pos));
 	}
 
@@ -555,6 +600,7 @@ private:
 } // namespace
 
 void OpenHistoryWindow() {
+	EnsureDownloadListener();
 	HistoryWindow::ShowExisting();
 }
 

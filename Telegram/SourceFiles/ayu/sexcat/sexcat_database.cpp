@@ -200,6 +200,49 @@ std::vector<Entry> Database::LookupByHash(QByteArray sha256) {
 	}
 }
 
+std::optional<Entry> Database::FindByPath(
+		const QString &savedPath,
+		int64 fileSize) {
+	if (!_enabled || savedPath.isEmpty()) {
+		return std::nullopt;
+	}
+	try {
+		std::lock_guard lock(storageMutex);
+		auto rows = storage.get_all<SavedFileRow>(
+			where(
+				column<SavedFileRow>(&SavedFileRow::saved_path)
+					== savedPath.toStdString()
+				and column<SavedFileRow>(&SavedFileRow::file_size) == fileSize
+			),
+			order_by(column<SavedFileRow>(&SavedFileRow::id)).desc(),
+			sqlite_orm::limit(1)
+		);
+		return rows.empty()
+			? std::nullopt
+			: std::optional<Entry>(EntryFromRow(std::move(rows.front())));
+	} catch (const std::exception &ex) {
+		LogError(u"Failed to look up by path: %1"_q.arg(QString::fromUtf8(ex.what())));
+		return std::nullopt;
+	}
+}
+
+bool Database::Relink(int64 id, const QString &newPath) {
+	if (!_enabled || id <= 0 || newPath.isEmpty()) {
+		return false;
+	}
+	try {
+		std::lock_guard lock(storageMutex);
+		storage.update_all<SavedFileRow>(
+			set(column<SavedFileRow>(&SavedFileRow::saved_path)
+				= newPath.toStdString()),
+			where(column<SavedFileRow>(&SavedFileRow::id) == id));
+		return true;
+	} catch (const std::exception &ex) {
+		LogError(u"Failed to relink saved file: %1"_q.arg(QString::fromUtf8(ex.what())));
+		return false;
+	}
+}
+
 std::vector<Entry> Database::LookupBySource(PeerId peer, MsgId msg) {
 	if (!_enabled || !peer || !msg) {
 		return {};

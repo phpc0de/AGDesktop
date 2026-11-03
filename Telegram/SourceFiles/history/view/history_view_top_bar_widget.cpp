@@ -76,6 +76,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ayu/ayu_settings.h"
 #include "ayu/data/entities.h"
 #include "ayu/data/messages_storage.h"
+#include "ayu/sexcat/sexcat_history_window.h"
 #include "ayu/ui/toasts.h"
 #include "ayu/utils/ayu_log.h"
 #include "boxes/peers/edit_participants_box.h"
@@ -141,6 +142,7 @@ TopBarWidget::TopBarWidget(
 , _groupCall(this, st::topBarGroupCall)
 , _search(this, st::topBarSearch)
 , _jumpCheckpoint(this, st::topBarAyuCheckpoint)
+, _openDownloads(this, st::topBarAyuDownloads)
 , _infoToggle(this, st::topBarInfo)
 , _menuToggle(this, st::topBarMenuToggle)
 , _recentActions(this, st::topBarRecentActions)
@@ -182,6 +184,8 @@ TopBarWidget::TopBarWidget(
 	_infoToggle->setClickedCallback([=] { toggleInfoSection(); });
 	_jumpCheckpoint->setClickedCallback([=] { jumpToCheckpoint(); });
 	_jumpCheckpoint->setToolTip(tr::ayu_JumpToCheckpointMenuText(tr::now));
+	_openDownloads->setClickedCallback([=] { openDownloads(); });
+	_openDownloads->setToolTip(tr::lng_sexcat_history_title(tr::now));
 
 	_recentActions->setClickedCallback([=]
 	{
@@ -1159,6 +1163,7 @@ void TopBarWidget::updateSearchVisibility() {
 		|| (_activeChat.section == Section::SavedSublist
 			&& _activeChat.key.sublist());
 	_jumpCheckpoint->setVisible(searchAllowedMode && !_chooseForReportReason);
+	_openDownloads->setVisible(searchAllowedMode && !_chooseForReportReason);
 	_search->setVisible(searchAllowedMode && !_chooseForReportReason);
 }
 
@@ -1198,6 +1203,10 @@ void TopBarWidget::jumpToCheckpoint() {
 			Window::SectionShow::Way::ClearStack,
 			MsgId(checkpoint->messageId));
 	}
+}
+
+void TopBarWidget::openDownloads() {
+	SexCat::OpenHistoryWindow();
 }
 
 void TopBarWidget::updateInfoButtonVisibility() {
@@ -1387,6 +1396,11 @@ void TopBarWidget::updateControlsGeometry() {
 	_jumpCheckpoint->moveToRight(_rightTaken, otherButtonsTop);
 	if (!_jumpCheckpoint->isHidden()) {
 		_rightTaken += _jumpCheckpoint->width();
+	}
+
+	_openDownloads->moveToRight(_rightTaken, otherButtonsTop);
+	if (!_openDownloads->isHidden()) {
+		_rightTaken += _openDownloads->width();
 	}
 
 	_search->moveToRight(_rightTaken, otherButtonsTop);

@@ -46,6 +46,10 @@ public:
 	[[nodiscard]] bool RecordSaved(Entry entry);
 	[[nodiscard]] std::vector<Entry> LookupByHash(QByteArray sha256);
 	[[nodiscard]] std::vector<Entry> LookupBySource(PeerId peer, MsgId msg);
+	[[nodiscard]] std::optional<Entry> FindByPath(
+		const QString &savedPath,
+		int64 fileSize);
+	[[nodiscard]] bool Relink(int64 id, const QString &newPath);
 	[[nodiscard]] std::vector<Entry> Recent(int limit, Filter filter = {});
 
 	[[nodiscard]] bool Enabled() const;

@@ -13,11 +13,14 @@
 #include "base/unixtime.h"
 #include "core/application.h"
 #include "data/data_document.h"
+#include "data/data_download_manager.h"
+#include "data/data_peer.h"
 #include "data/data_photo.h"
 #include "data/data_session.h"
 #include "history/history.h"
 #include "history/history_item.h"
 #include "lang_auto.h"
+#include "rpl/rpl.h"
 #include "ui/text/text_entity.h"
 #include "ui/toast/toast.h"
 #include "window/window_controller.h"
@@ -89,7 +92,8 @@ void Persist(
 		int64 srcMsgId,
 		QString srcTitle,
 		int srcAttach,
-		QByteArray sha256) {
+		QByteArray sha256,
+		bool announce) {
 	auto entry = Entry{
 		.sha256 = std::move(sha256),
 		.file_name = QFileInfo(savedPath).fileName(),
@@ -110,7 +114,9 @@ void Persist(
 		sha,
 		PeerId(uint64(srcPeerId)),
 		MsgId(srcMsgId));
-	ShowSavedToast();
+	if (announce) {
+		ShowSavedToast();
+	}
 }
 
 void ResolveHashAndPersist(
@@ -119,7 +125,8 @@ void ResolveHashAndPersist(
 		int64 srcPeerId,
 		int64 srcMsgId,
 		QString srcTitle,
-		int srcAttach) {
+		int srcAttach,
+		bool announce) {
 	if (const auto hit = HashStore::ReadAds(savedPath)) {
 		if (hit->sha256.size() == 32) {
 			Persist(
@@ -129,7 +136,8 @@ void ResolveHashAndPersist(
 				srcMsgId,
 				std::move(srcTitle),
 				srcAttach,
-				std::move(hit->sha256));
+				std::move(hit->sha256),
+				announce);
 			return;
 		}
 	}
@@ -147,8 +155,49 @@ void ResolveHashAndPersist(
 				srcMsgId,
 				std::move(title),
 				srcAttach,
-				std::move(sha256));
+				std::move(sha256),
+				announce);
 		});
+}
+
+void HandleLoadedDownload(not_null<const Data::DownloadedId*> id) {
+	if (!Enabled()) {
+		return;
+	}
+	const auto info = QFileInfo(id->path);
+	if (id->path.isEmpty() || !info.exists() || info.isDir()) {
+		return;
+	}
+	if (!Database::instance().Enabled()) {
+		LogFailure(u"database unavailable, download not recorded: "_q + id->path);
+		return;
+	}
+	if (Database::instance().FindByPath(id->path, id->size)) {
+		return;
+	}
+	auto srcPeerId = int64(0);
+	auto srcMsgId = int64(0);
+	auto srcTitle = QString();
+	auto attachIndex = 0;
+	if (const auto item = id->object ? id->object->item.get() : nullptr) {
+		// Restored downloads carry generated items, not a real source.
+		if (item->isRegular()) {
+			if (const auto peer = item->history()->peer) {
+				srcPeerId = int64(peer->id.value);
+				srcTitle = peer->name();
+			}
+			srcMsgId = int64(item->id.bare);
+			attachIndex = ResolveAttachIndex(item);
+		}
+	}
+	ResolveHashAndPersist(
+		id->path,
+		id->size,
+		srcPeerId,
+		srcMsgId,
+		std::move(srcTitle),
+		attachIndex,
+		false);
 }
 
 } // namespace
@@ -158,6 +207,7 @@ void RecordSaveAttempt(
 		not_null<DocumentData*> document,
 		FullMsgId contextId,
 		int attachIndex) {
+	EnsureDownloadListener();
 	if (!Enabled()) {
 		return;
 	}
@@ -188,7 +238,8 @@ void RecordSaveAttempt(
 		srcPeerId,
 		srcMsgId,
 		std::move(srcTitle),
-		attachIndex ? attachIndex : ResolveAttachIndex(item));
+		attachIndex ? attachIndex : ResolveAttachIndex(item),
+		true);
 }
 
 void RecordPhotoSaveAttempt(
@@ -196,6 +247,7 @@ void RecordPhotoSaveAttempt(
 		not_null<PhotoData*> photo,
 		FullMsgId contextId,
 		int attachIndex) {
+	EnsureDownloadListener();
 	if (!Enabled()) {
 		return;
 	}
@@ -226,7 +278,8 @@ void RecordPhotoSaveAttempt(
 		srcPeerId,
 		srcMsgId,
 		std::move(srcTitle),
-		attachIndex ? attachIndex : ResolveAttachIndex(item));
+		attachIndex ? attachIndex : ResolveAttachIndex(item),
+		true);
 }
 
 void MarkDocumentSaveAs(
@@ -252,6 +305,19 @@ void NotifyDocumentSaved(
 
 void ForgetDoctrineSaveAs(not_null<DocumentData*> document) {
 	PendingMap().erase(document.get());
+}
+
+void EnsureDownloadListener() {
+	static bool subscribed = false;
+	static rpl::lifetime lifetime;
+	if (subscribed) {
+		return;
+	}
+	subscribed = true;
+	Core::App().downloadManager().loadedAdded(
+	) | rpl::on_next([=](not_null<const Data::DownloadedId*> id) {
+		HandleLoadedDownload(id);
+	}, lifetime);
 }
 
 } // namespace SexCat

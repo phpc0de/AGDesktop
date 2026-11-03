@@ -1,4 +1,4 @@
-﻿// This is the source code of AyuGram for Desktop.
+// This is the source code of AyuGram for Desktop.
 //
 // We do not and cannot prevent the use of our code,
 // but be respectful and credit the original author.
@@ -22,7 +22,7 @@ bool hasDeletedMessages(not_null<PeerData*> peer, ID topicId);
 void removeDeletedMessage(not_null<HistoryItem*> item);
 void clearDeletedMessages(not_null<PeerData*> peer, ID topicId);
 
-void setCheckpoint(not_null<HistoryItem*> item);
+bool setCheckpoint(not_null<HistoryItem*> item);
 std::optional<Checkpoint> getCheckpoint(not_null<PeerData*> peer, ID topicId);
 std::optional<Checkpoint> getLatestCheckpoint(not_null<PeerData*> peer);
 void clearCheckpoint(not_null<PeerData*> peer, ID topicId);
