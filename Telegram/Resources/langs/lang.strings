@@ -9224,7 +9224,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_sexcat_source_gone" = "The source conversation is not available.";
 "lng_sexcat_scan_folder" = "Scan Folder";
 "lng_sexcat_scan_progress" = "Scanning... {processed}";
-"lng_sexcat_scan_done" = "Scan finished. Hashed: {hashed}, linked: {linked}, marked: {marked}, skipped: {skipped}, failed: {failed}.";
+"lng_sexcat_scan_done" = "Scan finished. Hashed: {hashed}, linked: {linked}, imported: {imported}, marked: {marked}, skipped: {skipped}, failed: {failed}.";
 "lng_sexcat_col_sha" = "SHA-256";
 "lng_sexcat_copy_sha" = "Copy SHA-256";
 "lng_sexcat_select_all" = "Select all";

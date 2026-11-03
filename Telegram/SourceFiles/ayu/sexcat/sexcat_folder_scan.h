@@ -17,6 +17,7 @@ struct ScanSummary {
 	int alreadyMarked = 0;
 	int hashed = 0;
 	int linked = 0;
+	int imported = 0;
 	int marked = 0;
 	int failed = 0;
 	bool finished = false;

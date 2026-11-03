@@ -205,6 +205,8 @@ public:
 						QString::number(s.hashed),
 						lt_linked,
 						QString::number(s.linked),
+						lt_imported,
+						QString::number(s.imported),
 						lt_marked,
 						QString::number(s.marked),
 						lt_skipped,

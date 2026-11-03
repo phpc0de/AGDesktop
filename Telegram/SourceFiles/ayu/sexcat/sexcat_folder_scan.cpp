@@ -54,6 +54,26 @@ using Progress = Fn<void(const ScanSummary &)>;
 	return true;
 }
 
+// Path+size dedupe keeps re-scans from duplicating rows.
+[[nodiscard]] bool ImportLooseFile(
+		const QString &path,
+		const QByteArray &sha256,
+		int64 size) {
+	if (Database::instance().FindByPath(path, size)) {
+		return false;
+	}
+	auto entry = Entry();
+	entry.sha256 = sha256;
+	entry.file_name = QFileInfo(path).fileName();
+	entry.saved_path = path;
+	entry.file_size = size;
+	const auto modified = QFileInfo(path).lastModified();
+	entry.saved_at = modified.isValid()
+		? modified.toSecsSinceEpoch()
+		: base::unixtime::now();
+	return Database::instance().RecordSaved(std::move(entry));
+}
+
 void PumpNext(
 		const std::shared_ptr<ScanSummary> &summary,
 		const std::shared_ptr<QDirIterator> &iterator,
@@ -90,6 +110,10 @@ void PumpNext(
 					}
 				}
 				if (best.sha256.isEmpty()) {
+					const auto imported = ImportLooseFile(
+							path,
+							sha256,
+							size);
 					if (!HashStore::WriteAds(
 							path,
 							sha256,
@@ -101,7 +125,11 @@ void PumpNext(
 							PeerId(),
 							MsgId());
 					}
-					summary->marked++;
+					if (imported) {
+						summary->imported++;
+					} else {
+						summary->marked++;
+					}
 				} else {
 					const auto peer = PeerId(uint64(best.src_peer_id));
 					const auto msg = MsgId(best.src_msg_id);
