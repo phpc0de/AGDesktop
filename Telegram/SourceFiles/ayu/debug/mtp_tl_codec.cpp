@@ -7,6 +7,7 @@ https://<obf:github-repo-ref>/blob/dev/LEGAL
 */
 #include "ayu/debug/mtp_tl_codec.h"
 
+#include "ayu/debug/mtp_scheme_docs.h"
 #include "ayu/debug/mtp_scheme_table.h"
 #include "core/application.h"
 #include "data/data_peer.h"
@@ -28,7 +29,7 @@ namespace {
 
 using Scheme::CtorDesc;
 
-constexpr auto kVectorCtor = 0x15c4b51c; // vector#15c4b51c
+constexpr auto kVectorCtor = 0x1cb5c415; // vector#1cb5c415
 constexpr auto kMaxRawHexChars = 4096;
 
 [[nodiscard]] const CtorDesc *FindCtor(uint32_t id) {
@@ -138,8 +139,12 @@ constexpr auto kMaxRawHexChars = 4096;
 }
 
 // Resolves user_id / chat_id / channel_id into a readable peer name so
-// raw packets are debuggable without a second lookup tool.
-[[nodiscard]] QString PeerAnnotation(const QString &field, qint64 value) {
+// raw packets are debuggable without a second lookup tool. `owner` is the
+// enclosing ctor name or vector element type, disambiguating generic ids.
+[[nodiscard]] QString PeerAnnotation(
+		const QString &field,
+		qint64 value,
+		const QString &owner) {
 	if (!value) {
 		return {};
 	}
@@ -149,19 +154,120 @@ constexpr auto kMaxRawHexChars = 4096;
 	if (!session) {
 		return {};
 	}
-	auto peerId = PeerId();
-	if (field.contains(u"user"_q)) {
-		peerId = peerFromUser(UserId(uint64(value)));
-	} else if (field.contains(u"chat"_q) && !field.contains(u"channel"_q)) {
-		peerId = peerFromChat(ChatId(uint64(value)));
-	} else {
-		peerId = peerFromChannel(ChannelId(uint64(value)));
+	auto kinds = QStringList();
+	const auto push = [&](const QString &kind) {
+		if (!kinds.contains(kind)) {
+			kinds << kind;
+		}
+	};
+	const auto route = [&](const QString &text) {
+		if (text.contains(u"user"_q)) {
+			push(u"user"_q);
+		} else if (text.contains(u"channel"_q)) {
+			push(u"channel"_q);
+		} else if (text.contains(u"chat"_q)) {
+			push(u"chat"_q);
+		}
+	};
+	route(field);
+	route(owner);
+	// WHY: generic `id` fields carry no kind in their name and the owner
+	// route can still miss, so id-like fields are probed user→chat→channel
+	// via peerLoaded; probing every value would mislabel dates and limits.
+	if (field.contains(u"id"_q)) {
+		for (const auto kind : { u"user"_q, u"chat"_q, u"channel"_q }) {
+			push(kind);
+		}
 	}
-	const auto peer = session->data().peerLoaded(peerId);
-	if (!peer) {
+	for (const auto &kind : kinds) {
+		auto peerId = PeerId();
+		if (kind == u"user"_q) {
+			peerId = peerFromUser(UserId(uint64(value)));
+		} else if (kind == u"chat"_q) {
+			peerId = peerFromChat(ChatId(uint64(value)));
+		} else {
+			peerId = peerFromChannel(ChannelId(uint64(value)));
+		}
+		if (const auto peer = session->data().peerLoaded(peerId)) {
+			return u"  [%1]"_q.arg(peer->name());
+		}
+	}
+	return {};
+}
+
+// One-line media summary scraped from the already-rendered ctor body.
+[[nodiscard]] QString MediaSummary(const QString &ctor, const QString &body) {
+	const auto isPhoto = (ctor == u"photo"_q)
+		|| (ctor == u"photoEmpty"_q)
+		|| (ctor == u"messageMediaPhoto"_q);
+	const auto isDocument = (ctor == u"document"_q)
+		|| (ctor == u"documentEmpty"_q)
+		|| (ctor == u"messageMediaDocument"_q);
+	if (!isPhoto && !isDocument) {
 		return {};
 	}
-	return u"  [%1]"_q.arg(peer->name());
+	auto id = QString();
+	auto size = QString();
+	auto mime = QString();
+	auto bestW = 0;
+	auto bestH = 0;
+	auto bestArea = 0;
+	auto pendingW = -1;
+	for (const auto &raw : body.split(u'\n')) {
+		const auto sep = raw.indexOf(u": "_q);
+		if (sep <= 0) {
+			continue;
+		}
+		const auto field = raw.left(sep).trimmed();
+		const auto value = raw.mid(sep + 2).section(u' ', 0, 0);
+		if (field == u"w"_q) {
+			pendingW = value.toInt();
+		} else if (field == u"h"_q) {
+			const auto area = pendingW * value.toInt();
+			if (area > bestArea) {
+				bestArea = area;
+				bestW = pendingW;
+				bestH = value.toInt();
+			}
+			pendingW = -1;
+		} else if (field == u"id"_q && id.isEmpty()) {
+			id = value;
+		} else if (field == u"size"_q && size.isEmpty()) {
+			size = value;
+		} else if (field == u"mime_type"_q && mime.isEmpty()) {
+			mime = (value.size() > 1
+				&& value.startsWith(u'"')
+				&& value.endsWith(u'"'))
+				? value.mid(1, value.size() - 2)
+				: value;
+		}
+	}
+	if (id.isEmpty()) {
+		return {};
+	}
+	auto text = isPhoto
+		? u"[photo id=%1"_q.arg(id)
+		: u"[document id=%1"_q.arg(id);
+	if (!size.isEmpty()) {
+		text += u" size=%1"_q.arg(size);
+	}
+	if (isPhoto && bestArea > 0) {
+		text += u" %1x%2"_q.arg(bestW).arg(bestH);
+	}
+	if (!isPhoto && !mime.isEmpty()) {
+		text += u" mime=%1"_q.arg(mime);
+	}
+	return text + u']'_q;
+}
+
+[[nodiscard]] QString FieldDocNote(const CtorDoc &doc, const QString &field) {
+	for (const auto &entry : QString::fromUtf8(doc.fields).split(u';')) {
+		const auto sep = entry.indexOf(u':');
+		if (sep > 0 && entry.left(sep).trimmed() == field) {
+			return entry.mid(sep + 1).trimmed();
+		}
+	}
+	return {};
 }
 
 struct Reader {
@@ -266,14 +372,32 @@ void PackBytes(const QByteArray &bytes, QVector<mtpPrime> &out) {
 		Reader &reader,
 		const QString &expect,
 		const QString &fieldName,
-		int depth);
+		int depth,
+		const QString &owner);
 
 [[nodiscard]] QString DecodeCtorBody(
 		Reader &reader,
 		const CtorDesc *desc,
 		int depth) {
 	const auto pad = QString(depth * 2, QChar(u' '));
-	auto out = pad + QString::fromUtf8(desc->name) + u" {\n"_q;
+	const auto ctorName = QString::fromUtf8(desc->name);
+	const auto utf8Name = ctorName.toUtf8();
+	const auto doc = FindCtorDoc(utf8Name.constData());
+	const auto attachNote = [&](QString &line, const QString &field) {
+		if (!doc) {
+			return;
+		}
+		const auto note = FieldDocNote(*doc, field);
+		if (!note.isEmpty()) {
+			const auto nl = line.indexOf(u'\n');
+			line.insert((nl >= 0) ? nl : line.size(), u" // "_q + note);
+		}
+	};
+	auto out = pad + ctorName + u" {"_q;
+	if (doc) {
+		out += u" // "_q + QString::fromUtf8(doc->purpose);
+	}
+	out += u"\n"_q;
 	auto flags = quint32(0);
 	auto flagsRead = false;
 	for (auto i = 0; i != int(desc->fieldsCount); ++i) {
@@ -309,7 +433,9 @@ void PackBytes(const QByteArray &bytes, QVector<mtpPrime> &out) {
 				continue;
 			}
 			if (type == u"true"_q) {
-				out += pad + u"  %1: true\n"_q.arg(name);
+				auto line = pad + u"  %1: true\n"_q.arg(name);
+				attachNote(line, name);
+				out += line;
 				continue;
 			}
 		}
@@ -318,10 +444,15 @@ void PackBytes(const QByteArray &bytes, QVector<mtpPrime> &out) {
 			out += pad + u"  // <buffer end>\n"_q;
 			return out;
 		}
-		out += DecodeValue(reader, type, name, depth + 1);
+		auto rendered = DecodeValue(reader, type, name, depth + 1, ctorName);
+		attachNote(rendered, name);
+		out += rendered;
 	}
 	if (depth == 0 && reader.from < reader.end) {
 		out += pad + u"  // %1 trailing primes\n"_q.arg(reader.end - reader.from);
+	}
+	if (const auto summary = MediaSummary(ctorName, out); !summary.isEmpty()) {
+		out += pad + u"  // "_q + summary + u"\n"_q;
 	}
 	out += pad + u"}\n"_q;
 	return out;
@@ -363,7 +494,8 @@ void PackBytes(const QByteArray &bytes, QVector<mtpPrime> &out) {
 		Reader &reader,
 		const QString &expect,
 		const QString &fieldName,
-		int depth) {
+		int depth,
+		const QString &owner) {
 	const auto pad = QString(depth * 2, QChar(u' '));
 	const auto prefix = fieldName.isEmpty()
 		? QString()
@@ -378,8 +510,14 @@ void PackBytes(const QByteArray &bytes, QVector<mtpPrime> &out) {
 			reader.from += 2;
 			return pad + u"%1vector // <not a vector, skipped>\n"_q.arg(prefix);
 		}
-		reader.from += 2;
+		++reader.from;
 		const auto count = int32_t(*reader.from++);
+		// A garbage count would run primes past the payload; skip instead.
+		if (count < 0 || count > reader.end - reader.from) {
+			return pad + u"%1vector // <bad count %2, skipped>\n"_q
+				.arg(prefix)
+				.arg(count);
+		}
 		auto out = pad + u"%1vector {\n"_q.arg(prefix);
 		for (auto i = 0; i != count; ++i) {
 			if (!reader.remaining(1)) {
@@ -392,7 +530,8 @@ void PackBytes(const QByteArray &bytes, QVector<mtpPrime> &out) {
 					reader,
 					element,
 					QString(),
-					depth + 1);
+					depth + 1,
+					element);
 				if (reader.from == before) {
 					break;
 				}
@@ -416,7 +555,12 @@ void PackBytes(const QByteArray &bytes, QVector<mtpPrime> &out) {
 		if (expect == u"bytes"_q) {
 			auto bytes = QByteArray();
 			ReadBytes(reader, bytes);
-			return pad + u"%1bytes: 0x%2\n"_q.arg(prefix).arg(HexBytes(bytes));
+			const auto shown = qMin<qsizetype>(bytes.size(), 32);
+			return pad + u"%1bytes[%2]: 0x%3%4\n"_q
+				.arg(prefix)
+				.arg(bytes.size())
+				.arg(HexBytes(bytes.left(shown)))
+				.arg(bytes.size() > 32 ? u"…"_q : QString());
 		}
 		if (expect == u"Bool"_q) {
 			const auto value = uint32_t(*reader.from++);
@@ -467,7 +611,7 @@ void PackBytes(const QByteArray &bytes, QVector<mtpPrime> &out) {
 				.arg(value)
 				.arg(fieldName.isEmpty()
 					? QString()
-					: PeerAnnotation(fieldName, value));
+					: PeerAnnotation(fieldName, value, owner));
 		}
 		const auto value = qint32(uint32_t(*reader.from++));
 		if (expect == u"#"_q) {
@@ -478,13 +622,16 @@ void PackBytes(const QByteArray &bytes, QVector<mtpPrime> &out) {
 		return pad + u"%1%2%3\n"_q
 			.arg(prefix)
 			.arg(value)
-			.arg(PeerAnnotation(fieldName, value));
+			.arg(PeerAnnotation(fieldName, value, owner));
 	}
 	return DecodeCtorValue(reader, fieldName, depth);
 }
 
 [[nodiscard]] QString CleanLine(const QString &raw) {
 	auto line = raw.trimmed();
+	if (line.startsWith(u"//"_q)) {
+		return {};
+	}
 	const auto comment = line.indexOf(u" //"_q);
 	return (comment >= 0) ? line.left(comment).trimmed() : line;
 }
@@ -615,8 +762,18 @@ private:
 			PackBytes(UnescapeBytes(value.mid(1, value.size() - 2)), out);
 		} else if (type == u"bytes"_q) {
 			auto hex = value;
+			if (hex.startsWith(u"bytes["_q)) {
+				const auto sep = hex.indexOf(u"]: "_q);
+				if (sep < 0) {
+					return fail(u"bad bytes header %1"_q.arg(value));
+				}
+				hex = hex.mid(sep + 3);
+			}
 			if (hex.startsWith(u"0x"_q)) {
 				hex = hex.mid(2);
+			}
+			if (hex.endsWith(u"…"_q)) {
+				return fail(u"bytes preview is truncated"_q);
 			}
 			if (hex.size() % 2 != 0) {
 				return fail(u"bytes must be even-length hex"_q);
@@ -814,7 +971,7 @@ QString DecodeTlBody(const mtpPrime *from, const mtpPrime *end) {
 	if (!reader.remaining(1)) {
 		return u"// empty body\n"_q;
 	}
-	return DecodeValue(reader, QString(), QString(), 0);
+	return DecodeValue(reader, QString(), QString(), 0, QString());
 }
 
 QString DecodeTlRowName(const QVector<mtpPrime> &body) {

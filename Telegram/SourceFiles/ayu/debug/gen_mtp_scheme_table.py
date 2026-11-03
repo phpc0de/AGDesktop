@@ -18,7 +18,7 @@ SCHEMES = [
 OUT = os.path.join(ROOT, 'Telegram/SourceFiles/ayu/debug/mtp_scheme_table.h')
 
 ctor_re = re.compile(
-    r'^([a-zA-Z_][\w.]*)#([0-9a-fA-F]{8})\s+(.*?)\s*=\s*([\w.]+);$')
+    r'^([a-zA-Z_][\w.]*)#([0-9a-fA-F]{1,8})\s+(.*?)\s*=\s*([\w.]+);$')
 field_re = re.compile(r'^([\w#]+):(.+)$')
 opt_re = re.compile(r'^flags\.(\d+)\?(.+)$')
 
@@ -91,16 +91,22 @@ for idx, key in enumerate(order):
     lines.append('};')
     lines.append('')
 lines.append('inline constexpr CtorDesc kCtors[] = {')
+rows = 0
 for idx, key in enumerate(order):
     name, parent, fields = ctors[key]
     fp = 'kFields%d' % idx if fields else 'nullptr'
     fc = len(fields) if fields else 0
     lines.append('\t{0x%08xu, %s, %s, %du, %s},'
                  % (key, cstr(name), cstr(parent), fc, fp))
+    rows += 1
 lines.append('};')
 lines.append('')
 lines.append('inline constexpr int kCtorsCount = %d;' % len(order))
 lines.append('')
 lines.append('} // namespace Ayu::Debug::Scheme')
 open(OUT, 'w', encoding='utf-8', newline='\n').write('\n'.join(lines) + '\n')
+sys.stderr.write('ctors: %d parsed, %d rows written\n' % (len(ctors), rows))
+if rows != len(ctors):
+    sys.stderr.write('WARNING: %d parsed ctors missing from the table\n'
+                     % (len(ctors) - rows))
 print('wrote %s (%d ctors)' % (OUT, len(order)))
