@@ -544,10 +544,18 @@ public:
 
 		MtpEntriesUpdates(
 		) | rpl::on_next([=] {
-			refreshSoft();
+			if (isVisible()) {
+				refreshSoft();
+			}
 		}, _lifetime);
 
 		refresh();
+	}
+
+protected:
+	void showEvent(QShowEvent *e) override {
+		refreshSoft();
+		QWidget::showEvent(e);
 	}
 
 private:
@@ -584,6 +592,7 @@ private:
 	[[nodiscard]] QString copyAllText() const {
 		auto blocks = QStringList();
 		blocks.reserve(int(_rows.size()) * 2);
+		auto total = 0;
 		for (const auto &entry : _rows) {
 			const auto time = QDateTime::fromMSecsSinceEpoch(entry.when)
 				.time().toString(u"HH:mm:ss.zzz"_q);
@@ -593,6 +602,10 @@ private:
 				.arg(KindName(entry.kind))
 				.arg(FirstLine(entry.name));
 			blocks << entry.text;
+			total += entry.text.size() + 4;
+			if (total > kMaxTextChars) {
+				break;
+			}
 		}
 		auto text = blocks.join(u"\n\n"_q);
 		if (text.size() > kMaxTextChars) {
@@ -621,7 +634,7 @@ private:
 	}
 
 	void refresh() {
-		const auto needle = _filter->text().trimmed().toLower();
+		const auto needle = _filter->text().trimmed();
 		const auto entries = MtpEntriesSnapshot();
 		_rows.clear();
 		_list->clear();
@@ -634,8 +647,8 @@ private:
 				.arg(KindName(entry.kind))
 				.arg(FirstLine(entry.name));
 			if (!needle.isEmpty()
-				&& !entry.text.toLower().contains(needle)
-				&& !line.toLower().contains(needle)) {
+				&& !entry.text.contains(needle, Qt::CaseInsensitive)
+				&& !line.contains(needle, Qt::CaseInsensitive)) {
 				continue;
 			}
 			_rows.push_back(entry);
@@ -669,6 +682,10 @@ rpl::event_stream<> Updates;
 QPointer<DevtoolsWindow> Window;
 
 void Push(MtpEntry entry) {
+	if (entry.text.size() > kMaxTextChars) {
+		entry.text = entry.text.left(kMaxTextChars)
+			+ u"\n... (truncated)"_q;
+	}
 	Entries.push_back(std::move(entry));
 	if (Entries.size() > kMaxEntries) {
 		Entries.erase(Entries.begin(), Entries.end() - kMaxEntries);
