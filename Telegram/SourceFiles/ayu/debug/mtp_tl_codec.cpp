@@ -302,12 +302,13 @@ void ReadBytes(Reader &reader, QByteArray &out) {
 				| (qint64(uint32_t(reader.from[0])) << 24)
 				| (qint64(uint32_t(reader.from[1]) & 0xFF) << 56);
 			reader.from += 1;
-			const auto need = int((length + 3) / 4);
-			if (reader.remaining(need)) {
+			const auto need = (length + 3) / 4;
+			if (need >= 0
+				&& need <= int64(reader.end - reader.from)) {
 				out = QByteArray(
 					reinterpret_cast<const char*>(reader.from),
 					int(length));
-				reader.from += need;
+				reader.from += int(need);
 			} else {
 				reader.from = reader.end;
 			}
