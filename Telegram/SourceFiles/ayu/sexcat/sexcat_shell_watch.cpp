@@ -14,6 +14,7 @@
 
 #include <QtWidgets/QWidget>
 
+#include <QDir>
 #include <QFileInfo>
 
 #include <array>
@@ -33,7 +34,7 @@ void LogFailure(const QString &message) {
 	Ayu::Log::Write(u"sexcat"_q, message);
 }
 
-constexpr auto kShellChangeMessage = WM_APP + 0x7351;
+constexpr auto kShellChangeMessage = WM_APP + 0x0351;
 
 bool RelinkLostByAds(const QString &path, const HashHit &hit) {
 	const auto hits = Database::instance().LookupByHash(hit.sha256);
@@ -75,6 +76,33 @@ void HandleRename(const QString &oldPath, const QString &newPath) {
 	}
 }
 
+void HandleRenameFolder(const QString &oldDir, const QString &newDir) {
+	auto oldPrefix = oldDir;
+	if (!oldPrefix.endsWith('/')) {
+		oldPrefix += '/';
+	}
+	auto newPrefix = newDir;
+	if (!newPrefix.endsWith('/')) {
+		newPrefix += '/';
+	}
+	auto relinked = 0;
+	for (const auto &entry : Database::instance().LookupByPathPrefix(oldPrefix)) {
+		if (!entry.saved_path.startsWith(oldPrefix)) {
+			continue;
+		}
+		if (Database::instance().Relink(
+				entry.id,
+				newPrefix + entry.saved_path.mid(oldPrefix.size()))) {
+			relinked++;
+		}
+	}
+	if (relinked > 0) {
+		LogFailure(u"shell watch relinked folder %1 -> %2 (%3)"_q
+			.arg(oldDir, newDir)
+			.arg(relinked));
+	}
+}
+
 void HandleUpdate(const QString &path) {
 	if (!QFileInfo(path).isFile()) {
 		return;
@@ -85,23 +113,22 @@ void HandleUpdate(const QString &path) {
 	}
 }
 
-void ProcessChangeEvent(LONG event, PIDLIST_ABSOLUTE *pidls) {
+void ProcessChangeEvent(
+		LONG event,
+		const QString &oldPath,
+		const QString &newPath,
+		const QString &path) {
 	if (event == SHCNE_RENAMEITEM) {
-		auto oldPath = std::array<WCHAR, MAX_PATH>();
-		auto newPath = std::array<WCHAR, MAX_PATH>();
-		const auto oldOk = pidls[0]
-			&& SHGetPathFromIDListW(pidls[0], oldPath.data());
-		const auto newOk = pidls[1]
-			&& SHGetPathFromIDListW(pidls[1], newPath.data());
-		if (oldOk && newOk) {
-			HandleRename(
-				QString::fromWCharArray(oldPath.data()),
-				QString::fromWCharArray(newPath.data()));
+		if (!oldPath.isEmpty() && !newPath.isEmpty()) {
+			HandleRename(oldPath, newPath);
+		}
+	} else if (event == SHCNE_RENAMEFOLDER) {
+		if (!oldPath.isEmpty() && !newPath.isEmpty()) {
+			HandleRenameFolder(oldPath, newPath);
 		}
 	} else if (event == SHCNE_UPDATEITEM) {
-		auto path = std::array<WCHAR, MAX_PATH>();
-		if (pidls[0] && SHGetPathFromIDListW(pidls[0], path.data())) {
-			HandleUpdate(QString::fromWCharArray(path.data()));
+		if (!path.isEmpty()) {
+			HandleUpdate(path);
 		}
 	}
 }
@@ -132,15 +159,33 @@ protected:
 			static_cast<DWORD>(msg->lParam),
 			&pidls,
 			&event);
+		auto oldPath = QString();
+		auto newPath = QString();
+		auto path = QString();
 		if (lock) {
-			try {
-				ProcessChangeEvent(event, pidls);
-			} catch (const std::exception &ex) {
-				LogFailure(u"shell watch failed: %1"_q.arg(QString::fromUtf8(ex.what())));
-			} catch (...) {
-				LogFailure(u"shell watch failed: unknown error"_q);
+			// WHY: only cheap PIDL decoding may run under the shell lock,
+			// database and file work must happen after it is released.
+			const auto read = [&](PIDLIST_ABSOLUTE pidl) {
+				auto buffer = std::array<WCHAR, MAX_PATH>();
+				return (pidl && SHGetPathFromIDListW(pidl, buffer.data()))
+					? QDir::fromNativeSeparators(
+						QString::fromWCharArray(buffer.data()))
+					: QString();
+			};
+			if (event == SHCNE_RENAMEITEM || event == SHCNE_RENAMEFOLDER) {
+				oldPath = read(pidls ? pidls[0] : nullptr);
+				newPath = read(pidls ? pidls[1] : nullptr);
+			} else if (event == SHCNE_UPDATEITEM) {
+				path = read(pidls ? pidls[0] : nullptr);
 			}
 			SHChangeNotification_Unlock(lock);
+		}
+		try {
+			ProcessChangeEvent(event, oldPath, newPath, path);
+		} catch (const std::exception &ex) {
+			LogFailure(u"shell watch failed: %1"_q.arg(QString::fromUtf8(ex.what())));
+		} catch (...) {
+			LogFailure(u"shell watch failed: unknown error"_q);
 		}
 		*result = 0;
 		return true;
@@ -160,7 +205,7 @@ void RegisterShellWatch() {
 	const auto registered = SHChangeNotifyRegister(
 		reinterpret_cast<HWND>(window->winId()),
 		SHCNRF_NewDelivery | SHCNRF_InterruptLevel | SHCNRF_ShellLevel,
-		SHCNE_RENAMEITEM | SHCNE_UPDATEITEM,
+		SHCNE_RENAMEITEM | SHCNE_RENAMEFOLDER | SHCNE_UPDATEITEM,
 		kShellChangeMessage,
 		1,
 		&entry);

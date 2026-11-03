@@ -81,6 +81,10 @@ void PumpNext(
 	while (iterator->hasNext()) {
 		const auto path = iterator->next();
 		summary->scanned++;
+		if (path.endsWith(u".sexcat.json"_q)) {
+			summary->skipped++;
+			continue;
+		}
 		if (const auto hit = HashStore::ReadAds(path)) {
 			if (hit->sha256.size() == 32
 				&& RelinkLostEntry(path, *hit, *summary)) {

@@ -48,6 +48,9 @@ auto storage = make_storage(
 		"idx_saved_file_src",
 		column<SavedFileRow>(&SavedFileRow::src_peer_id),
 		column<SavedFileRow>(&SavedFileRow::src_msg_id)),
+	make_index(
+		"idx_saved_file_path",
+		column<SavedFileRow>(&SavedFileRow::saved_path)),
 	make_table<SavedFileRow>(
 		"saved_file",
 		make_column("id", &SavedFileRow::id, primary_key().autoincrement()),
@@ -246,6 +249,30 @@ std::optional<Entry> Database::LookupByPath(const QString &savedPath) {
 	} catch (const std::exception &ex) {
 		LogError(u"Failed to look up latest by path: %1"_q.arg(QString::fromUtf8(ex.what())));
 		return std::nullopt;
+	}
+}
+
+std::vector<Entry> Database::LookupByPathPrefix(const QString &prefix) {
+	if (!_enabled || prefix.isEmpty()) {
+		return {};
+	}
+	try {
+		std::lock_guard lock(storageMutex);
+		auto rows = storage.get_all<SavedFileRow>(
+			where(
+				like(
+					column<SavedFileRow>(&SavedFileRow::saved_path),
+					prefix.toStdString() + '%')),
+			order_by(column<SavedFileRow>(&SavedFileRow::id)).desc());
+		auto result = std::vector<Entry>();
+		result.reserve(rows.size());
+		for (auto &row : rows) {
+			result.push_back(EntryFromRow(std::move(row)));
+		}
+		return result;
+	} catch (const std::exception &ex) {
+		LogError(u"Failed to look up by path prefix: %1"_q.arg(QString::fromUtf8(ex.what())));
+		return {};
 	}
 }
 
