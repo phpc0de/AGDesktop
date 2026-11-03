@@ -91,6 +91,22 @@ using ::Media::ValidFrameSize;
 		: document->dimensions;
 }
 
+[[nodiscard]] QString VideoResolutionBadge(int shortSide) {
+	constexpr auto k4KVideoShortSide = 2160;
+	if (shortSide <= 0) {
+		return QString();
+	} else if (shortSide >= k4KVideoShortSide) {
+		return u"4K"_q;
+	}
+	auto tier = 144;
+	for (const auto candidate : { 144, 240, 360, 480, 720, 1080, 1440 }) {
+		if (qAbs(shortSide - candidate) < qAbs(shortSide - tier)) {
+			tier = candidate;
+		}
+	}
+	return QString::number(tier) + 'p';
+}
+
 [[nodiscard]] bool IsHostedInstantViewMedia(not_null<const Element*> parent) {
 	return parent->Get<InstantViewMediaRuntime>() != nullptr;
 }
@@ -2284,6 +2300,13 @@ void Gif::setStatusSize(int64 newSize) const {
 			_data->size,
 			_data->isVideoFile() ? (_data->duration() / 1000) : -2,
 			0);
+		if (_data->isVideoFile() && !_data->sticker()) {
+			const auto badge = VideoResolutionBadge(
+				_data->resolveOriginalVideoQuality());
+			if (!badge.isEmpty()) {
+				_statusText += u", "_q + badge;
+			}
+		}
 	}
 }
 
