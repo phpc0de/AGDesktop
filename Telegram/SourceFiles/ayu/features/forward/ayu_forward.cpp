@@ -1,4 +1,4 @@
-// This is the source code of AyuGram for Desktop.
+// This is the source code of [R:67494147] for Desktop.
 //
 // We do not and cannot prevent the use of our code,
 // but be respectful and credit the original author.
@@ -639,142 +639,212 @@ void zeroCostForward(
 			MTPint(), // ttl_seconds
 			MTPstring())); // query
 	};
-	const auto captionOf = [&](HistoryItem *item) {
-		if (draft.options == Data::ForwardOptions::NoNamesAndCaptions) {
+	const auto captionOf = [options = draft.options](HistoryItem *item) {
+		if (options == Data::ForwardOptions::NoNamesAndCaptions) {
 			return TextWithEntities();
 		}
 		return item->originalText();
 	};
 
-	for (const auto &unit : units) {
-		const auto item = unit.items.front();
+	// WHY: per-unit sends below re-reference the original media and get
+	// hard-rejected with CHAT_FORWARDS_RESTRICTED, so first probe a
+	// drop-author copy forward, validated differently server-side.
+	const auto probeUnsupported = [](HistoryItem *item) {
 		const auto media = item->media();
-		if (!media || media->poll() || media->ttlSeconds()) {
-			if (media && (media->poll() || media->ttlSeconds())) {
-				fallback->push_back(item);
-				continue;
-			}
-			auto extracted = extractText(item);
-			if (extracted.empty()) {
-				continue;
-			}
-			auto message = Api::MessageToSend(action);
-			message.action.options.invertCaption = item->invertMedia();
-			message.action.options.scheduled = 0;
-			message.action.options.suggest = {};
-			message.action.options.effectId = 0;
-			message.action.replaceMediaOf = 0;
-			if (draft.options != Data::ForwardOptions::NoNamesAndCaptions) {
-				message.textWithTags = extracted;
-			}
-			session->api().sendMessage(std::move(message));
-			state->sentMessages++;
-			continue;
+		return item->isService()
+			|| item->isDeleted()
+			|| item->id.bare <= 0
+			|| (media && (media->poll() || media->ttlSeconds()));
+	};
+	Peer *probeFromPeer = nullptr;
+	auto probeIds = QVector<MTPint>();
+	auto probeRandomIds = QVector<MTPlong>();
+	auto probePossible = !units.empty() && int(items.size()) <= 100;
+	for (const auto item : items) {
+		if (!probePossible
+			|| probeUnsupported(item)
+			|| (probeFromPeer && probeFromPeer != item->history()->peer.get())) {
+			probePossible = false;
+			break;
 		}
+		probeFromPeer = item->history()->peer.get();
+		probeIds.push_back(MTP_int(item->id));
+		probeRandomIds.push_back(MTP_long(base::RandomValue<uint64>()));
+	}
+	auto sendUnits = [=] {
+		for (const auto &unit : units) {
+			const auto item = unit.items.front();
+			const auto media = item->media();
+			if (!media || media->poll() || media->ttlSeconds()) {
+				if (media && (media->poll() || media->ttlSeconds())) {
+					fallback->push_back(item);
+					continue;
+				}
+				auto extracted = extractText(item);
+				if (extracted.empty()) {
+					continue;
+				}
+				auto message = Api::MessageToSend(action);
+				message.action.options.invertCaption = item->invertMedia();
+				message.action.options.scheduled = 0;
+				message.action.options.suggest = {};
+				message.action.options.effectId = 0;
+				message.action.replaceMediaOf = 0;
+				if (draft.options != Data::ForwardOptions::NoNamesAndCaptions) {
+					message.textWithTags = extracted;
+				}
+				session->api().sendMessage(std::move(message));
+				state->sentMessages++;
+				continue;
+			}
 
-		const auto mediaMtp = mediaToMtp(media);
-		const auto caption = captionOf(item);
-		const auto entities = Api::EntitiesToMTP(
-			session,
-			caption.entities,
-			Api::ConvertOption::SkipLocal);
-		if (unit.items.size() == 1) {
+			const auto mediaMtp = mediaToMtp(media);
+			const auto caption = captionOf(item);
+			const auto entities = Api::EntitiesToMTP(
+				session,
+				caption.entities,
+				Api::ConvertOption::SkipLocal);
+			if (unit.items.size() == 1) {
+				(*remaining)++;
+				session->api().request(MTPmessages_SendMedia(
+					MTP_flags(MTPmessages_SendMedia::Flags(0)),
+					peer->input(),
+					MTPInputReplyTo(),
+					mediaMtp,
+					MTP_string(caption.text),
+					MTP_long(base::RandomValue<uint64>()),
+					MTPReplyMarkup(),
+					entities,
+					MTP_int(0), // schedule_date
+					MTP_int(0), // schedule_repeat_period
+					MTP_inputPeerEmpty(), // send_as
+					MTPInputQuickReplyShortcut(),
+					MTP_long(0), // effect
+					MTP_long(0), // allow_paid_stars
+					MTPSuggestedPost()
+				)).done([=](const MTPUpdates &result) {
+					Ayu::Log::Write(
+						u"forward"_q,
+						u"zerocost media ok item=%1 dest=%2"_q
+							.arg(item->id.bare)
+							.arg(peer->id.value));
+					crl::on_main([=] {
+						session->api().applyUpdates(result);
+					});
+					state->sentMessages++;
+					(*remaining)--;
+					settle();
+				}).fail([=](const MTP::Error &error) {
+					Ayu::Log::Write(
+						u"forward"_q,
+						u"zerocost media FAILED item=%1 dest=%2 type=%3"_q
+							.arg(item->id.bare)
+							.arg(peer->id.value)
+							.arg(error.type()));
+					fallback->push_back(item);
+					(*remaining)--;
+					settle();
+				}).send();
+				continue;
+			}
+
+			auto singles = QVector<MTPInputSingleMedia>();
+			for (const auto groupItem : unit.items) {
+				const auto groupCaption = captionOf(groupItem);
+				singles.push_back(MTP_inputSingleMedia(
+					MTP_flags(0),
+					(groupItem == item)
+						? mediaMtp
+						: mediaToMtp(groupItem->media()),
+					MTP_long(base::RandomValue<uint64>()),
+					MTP_string(groupCaption.text),
+					Api::EntitiesToMTP(
+						session,
+						groupCaption.entities,
+						Api::ConvertOption::SkipLocal)));
+			}
 			(*remaining)++;
-			session->api().request(MTPmessages_SendMedia(
-				MTP_flags(MTPmessages_SendMedia::Flags(0)),
+			session->api().request(MTPmessages_SendMultiMedia(
+				MTP_flags(MTPmessages_SendMultiMedia::Flags(0)),
 				peer->input(),
 				MTPInputReplyTo(),
-				mediaMtp,
-				MTP_string(caption.text),
-				MTP_long(base::RandomValue<uint64>()),
-				MTPReplyMarkup(),
-				entities,
+				MTP_vector<MTPInputSingleMedia>(std::move(singles)),
 				MTP_int(0), // schedule_date
-				MTP_int(0), // schedule_repeat_period
 				MTP_inputPeerEmpty(), // send_as
 				MTPInputQuickReplyShortcut(),
 				MTP_long(0), // effect
-				MTP_long(0), // allow_paid_stars
-				MTPSuggestedPost()
+				MTP_long(0) // allow_paid_stars
 			)).done([=](const MTPUpdates &result) {
 				Ayu::Log::Write(
 					u"forward"_q,
-					u"zerocost media ok item=%1 dest=%2"_q
-						.arg(item->id.bare)
+					u"zerocost album ok count=%1 dest=%2"_q
+						.arg(unit.items.size())
 						.arg(peer->id.value));
 				crl::on_main([=] {
 					session->api().applyUpdates(result);
 				});
-				state->sentMessages++;
+				state->sentMessages += int(unit.items.size());
 				(*remaining)--;
 				settle();
 			}).fail([=](const MTP::Error &error) {
 				Ayu::Log::Write(
 					u"forward"_q,
-					u"zerocost media FAILED item=%1 dest=%2 type=%3"_q
-						.arg(item->id.bare)
+					u"zerocost album FAILED count=%1 dest=%2 type=%3"_q
+						.arg(unit.items.size())
 						.arg(peer->id.value)
 						.arg(error.type()));
-				fallback->push_back(item);
+				for (const auto groupItem : unit.items) {
+					fallback->push_back(groupItem);
+				}
 				(*remaining)--;
 				settle();
 			}).send();
-			continue;
 		}
+		settle();
+	};
 
-		auto singles = QVector<MTPInputSingleMedia>();
-		for (const auto groupItem : unit.items) {
-			const auto groupCaption = captionOf(groupItem);
-			singles.push_back(MTP_inputSingleMedia(
-				MTP_flags(0),
-				(groupItem == item)
-					? mediaMtp
-					: mediaToMtp(groupItem->media()),
-				MTP_long(base::RandomValue<uint64>()),
-				MTP_string(groupCaption.text),
-				Api::EntitiesToMTP(
-					session,
-					groupCaption.entities,
-					Api::ConvertOption::SkipLocal)));
-		}
-		(*remaining)++;
-		session->api().request(MTPmessages_SendMultiMedia(
-			MTP_flags(MTPmessages_SendMultiMedia::Flags(0)),
-			peer->input(),
-			MTPInputReplyTo(),
-			MTP_vector<MTPInputSingleMedia>(std::move(singles)),
-			MTP_int(0), // schedule_date
-			MTP_inputPeerEmpty(), // send_as
-			MTPInputQuickReplyShortcut(),
-			MTP_long(0), // effect
-			MTP_long(0) // allow_paid_stars
-		)).done([=](const MTPUpdates &result) {
-			Ayu::Log::Write(
-				u"forward"_q,
-				u"zerocost album ok count=%1 dest=%2"_q
-					.arg(unit.items.size())
-					.arg(peer->id.value));
-			crl::on_main([=] {
-				session->api().applyUpdates(result);
-			});
-			state->sentMessages += int(unit.items.size());
-			(*remaining)--;
-			settle();
-		}).fail([=](const MTP::Error &error) {
-			Ayu::Log::Write(
-				u"forward"_q,
-				u"zerocost album FAILED count=%1 dest=%2 type=%3"_q
-					.arg(unit.items.size())
-					.arg(peer->id.value)
-					.arg(error.type()));
-			for (const auto groupItem : unit.items) {
-				fallback->push_back(groupItem);
-			}
-			(*remaining)--;
-			settle();
-		}).send();
+	if (!probePossible) {
+		sendUnits();
+		return;
 	}
-	settle();
+
+	using ProbeFlag = MTPmessages_ForwardMessages::Flag;
+	const auto probeFlags = ProbeFlag() | ProbeFlag::f_drop_author
+		| ProbeFlag::f_drop_media_captions;
+	session->api().request(MTPmessages_ForwardMessages(
+		MTP_flags(probeFlags),
+		probeFromPeer->input(),
+		MTP_vector<MTPint>(probeIds),
+		MTP_vector<MTPlong>(probeRandomIds),
+		peer->input(), // to_peer
+		MTP_int(0), // top_msg_id
+		MTPInputReplyTo(),
+		MTP_int(0), // schedule_date
+		MTP_int(0), // schedule_repeat_period
+		MTP_inputPeerEmpty(), // send_as
+		MTPInputQuickReplyShortcut(),
+		MTP_long(0), // effect
+		MTPint(), // video_timestamp
+		MTP_long(0), // allow_paid_stars
+		MTPSuggestedPost()
+	)).done([=](const MTPUpdates &result) {
+		Ayu::Log::Write(
+			u"forward"_q,
+			u"zerocost probe dropauthor ok items=%1"_q.arg(probeIds.size()));
+		crl::on_main([=] {
+			session->api().applyUpdates(result);
+		});
+		state->sentMessages = state->totalMessages;
+		*remaining = 0;
+		*finished = true;
+		state->state = ForwardState::State::Finished;
+		state->updateBottomBar(*session, &peer->id, ForwardState::State::Finished);
+	}).fail([=, sendUnits = std::move(sendUnits)](const MTP::Error &error) {
+		Ayu::Log::Write(
+			u"forward"_q,
+			u"zerocost probe dropauthor FAILED type=%1"_q.arg(error.type()));
+		sendUnits();
+	}).send();
 }
 
 } // namespace AyuForward
