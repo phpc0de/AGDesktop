@@ -614,17 +614,17 @@ void zeroCostForward(
 			Ayu::Log::Write(
 				u"forward"_q,
 				u"zerocost fallback full items=%1"_q.arg(fallback->size()));
-			auto items = std::move(*fallback);
+			auto fallbackItems = std::move(*fallback);
 			Ayu::Log::Write(
 				u"forward"_q,
 				u"zerocost fallback async dispatch items=%1 dest=%2"_q
-					.arg(items.size())
+					.arg(fallbackItems.size())
 					.arg(peer->id.value));
 			crl::async(crl::guard(session, [
 				session,
 				action,
 				options = draft.options,
-				items = std::move(items)
+				items = std::move(fallbackItems)
 			]() mutable {
 				forwardMessages(
 					session,
