@@ -112,6 +112,30 @@ QString TopBarNameText(
 	return peer->topBarNameText();
 }
 
+enum class TopBarTitleTint {
+	None,
+	Protected,
+	Banned,
+};
+
+[[nodiscard]] TopBarTitleTint TopBarTitleTintOf(not_null<PeerData*> peer) {
+	if (const auto channel = peer->asChannel()) {
+		if (channel->isForbidden() && channel->date != 0) {
+			// freshly created channels default to Forbidden until loaded
+			return TopBarTitleTint::Banned;
+		} else if (channel->isAyuNoForwards()
+			|| (channel->flags() & ChannelDataFlag::NoForwards)) {
+			return TopBarTitleTint::Protected;
+		}
+	} else if (const auto chat = peer->asChat()) {
+		if (chat->isAyuNoForwards()
+			|| (chat->flags() & ChatDataFlag::NoForwards)) {
+			return TopBarTitleTint::Protected;
+		}
+	}
+	return TopBarTitleTint::None;
+}
+
 } // namespace
 
 struct TopBarWidget::EmojiInteractionSeenAnimation {
@@ -742,7 +766,12 @@ void TopBarWidget::paintTopBar(Painter &p) {
 		});
 		namewidth -= badgeWidth;
 
-		p.setPen(st::dialogsNameFg);
+		const auto tint = TopBarTitleTintOf(namePeer);
+		p.setPen(tint == TopBarTitleTint::Banned
+			? st::topBarTitleAyuBanned.textFg
+			: tint == TopBarTitleTint::Protected
+			? st::topBarTitleAyuProtected.textFg
+			: st::dialogsNameFg);
 		_title.draw(p, {
 			.position = { nameleft, nametop },
 			.availableWidth = namewidth,
