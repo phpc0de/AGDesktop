@@ -29,6 +29,11 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/history_item.h"
 #include "styles/style_dialogs.h" // st::dialogsTextWidthMin
 
+// AyuGram includes
+#include "ayu/utils/telegram_helpers.h"
+#include "ui/chat/chat_style.h"
+
+
 namespace Dialogs {
 namespace {
 
@@ -452,7 +457,15 @@ not_null<Row*> Entry::addToChatList(
 		const auto &list = owner().chatsFilters().list();
 		const auto it = ranges::find(list, filterId, &Data::ChatFilter::id);
 		if (it != end(list)) {
-			setColorIndexForFilterId(filterId, it->colorIndex());
+			auto colorIndex = it->colorIndex();
+			if (!colorIndex) {
+				const auto colorCount = int(Ui::kSimpleColorIndexCount);
+				if (colorCount > 0) {
+					colorIndex = uint8(
+						AyuFallbackFilterColorIndex(filterId, colorCount));
+				}
+			}
+			setColorIndexForFilterId(filterId, colorIndex);
 		}
 	}
 	if (const auto main = maybeMainChatListLink(filterId)) {

@@ -132,3 +132,7 @@ void applyGhostScheduling(
 	Api::SendAction &action,
 	const QString &text = QString(),
 	int delaySeconds = 12);
+
+// WHY: the server omits filter colors for non-premium accounts, so a
+// stable per-folder color is derived locally from the filter id.
+[[nodiscard]] int AyuFallbackFilterColorIndex(int64 filterId, int colorCount);

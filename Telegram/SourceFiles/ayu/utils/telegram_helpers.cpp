@@ -1607,3 +1607,16 @@ void applyGhostScheduling(
 	}
 	applyGhostScheduling(session, action.options, delaySeconds);
 }
+
+int AyuFallbackFilterColorIndex(int64 filterId, int colorCount) {
+	if (colorCount <= 0) {
+		return 0;
+	}
+	auto value = uint64(filterId);
+	value ^= value >> 33;
+	value *= 0xff51afd7ed558ccdULL;
+	value ^= value >> 33;
+	value *= 0xc4ceb9fe1a85ec53ULL;
+	value ^= value >> 33;
+	return int(value % uint64(colorCount));
+}

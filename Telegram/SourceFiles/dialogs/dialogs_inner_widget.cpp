@@ -106,6 +106,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ayu/ui/ayu_userpic.h"
 #include "ayu/utils/telegram_helpers.h"
 #include "styles/style_ayu_icons.h"
+#include "ui/chat/chat_style.h"
 
 
 namespace Dialogs {
@@ -5810,6 +5811,13 @@ QImage *InnerWidget::cacheChatsFilterTag(
 		roundedText.text = roundedText.text.toUpper();
 		if (filter.colorIndex()) {
 			colorIndex = *(filter.colorIndex());
+		} else {
+			const auto colorCount = int(Ui::kSimpleColorIndexCount);
+			if (colorCount > 0) {
+				colorIndex = AyuFallbackFilterColorIndex(
+					filter.id(),
+					colorCount);
+			}
 		}
 	} else if (more > 0) {
 		roundedText.text = QChar('+') + QString::number(more);
