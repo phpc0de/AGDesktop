@@ -30,14 +30,30 @@
 #include "ui/chat/attach/attach_prepare.h"
 #include "ui/text/text_utilities.h"
 
+#include <QMutex>
+
 namespace AyuForward {
 
 std::unordered_map<PeerId, std::shared_ptr<ForwardState>> forwardStates;
+QMutex forwardStatesMutex;
+
+std::shared_ptr<ForwardState> FindForwardState(const PeerId &id) {
+	QMutexLocker lock(&forwardStatesMutex);
+	const auto i = forwardStates.find(id);
+	return (i == forwardStates.end()) ? nullptr : i->second;
+}
+
+void SetForwardState(
+		const PeerId &id,
+		std::shared_ptr<ForwardState> state) {
+	QMutexLocker lock(&forwardStatesMutex);
+	forwardStates[id] = std::move(state);
+}
 
 bool isForwarding(const PeerId &id) {
-	const auto fwState = forwardStates.find(id);
-	if (id.value && fwState != forwardStates.end()) {
-		const auto &state = *fwState->second;
+	const auto fwState = FindForwardState(id);
+	if (id.value && fwState) {
+		const auto &state = *fwState;
 
 		return state.state != ForwardState::State::Finished
 			&& state.currentChunk < state.totalChunks
@@ -48,22 +64,17 @@ bool isForwarding(const PeerId &id) {
 }
 
 void cancelForward(const PeerId &id, const Main::Session &session) {
-	const auto fwState = forwardStates.find(id);
-	if (fwState != forwardStates.end()) {
-		fwState->second->stopRequested = true;
-		fwState->second->updateBottomBar(session, &id, ForwardState::State::Finished);
+	if (const auto fwState = FindForwardState(id)) {
+		fwState->stopRequested = true;
+		fwState->updateBottomBar(session, &id, ForwardState::State::Finished);
 	}
 }
 
 std::pair<QString, QString> stateName(const PeerId &id) {
-	const auto fwState = forwardStates.find(id);
-
-
-	if (fwState == forwardStates.end()) {
+	const auto state = FindForwardState(id);
+	if (!state) {
 		return std::make_pair(QString(), QString());
 	}
-
-	const auto state = fwState->second;
 
 	QString messagesString = tr::ayu_AyuForwardStatusSentCount(tr::now,
 															   lt_count1,
@@ -298,7 +309,7 @@ void intelligentForward(
 	chunks.push_back(currentChunk);
 
 	auto state = std::make_shared<ForwardState>(chunks.size());
-	forwardStates[peer->id] = state;
+	SetForwardState(peer->id, state);
 
 
 	for (const auto &chunk : chunks) {
@@ -340,12 +351,15 @@ void forwardMessages(
 	std::shared_ptr<ForwardState> state;
 
 	if (forwardState) {
-		state = std::make_shared<ForwardState>(*forwardStates[peer->id]);
+		const auto previous = FindForwardState(peer->id);
+		state = previous
+			? std::make_shared<ForwardState>(*previous)
+			: std::make_shared<ForwardState>(1);
 	} else {
 		state = std::make_shared<ForwardState>(1);
 	}
 
-	forwardStates[peer->id] = state;
+	SetForwardState(peer->id, state);
 
 	Ayu::Log::Write(
 		u"forward"_q,
@@ -536,7 +550,7 @@ void zeroCostForward(
 			.arg(items.size()));
 
 	auto state = std::make_shared<ForwardState>(1);
-	forwardStates[peer->id] = state;
+	SetForwardState(peer->id, state);
 	state->state = ForwardState::State::Sending;
 	state->totalMessages = int(items.size());
 	state->updateBottomBar(*session, &peer->id, ForwardState::State::Sending);
@@ -606,7 +620,7 @@ void zeroCostForward(
 				u"zerocost fallback async dispatch items=%1 dest=%2"_q
 					.arg(items.size())
 					.arg(peer->id.value));
-			crl::async([
+			crl::async(crl::guard(session, [
 				session,
 				action,
 				options = draft.options,
@@ -620,7 +634,7 @@ void zeroCostForward(
 						.items = std::move(items),
 						.options = options,
 					});
-			});
+			}));
 		}
 	};
 	const auto mediaToMtp = [](Data::Media *media) {
