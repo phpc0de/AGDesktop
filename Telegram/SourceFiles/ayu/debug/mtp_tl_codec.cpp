@@ -257,7 +257,7 @@ constexpr auto kMaxRawHexChars = 4096;
 	if (!isPhoto && !mime.isEmpty()) {
 		text += u" mime=%1"_q.arg(mime);
 	}
-	return text + u']'_q;
+	return text + QChar(u']');
 }
 
 [[nodiscard]] QString FieldDocNote(const CtorDoc &doc, const QString &field) {
