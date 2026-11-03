@@ -28,7 +28,6 @@
 #include "window/window_session_controller.h"
 
 #include <QFileInfo>
-#include <QPointer>
 #include <map>
 #include <optional>
 
@@ -38,21 +37,26 @@ namespace {
 constexpr auto kSexCatToastDuration = crl::time(3000);
 
 struct PendingSaveAs {
-	QPointer<DocumentData> document;
 	FullMsgId contextId;
+	crl::time when = 0;
 };
+
+constexpr auto kPendingSaveAsTtl = 10 * crl::time(60'000);
+constexpr auto kPendingSaveAsMax = 32;
 
 std::map<DocumentData*, PendingSaveAs> &PendingMap() {
 	static std::map<DocumentData*, PendingSaveAs> result;
 	return result;
 }
 
-// WHY: a failed save can die without its Forget callback, so raw-pointer
-// keys are validated via QPointer and pruned lazily on every access.
+// WHY: a failed save can die without its Forget callback and
+// DocumentData is not a QObject, so entries age out and the map
+// stays bounded instead of tracking document lifetimes.
 void PruneStalePending() {
 	auto &map = PendingMap();
+	const auto now = crl::now();
 	for (auto i = map.begin(); i != map.end();) {
-		if (!i->second.document) {
+		if (now - i->second.when > kPendingSaveAsTtl) {
 			i = map.erase(i);
 		} else {
 			++i;
@@ -302,7 +306,11 @@ void MarkDocumentSaveAs(
 		not_null<DocumentData*> document,
 		FullMsgId contextId) {
 	PruneStalePending();
-	PendingMap()[document.get()] = PendingSaveAs{ document, contextId };
+	auto &map = PendingMap();
+	if (map.size() >= kPendingSaveAsMax) {
+		map.clear();
+	}
+	map[document.get()] = PendingSaveAs{ contextId, crl::now() };
 }
 
 void NotifyDocumentSaved(
