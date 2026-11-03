@@ -28,6 +28,7 @@
 #include "window/window_session_controller.h"
 
 #include <QFileInfo>
+#include <QPointer>
 #include <map>
 #include <optional>
 
@@ -37,12 +38,26 @@ namespace {
 constexpr auto kSexCatToastDuration = crl::time(3000);
 
 struct PendingSaveAs {
+	QPointer<DocumentData> document;
 	FullMsgId contextId;
 };
 
 std::map<DocumentData*, PendingSaveAs> &PendingMap() {
 	static std::map<DocumentData*, PendingSaveAs> result;
 	return result;
+}
+
+// WHY: a failed save can die without its Forget callback, so raw-pointer
+// keys are validated via QPointer and pruned lazily on every access.
+void PruneStalePending() {
+	auto &map = PendingMap();
+	for (auto i = map.begin(); i != map.end();) {
+		if (!i->second.document) {
+			i = map.erase(i);
+		} else {
+			++i;
+		}
+	}
 }
 
 [[nodiscard]] bool Enabled() {
@@ -286,12 +301,14 @@ void RecordPhotoSaveAttempt(
 void MarkDocumentSaveAs(
 		not_null<DocumentData*> document,
 		FullMsgId contextId) {
-	PendingMap()[document.get()] = PendingSaveAs{ contextId };
+	PruneStalePending();
+	PendingMap()[document.get()] = PendingSaveAs{ document, contextId };
 }
 
 void NotifyDocumentSaved(
 		const QString &savedPath,
 		not_null<DocumentData*> document) {
+	PruneStalePending();
 	const auto i = PendingMap().find(document.get());
 	if (i == end(PendingMap())) {
 		return;

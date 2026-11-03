@@ -192,7 +192,7 @@ public:
 			const auto guard = QPointer<QPushButton>(scan);
 			const auto window = QPointer<HistoryWindow>(this);
 			scan->setEnabled(false);
-			SexCat::StartFolderScan(dir, [=](const ScanSummary &s) {
+			const auto summary = SexCat::StartFolderScan(dir, [=](const ScanSummary &s) {
 				if (!guard) {
 					return;
 				}
@@ -227,6 +227,12 @@ public:
 					tr::now,
 					lt_processed,
 					QString::number(s.scanned)));
+			});
+			connect(this, &QObject::destroyed, [weak = std::weak_ptr<
+				ScanSummary>(summary)] {
+				if (const auto alive = weak.lock()) {
+					alive->canceled = true;
+				}
 			});
 		});
 		connect(selectAll, &QPushButton::clicked, this, [=] {

@@ -10,6 +10,9 @@
 
 #include <QString>
 
+#include <atomic>
+#include <memory>
+
 namespace SexCat {
 
 struct ScanSummary {
@@ -21,10 +24,11 @@ struct ScanSummary {
 	int marked = 0;
 	int failed = 0;
 	bool finished = false;
+	std::atomic<bool> canceled = false;
 };
 
 // Backfills sha markers under a folder, relinking known content.
-void StartFolderScan(
+[[nodiscard]] std::shared_ptr<ScanSummary> StartFolderScan(
 	const QString &root,
 	Fn<void(const ScanSummary &)> progress);
 

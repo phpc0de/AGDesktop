@@ -79,6 +79,11 @@ void PumpNext(
 		const std::shared_ptr<QDirIterator> &iterator,
 		const Progress &progress) {
 	while (iterator->hasNext()) {
+		if (summary->canceled) {
+			summary->finished = true;
+			progress(*summary);
+			return;
+		}
 		const auto path = iterator->next();
 		summary->scanned++;
 		if (path.endsWith(u".sexcat.json"_q)) {
@@ -102,6 +107,9 @@ void PumpNext(
 			continue;
 		}
 		HashStore::HashFileAsync(path, [=](QByteArray sha256) {
+			if (summary->canceled) {
+				return;
+			}
 			if (sha256.isEmpty()) {
 				summary->failed++;
 			} else {
@@ -168,13 +176,16 @@ void PumpNext(
 // WHY: HashFileAsync serializes on its own queue, so this pump keeps
 // exactly one file hashing at a time and every progress call lands on
 // the main thread, safe for direct UI updates.
-void StartFolderScan(const QString &root, Progress progress) {
+std::shared_ptr<ScanSummary> StartFolderScan(
+		const QString &root,
+		Progress progress) {
 	auto summary = std::make_shared<ScanSummary>();
 	auto iterator = std::make_shared<QDirIterator>(
 		root,
 		QDir::Files,
 		QDirIterator::Subdirectories);
 	PumpNext(summary, iterator, progress);
+	return summary;
 }
 
 } // namespace SexCat
