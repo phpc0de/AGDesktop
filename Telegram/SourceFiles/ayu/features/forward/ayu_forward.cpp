@@ -20,6 +20,7 @@
 #include "core/application.h"
 #include "data/data_changes.h"
 #include "data/data_document.h"
+#include "data/data_file_origin.h"
 #include "data/data_peer.h"
 #include "data/data_photo.h"
 #include "data/data_session.h"
@@ -31,6 +32,7 @@
 #include "ui/chat/attach/attach_prepare.h"
 #include "ui/text/text_utilities.h"
 
+#include <map>
 #include <QMutex>
 
 namespace AyuForward {
@@ -351,37 +353,122 @@ void intelligentForward(
 		}
 	}
 	state->updateBottomBar(*session, &peer->id, ForwardState::State::Sending);
+
+	auto ids = std::vector<FullMsgId>();
+	ids.reserve(items.size());
+	auto documentOrigins = std::map<DocumentData*, FullMsgId>();
+	auto photoOrigins = std::map<PhotoData*, FullMsgId>();
 	for (const auto item : items) {
-		auto message = Api::MessageToSend(action);
-		message.action.options.invertCaption = item->invertMedia();
-		message.action.options.scheduled = 0;
-		message.action.options.suggest = {};
-		message.action.options.effectId = 0;
-		message.action.replaceMediaOf = 0;
-		message.textWithTags = extractText(item);
+		ids.push_back(item->fullId());
 		const auto media = item->media();
 		if (const auto document = media->document()) {
-			Ayu::Log::Write(
-				u"forward"_q,
-				u"reattach document item=%1 dest=%2"_q
-					.arg(item->id.bare)
-					.arg(peer->id.value));
-			Api::SendExistingDocument(std::move(message), document);
-		} else {
-			Ayu::Log::Write(
-				u"forward"_q,
-				u"reattach photo item=%1 dest=%2"_q
-					.arg(item->id.bare)
-					.arg(peer->id.value));
-			Api::SendExistingPhoto(std::move(message), media->photo());
+			documentOrigins.emplace(document, item->fullId());
+		} else if (const auto photo = media->photo()) {
+			photoOrigins.emplace(photo, item->fullId());
 		}
 	}
-	state->updateBottomBar(*session, &peer->id, ForwardState::State::Finished);
-	Ayu::Log::Write(
-		u"forward"_q,
-		u"reattach done items=%1 dest=%2"_q
-			.arg(items.size())
-			.arg(peer->id.value));
+
+	const auto sendItems = [=] {
+		for (const auto id : ids) {
+			const auto item = session->data().message(id);
+			const auto media = item ? item->media() : nullptr;
+			if (!media
+				|| media->poll()
+				|| (!media->document() && !media->photo())) {
+				Ayu::Log::Write(
+					u"forward"_q,
+					u"reattach skip lost item=%1"_q.arg(id.msg.bare));
+				continue;
+			}
+			auto message = Api::MessageToSend(action);
+			message.action.options.invertCaption = item->invertMedia();
+			message.action.options.scheduled = 0;
+			message.action.options.suggest = {};
+			message.action.options.effectId = 0;
+			message.action.replaceMediaOf = 0;
+			message.textWithTags = extractText(item);
+			if (const auto document = media->document()) {
+				Ayu::Log::Write(
+					u"forward"_q,
+					u"reattach document item=%1 dest=%2"_q
+						.arg(item->id.bare)
+						.arg(peer->id.value));
+				Api::SendExistingDocument(std::move(message), document);
+			} else {
+				Ayu::Log::Write(
+					u"forward"_q,
+					u"reattach photo item=%1 dest=%2"_q
+						.arg(item->id.bare)
+						.arg(peer->id.value));
+				Api::SendExistingPhoto(std::move(message), media->photo());
+			}
+		}
+		state->updateBottomBar(
+			*session,
+			&peer->id,
+			ForwardState::State::Finished);
+		Ayu::Log::Write(
+			u"forward"_q,
+			u"reattach done items=%1 dest=%2"_q
+				.arg(ids.size())
+				.arg(peer->id.value));
+	};
+
+	// WHY: file_reference of source media expires after hours and
+	// SendExistingDocument/SendExistingPhoto carry no origin for plain
+	// media, so refresh every source message before the send loop.
+	const auto remaining = std::make_shared<int>(
+		int(documentOrigins.size() + photoOrigins.size()));
+	const auto proceeded = std::make_shared<bool>(false);
+	const auto proceed = [=] {
+		if (*proceeded || *remaining > 0) {
+			return;
+		}
+		*proceeded = true;
+		Ayu::Log::Write(
+			u"forward"_q,
+			u"reattach refreshed continue items=%1 dest=%2"_q
+				.arg(ids.size())
+				.arg(peer->id.value));
+		sendItems();
+	};
+	for (const auto &entry : documentOrigins) {
+		const auto document = entry.first;
+		const auto origin = entry.second;
+		const auto usedReference = document->fileReference();
+		session->api().refreshFileReference(
+			Data::FileOrigin(origin),
+			[=](const auto &) {
+				const auto ok = document->fileReference() != usedReference;
+				Ayu::Log::Write(
+					u"forward"_q,
+					u"reattach refresh %1 item=%2 document=%3"_q
+						.arg(ok ? u"ok"_q : u"fail"_q)
+						.arg(origin.msg.bare)
+						.arg(document->id));
+				(*remaining)--;
+				proceed();
+			});
+	}
+	for (const auto &entry : photoOrigins) {
+		const auto photo = entry.first;
+		const auto origin = entry.second;
+		const auto usedReference = photo->fileReference();
+		session->api().refreshFileReference(
+			Data::FileOrigin(origin),
+			[=](const auto &) {
+				const auto ok = photo->fileReference() != usedReference;
+				Ayu::Log::Write(
+					u"forward"_q,
+					u"reattach refresh %1 item=%2 photo=%3"_q
+						.arg(ok ? u"ok"_q : u"fail"_q)
+						.arg(origin.msg.bare)
+						.arg(photo->id));
+				(*remaining)--;
+				proceed();
+			});
+	}
+	proceed();
 	return true;
 }
 
