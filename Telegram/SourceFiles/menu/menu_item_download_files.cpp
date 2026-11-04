@@ -36,6 +36,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "ayu/sexcat/sexcat_save_hook.h"
+#include "history/history.h"
 
 
 namespace Menu {
@@ -69,11 +70,17 @@ void AddAction(
 		not_null<Window::SessionController*> controller,
 		Documents &&documents,
 		Photos &&photos,
-		Fn<void()> callback) {
-	const auto text = documents.empty()
-		? tr::lng_context_save_images_selected(tr::now)
-		: tr::lng_context_save_documents_selected(tr::now);
-	const auto icon = documents.empty()
+		Fn<void()> callback,
+		QString overrideText = QString(),
+		const style::icon *overrideIcon = nullptr) {
+	const auto text = overrideText.isEmpty()
+		? (documents.empty()
+			? tr::lng_context_save_images_selected(tr::now)
+			: tr::lng_context_save_documents_selected(tr::now))
+		: overrideText;
+	const auto icon = overrideIcon
+		? overrideIcon
+		: documents.empty()
 		? &st::menuIconSaveImage
 		: &st::menuIconDownload;
 	const auto shouldShowToast = documents.empty();
@@ -313,6 +320,37 @@ void AddDownloadFilesAction(
 		}
 	};
 	AddAction(menu, window, std::move(docs), std::move(photos), done);
+}
+
+void AddDownloadAlbumAction(
+		not_null<Ui::PopupMenu*> menu,
+		not_null<Window::SessionController*> window,
+		HistoryItem *item) {
+	if (!item) {
+		return;
+	}
+	const auto group = item->history()->owner().groups().find(item);
+	if (!group || group->items.size() < 2) {
+		return;
+	}
+	auto docs = Documents();
+	auto photos = Photos();
+	for (const auto &groupItem : group->items) {
+		if (!Collected(groupItem.get(), docs, photos)) {
+			return;
+		}
+	}
+	if (docs.empty() && photos.empty()) {
+		return;
+	}
+	AddAction(
+		menu,
+		window,
+		std::move(docs),
+		std::move(photos),
+		[] {},
+		tr::ayu_DownloadAlbumAll(tr::now),
+		&st::menuIconDownload);
 }
 
 } // namespace Menu

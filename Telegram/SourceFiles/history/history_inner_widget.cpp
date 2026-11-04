@@ -3570,6 +3570,11 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 				addDocumentActions(lnkDocument, item);
 			}
 		}
+		if (!selectedState.count
+			&& item
+			&& !hasCopyMediaRestriction(item)) {
+			Menu::AddDownloadAlbumAction(_menu, controller, item);
+		}
 		if (item
 			&& item->hasDirectLink()
 			&& isUponSelected != 2
@@ -3745,6 +3750,11 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 			addReplyAction(partItemOrLeader);
 			addTodoListAction(partItemOrLeader);
 			addItemActions(item, albumPartItem);
+			if (item
+				&& !isUponSelected
+				&& !hasCopyMediaRestriction(item)) {
+				Menu::AddDownloadAlbumAction(_menu, controller, item);
+			}
 			if (item && !isUponSelected) {
 				const auto media = (view ? view->media() : nullptr);
 				const auto mediaHasTextForCopy = media && media->hasTextForCopy();

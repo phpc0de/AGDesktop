@@ -1229,16 +1229,25 @@ void AddDownloadFilesAction(
 		not_null<Ui::PopupMenu*> menu,
 		const ContextMenuRequest &request,
 		not_null<ListWidget*> list) {
-	if (!request.overSelection
-		|| request.selectedItems.empty()
-		|| list->hasCopyRestrictionForSelected()) {
+	if (request.overSelection
+		&& !request.selectedItems.empty()
+		&& !list->hasCopyRestrictionForSelected()) {
+		Menu::AddDownloadFilesAction(
+			menu,
+			request.navigation->parentController(),
+			request.selectedItems,
+			list);
 		return;
 	}
-	Menu::AddDownloadFilesAction(
-		menu,
-		request.navigation->parentController(),
-		request.selectedItems,
-		list);
+	if (request.item
+		&& !request.overSelection
+		&& request.selectedItems.empty()
+		&& !list->hasCopyMediaRestriction(request.item)) {
+		Menu::AddDownloadAlbumAction(
+			menu,
+			request.navigation->parentController(),
+			request.item);
+	}
 }
 
 void AddSaveRichHtmlAction(

@@ -37,4 +37,9 @@ void AddDownloadFilesAction(
 	const std::vector<not_null<HistoryItem*>> &items,
 	not_null<HistoryInner*> list);
 
+void AddDownloadAlbumAction(
+	not_null<Ui::PopupMenu*> menu,
+	not_null<Window::SessionController*> window,
+	HistoryItem *item);
+
 } // namespace Menu
