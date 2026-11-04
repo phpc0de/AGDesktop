@@ -35,6 +35,7 @@ void clearDeletedMessages(ID userId, ID dialogId, ID topicId);
 bool setCheckpoint(ID userId, ID dialogId, ID topicId, ID messageId);
 std::optional<Checkpoint> getCheckpoint(ID userId, ID dialogId, ID topicId);
 std::optional<Checkpoint> getLatestCheckpoint(ID userId, ID dialogId);
+std::vector<Checkpoint> listCheckpoints(ID userId);
 void clearCheckpoint(ID userId, ID dialogId, ID topicId);
 void clearCheckpointsForDialog(ID userId, ID dialogId);
 void clearAllCheckpoints(ID userId);

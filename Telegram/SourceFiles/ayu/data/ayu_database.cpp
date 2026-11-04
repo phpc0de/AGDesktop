@@ -725,6 +725,21 @@ void clearCheckpoint(ID userId, ID dialogId, ID topicId) {
 	}
 }
 
+std::vector<Checkpoint> listCheckpoints(ID userId) {
+	std::lock_guard lock(databaseMutex);
+	try {
+		return storage.get_all<Checkpoint>(
+			where(
+				column<Checkpoint>(&Checkpoint::userId) == userId
+			),
+			order_by(column<Checkpoint>(&Checkpoint::fakeId)).desc()
+		);
+	} catch (std::exception &ex) {
+		LOG(("Failed to list checkpoints for some reason: %1").arg(ex.what()));
+		return {};
+	}
+}
+
 void clearCheckpointsForDialog(ID userId, ID dialogId) {
 	try {
 		storage.remove_all<Checkpoint>(

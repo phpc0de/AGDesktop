@@ -19,6 +19,7 @@
 #include "ayu/utils/ayu_log.h"
 #include "ayu/debug/mtp_devtools.h"
 #include "ayu/ui/toasts.h"
+#include "ayu/ui/lists_window.h"
 #include "ayu/ui/context_menu/menu_item_subtext.h"
 #include "ayu/ui/message_history/history_section.h"
 #include "ayu/ui/settings/filters/edit_filter.h"
@@ -371,6 +372,20 @@ void AddAyuGramActions(PeerData *peerData,
 					.isAttention = true,
 				});
 			}
+			addAction(
+				u"All checkpoints…"_q,
+				[=]
+				{
+					Ayu::Ui::OpenCheckpointListWindow();
+				},
+				&st::menuIconShowInChat);
+			addAction(
+				u"Saved by source…"_q,
+				[=]
+				{
+					Ayu::Ui::OpenSavedBySourceWindow();
+				},
+				&st::menuIconDownload);
 			if (hasCheckpoint) {
 				addAction(
 					tr::ayu_JumpToCheckpointMenuText(tr::now),
