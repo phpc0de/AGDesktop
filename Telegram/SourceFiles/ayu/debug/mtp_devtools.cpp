@@ -9,9 +9,11 @@
 #include "ayu/debug/mtp_tl_codec.h"
 
 #include <QtGui/QFontDatabase>
+#include <QRegularExpression>
 
 #include "ayu/ui/toasts.h"
 #include "ayu/utils/ayu_log.h"
+#include "ayu/ayu_settings.h"
 #include "base/random.h"
 #include "core/application.h"
 #include "data/data_channel.h"
@@ -403,6 +405,9 @@ public:
 			refresh();
 		});
 		connect(_list, &QListWidget::currentRowChanged, this, [=](int row) {
+			if (_rebuilding) {
+				return;
+			}
 			const auto entry = entryAt(row);
 			if (!entry) {
 				_selectedKey = -1;
@@ -625,6 +630,7 @@ private:
 		const auto atBottom = bar && bar->value() >= bar->maximum();
 		const auto pos = bar ? bar->value() : 0;
 		const auto key = _selectedKey;
+		const auto detailText = _detail->toPlainText();
 		refresh();
 		auto restored = false;
 		if (key >= 0) {
@@ -642,11 +648,15 @@ private:
 				? bar->maximum()
 				: qMin(pos, bar->maximum()));
 		}
+		if (!restored && key >= 0) {
+			_detail->setPlainText(detailText);
+		}
 	}
 
 	void refresh() {
 		const auto needle = _filter->text().trimmed();
 		const auto entries = MtpEntriesSnapshot();
+		_rebuilding = true;
 		_rows.clear();
 		_list->clear();
 		for (const auto &entry : entries) {
@@ -665,12 +675,14 @@ private:
 			_rows.push_back(entry);
 			_list->addItem(line);
 		}
+		_rebuilding = false;
 		updateButtons();
 	}
 
 	rpl::lifetime _lifetime;
 	std::vector<MtpEntry> _rows;
 	qint64 _selectedKey = -1;
+	bool _rebuilding = false;
 	QLineEdit *_filter = nullptr;
 	QPushButton *_hexView = nullptr;
 	QPushButton *_pin = nullptr;
@@ -702,6 +714,15 @@ void Push(MtpEntry entry) {
 		Entries.erase(Entries.begin(), Entries.end() - kMaxEntries);
 	}
 	Updates.fire({});
+}
+
+[[nodiscard]] QString RedactDump(const QString &text) {
+	static const auto hash = QRegularExpression(u"access_hash: \\S+"_q);
+	static const auto tags = QRegularExpression(u" \\[[^\\]]*\\]"_q);
+	auto out = text;
+	out.replace(hash, u"access_hash: ***"_q);
+	out.replace(tags, QString());
+	return out;
 }
 
 } // namespace
@@ -743,6 +764,9 @@ void RecordMtpRequest(
 	const auto *end = from + entry.body.size();
 	entry.text = DecodeTlBody(from, end);
 	entry.name = DecodeTlRowName(entry.body);
+	if (AyuSettings::getInstance().experimentalForward()) {
+		Ayu::Log::Write(u"mtpdump"_q, RedactDump(entry.text));
+	}
 	if (entry.name.isEmpty()) {
 		entry.name = FirstLine(entry.text);
 	}

@@ -9077,6 +9077,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "ayu_MtpDevtoolsMenuText" = "MTP Devtools";
 "ayu_FolderTagsForce" = "Force folder tags (bypass premium)";
 "ayu_ShowUnavailableChannels" = "Show unavailable channels (bypass ToS banner)";
+"ayu_ExperimentalForward" = "Experimental forward (download-retransmit + packet dump)";
 "ayu_ViewDeletedMenuText" = "View Deleted";
 "ayu_ViewFiltersMenuText" = "View Filters";
 "ayu_ShowFilteredMessagesMenuText" = "Show Filtered";

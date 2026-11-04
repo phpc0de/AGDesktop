@@ -275,6 +275,8 @@ public:
 	[[nodiscard]] bool filtersEnabledInChats() const { return _filtersEnabledInChats.current(); }
 	[[nodiscard]] bool folderTagsForce() const { return _folderTagsForce.current(); }
 	[[nodiscard]] bool showUnavailableChannels() const { return _showUnavailableChannels.current(); }
+	void setExperimentalForward(bool val);
+	[[nodiscard]] bool experimentalForward() const { return _experimentalForward.current(); }
 	[[nodiscard]] bool sexcatEnabled() const { return _sexcatEnabled.current(); }
 	[[nodiscard]] bool hideFromBlocked() const { return _hideFromBlocked.current(); }
 	[[nodiscard]] bool semiTransparentDeletedMessages() const { return _semiTransparentDeletedMessages.current(); }
@@ -647,6 +649,7 @@ private:
 	rpl::variable<bool> _filtersEnabledInChats = false;
 	rpl::variable<bool> _folderTagsForce = false;
 	rpl::variable<bool> _showUnavailableChannels = false;
+	rpl::variable<bool> _experimentalForward = false;
 	rpl::variable<bool> _sexcatEnabled = true;
 	rpl::variable<bool> _hideFromBlocked = false;
 	rpl::variable<bool> _semiTransparentDeletedMessages = false;

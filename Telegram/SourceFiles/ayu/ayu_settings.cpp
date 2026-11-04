@@ -580,6 +580,12 @@ void AyuSettings::setShowUnavailableChannels(bool val) {
 	save();
 }
 
+void AyuSettings::setExperimentalForward(bool val) {
+	if (_experimentalForward.current() == val) return;
+	_experimentalForward = val;
+	save();
+}
+
 void AyuSettings::setSexcatEnabled(bool val) {
 	if (_sexcatEnabled.current() == val) return;
 	_sexcatEnabled = val;
@@ -1111,6 +1117,7 @@ void to_json(nlohmann::json &j, const AyuSettings &s) {
 		{"filtersEnabledInChats", s._filtersEnabledInChats.current()},
 		{"folderTagsForce", s._folderTagsForce.current()},
 		{"showUnavailableChannels", s._showUnavailableChannels.current()},
+		{"experimentalForward", s._experimentalForward.current()},
 		{"sexcatEnabled", s._sexcatEnabled.current()},
 		{"hideFromBlocked", s._hideFromBlocked.current()},
 		{"semiTransparentDeletedMessages", s._semiTransparentDeletedMessages.current()},
@@ -1219,6 +1226,7 @@ void from_json(const nlohmann::json &j, AyuSettings &s) {
 	s._filtersEnabledInChats = j.value("filtersEnabledInChats", defaults._filtersEnabledInChats.current());
 	s._folderTagsForce = j.value("folderTagsForce", defaults._folderTagsForce.current());
 	s._showUnavailableChannels = j.value("showUnavailableChannels", defaults._showUnavailableChannels.current());
+	s._experimentalForward = j.value("experimentalForward", defaults._experimentalForward.current());
 	s._sexcatEnabled = j.value("sexcatEnabled", defaults._sexcatEnabled.current());
 	s._hideFromBlocked = j.value("hideFromBlocked", defaults._hideFromBlocked.current());
 	s._semiTransparentDeletedMessages = j.value("semiTransparentDeletedMessages", defaults._semiTransparentDeletedMessages.current());

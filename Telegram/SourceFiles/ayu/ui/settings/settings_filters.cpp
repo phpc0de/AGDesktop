@@ -99,6 +99,21 @@ void BuildFiltersSettings(SectionBuilder &builder) {
 		}, folderTagsButton->lifetime());
 	}
 
+	const auto experimentalButton = builder.addButton({
+		.id = u"ayu/experimentalForward"_q,
+		.title = tr::ayu_ExperimentalForward(),
+		.st = &st::settingsButtonNoIcon,
+		.toggled = rpl::single(settings->experimentalForward()),
+	});
+	if (experimentalButton) {
+		experimentalButton->toggledValue(
+		) | rpl::filter([=](bool enabled) {
+			return (enabled != settings->experimentalForward());
+		}) | on_next([=](bool enabled) {
+			AyuSettings::getInstance().setExperimentalForward(enabled);
+		}, experimentalButton->lifetime());
+	}
+
 	const auto unavailableButton = builder.addButton({
 		.id = u"ayu/showUnavailableChannels"_q,
 		.title = tr::ayu_ShowUnavailableChannels(),

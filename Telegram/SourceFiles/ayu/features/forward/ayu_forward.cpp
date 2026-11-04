@@ -12,6 +12,7 @@
 #include "lang_auto.h"
 #include "ayu/features/forward/ayu_forward_rich.h"
 #include "ayu/features/forward/ayu_sync.h"
+#include "ayu/ayu_settings.h"
 #include "ayu/utils/ayu_log.h"
 #include "ayu/utils/telegram_helpers.h"
 #include "base/random.h"
@@ -388,6 +389,18 @@ void forwardMessages(
 	}
 	state->totalMessages = items.size();
 	auto documentPaths = AyuSync::DocumentPaths();
+	if (!toBeDownloaded.empty()
+		&& !AyuSettings::getInstance().experimentalForward()) {
+		Ayu::Log::Write(
+			u"forward"_q,
+			u"experimental forward off: skip download-retransmit items=%1"
+			" dest=%2"_q.arg(items.size()).arg(peer->id.value));
+		state->updateBottomBar(
+			*session,
+			&peer->id,
+			ForwardState::State::Finished);
+		return;
+	}
 	if (!toBeDownloaded.empty()) {
 		state->state = ForwardState::State::Downloading;
 		state->updateBottomBar(*session, &peer->id, ForwardState::State::Downloading);
