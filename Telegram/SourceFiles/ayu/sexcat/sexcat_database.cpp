@@ -282,9 +282,8 @@ bool Database::Relink(int64 id, const QString &newPath) {
 	}
 	try {
 		std::lock_guard lock(storageMutex);
-		storage.update_all<SavedFileRow>(
-			set(column<SavedFileRow>(&SavedFileRow::saved_path)
-				= newPath.toStdString()),
+		storage.update_all(
+			set(c(&SavedFileRow::saved_path) = newPath.toStdString()),
 			where(column<SavedFileRow>(&SavedFileRow::id) == id));
 		return true;
 	} catch (const std::exception &ex) {

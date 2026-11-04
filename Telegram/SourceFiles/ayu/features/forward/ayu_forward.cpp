@@ -670,7 +670,7 @@ void zeroCostForward(
 			|| item->id.bare <= 0
 			|| (media && (media->poll() || media->ttlSeconds()));
 	};
-	Peer *probeFromPeer = nullptr;
+	PeerData *probeFromPeer = nullptr;
 	auto probeIds = QVector<MTPint>();
 	auto probeRandomIds = QVector<MTPlong>();
 	auto probePossible = !units.empty() && int(items.size()) <= 100;

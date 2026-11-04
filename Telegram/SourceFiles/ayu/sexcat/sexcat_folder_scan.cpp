@@ -87,7 +87,7 @@ void PumpNext(
 		const auto path = iterator->next();
 		summary->scanned++;
 		if (path.endsWith(u".sexcat.json"_q)) {
-			summary->skipped++;
+			summary->alreadyMarked++;
 			continue;
 		}
 		if (const auto hit = HashStore::ReadAds(path)) {
@@ -158,8 +158,11 @@ void PumpNext(
 					entry.src_title = best.src_title;
 					entry.src_attach = best.src_attach;
 					entry.saved_at = base::unixtime::now();
-					Database::instance().RecordSaved(std::move(entry));
-					summary->linked++;
+					if (Database::instance().RecordSaved(std::move(entry))) {
+						summary->linked++;
+					} else {
+						summary->failed++;
+					}
 				}
 			}
 			progress(*summary);
