@@ -6,6 +6,9 @@
 // Copyright @Radolyn, 2026
 #include "ayu/data/messages_storage.h"
 
+#include <QJsonDocument>
+#include <QJsonObject>
+
 #include "ayu/data/ayu_database.h"
 #include "ayu/utils/ayu_mapper.h"
 #include "ayu/utils/telegram_helpers.h"
@@ -183,6 +186,19 @@ bool setCheckpoint(not_null<HistoryItem*> item) {
 		topicId,
 		item->id.bare);
 	if (ok) {
+		auto dump = QJsonObject{
+			{u"at"_q, double(base::unixtime::now())},
+			{u"user_id"_q, double(userId)},
+			{u"dialog_id"_q, double(getDialogIdFromPeer(peer))},
+			{u"topic_id"_q, double(topicId)},
+			{u"message_id"_q, double(item->id.bare)},
+			{u"title"_q, peer->name()},
+		};
+		auto out = QFile(u"./tdata/checkpoints.jsonl"_q);
+		if (out.open(QIODevice::Append | QIODevice::Text)) {
+			out.write(QJsonDocument(dump).toJson(QJsonDocument::Compact));
+			out.write("\n");
+		}
 		ShowCheckpointSavedToast();
 	}
 	return ok;
