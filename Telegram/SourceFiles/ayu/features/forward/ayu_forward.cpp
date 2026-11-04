@@ -7,24 +7,33 @@
 #include "ayu/features/forward/ayu_forward.h"
 
 #include "apiwrap.h"
+#include "api/api_common.h"
 #include "api/api_sending.h"
 #include "api/api_text_entities.h"
 #include "lang_auto.h"
 #include "ayu/features/forward/ayu_forward_rich.h"
 #include "ayu/features/forward/ayu_sync.h"
 #include "ayu/ayu_settings.h"
+#include "ayu/ayu_worker.h"
 #include "ayu/utils/ayu_log.h"
 #include "ayu/utils/telegram_helpers.h"
 #include "base/random.h"
 #include "base/unixtime.h"
+#include "chat_helpers/message_field.h"
 #include "core/application.h"
+#include "data/business/data_shortcut_messages.h"
+#include "data/components/ephemeral_messages.h"
 #include "data/data_changes.h"
 #include "data/data_document.h"
 #include "data/data_file_origin.h"
+#include "data/data_histories.h"
 #include "data/data_peer.h"
 #include "data/data_photo.h"
 #include "data/data_session.h"
+#include "data/stickers/data_stickers.h"
 #include "history/history_item.h"
+#include "history/history_item_helpers.h"
+#include "mtproto/mtproto_response.h"
 #include "storage/localimageloader.h"
 #include "storage/storage_account.h"
 #include "storage/storage_media_prepare.h"
@@ -335,12 +344,461 @@ void intelligentForward(
 	state->updateBottomBar(*session, &peer->id, ForwardState::State::Finished);
 }
 
+void resendViaDownload(
+		not_null<Main::Session*> session,
+		const Api::SendAction &action,
+		Data::ForwardOptions options,
+		const std::vector<not_null<HistoryItem*>> &items,
+		const std::vector<not_null<HistoryItem*>> &toBeDownloaded,
+		const std::shared_ptr<ForwardState> &state) {
+	const auto peer = action.history->peer;
+
+	auto documentPaths = AyuSync::DocumentPaths();
+	if (!toBeDownloaded.empty()
+		&& !AyuSettings::getInstance().experimentalForward()) {
+		Ayu::Log::Write(
+			u"forward"_q,
+			u"experimental forward off: skip download-retransmit items=%1"
+			" dest=%2"_q.arg(items.size()).arg(peer->id.value));
+		state->updateBottomBar(
+			*session,
+			&peer->id,
+			ForwardState::State::Finished);
+		return;
+	}
+	if (!toBeDownloaded.empty()) {
+		state->state = ForwardState::State::Downloading;
+		state->updateBottomBar(*session, &peer->id, ForwardState::State::Downloading);
+		documentPaths = AyuSync::loadDocuments(
+			session,
+			toBeDownloaded,
+			[state] { return state->stopRequested.load(); });
+	}
+	if (state->stopRequested) {
+		Ayu::Log::Write(u"forward"_q, u"ayu stopped before send dest=%1"_q.arg(peer->id.value));
+		state->updateBottomBar(*session, &peer->id, ForwardState::State::Finished);
+		return;
+	}
+
+	state->sentMessages = 0;
+	state->updateBottomBar(*session, &peer->id, ForwardState::State::Sending);
+
+	for (int i = 0; i < items.size(); i++) {
+		const auto item = items[i];
+
+		if (state->stopRequested) {
+			state->updateBottomBar(*session, &peer->id, ForwardState::State::Finished);
+			return;
+		}
+		const auto updateProgress = gsl::finally([&] {
+			if (state->stopRequested) {
+				return;
+			}
+			state->sentMessages = i + 1;
+			state->updateBottomBar(
+				*session,
+				&peer->id,
+				ForwardState::State::Sending);
+		});
+
+		if (item->richPage()) {
+			state->updateBottomBar(*session, &peer->id, ForwardState::State::Downloading);
+
+			const auto sent = forwardRichMessage(session, item->fullId(), action, [state]
+			{
+				return state->stopRequested.load();
+			});
+
+			if (state->stopRequested) {
+				state->updateBottomBar(*session, &peer->id, ForwardState::State::Finished);
+				return;
+			}
+
+			state->updateBottomBar(*session, &peer->id, ForwardState::State::Sending);
+
+			if (sent) {
+				continue;
+			}
+		}
+
+		auto extractedText = extractText(item);
+		if (extractedText.empty() && !mediaDownloadable(item->media())) {
+			continue;
+		}
+
+		auto message = Api::MessageToSend(action);
+		message.action.options.invertCaption = item->invertMedia();
+		message.action.options.scheduled = 0;
+		message.action.options.suggest = {};
+		message.action.options.effectId = 0;
+		message.action.replaceMediaOf = 0;
+
+		if (options != Data::ForwardOptions::NoNamesAndCaptions) {
+			message.textWithTags = extractedText;
+		}
+
+		if (!mediaDownloadable(item->media())) {
+			AyuSync::sendMessageSync(session, std::move(message));
+		} else if (const auto media = item->media()) {
+			if (media->poll()) {
+				AyuSync::sendMessageSync(session, std::move(message));
+				continue;
+			}
+
+			std::vector<not_null<Data::Media*>> groupMedia;
+			auto preparedMedia = prepareMedia(
+				session,
+				items,
+				i,
+				groupMedia,
+				documentPaths);
+
+			// remove not finished files
+			for (auto j = int(preparedMedia.files.size()); j != 0;) {
+				--j;
+				const auto &file = preparedMedia.files[j];
+
+				const auto fileInfo = QFileInfo(file.path);
+				const auto photo = groupMedia[j]->photo();
+				const auto document = groupMedia[j]->document();
+				const auto incompletePhoto = photo
+					&& (!fileInfo.isFile()
+						|| fileInfo.size()
+							< photo->imageByteSize(Data::PhotoSize::Large));
+				const auto incompleteDocument = document
+					&& (!fileInfo.isFile()
+						|| fileInfo.size() != document->size);
+				if (incompletePhoto || incompleteDocument) {
+					preparedMedia.files.erase(preparedMedia.files.begin() + j);
+					groupMedia.erase(groupMedia.begin() + j);
+				}
+			}
+
+			if (preparedMedia.files.empty()) {
+				if (!message.textWithTags.empty()) {
+					AyuSync::sendMessageSync(session, std::move(message));
+				}
+				continue;
+			}
+
+			auto way = Ui::SendFilesWay();
+			way.setGroupFiles(true);
+			way.setSendImagesAsPhotos(false);
+			for (const auto &groupItem : groupMedia) {
+				if (groupItem->photo()) {
+					way.setSendImagesAsPhotos(true);
+					break;
+				}
+			}
+
+			auto groups = Ui::DivideByGroups(
+				std::move(preparedMedia),
+				way,
+				peer->slowmodeApplied());
+
+			auto bundle = Ui::PrepareFilesBundle(
+				std::move(groups),
+				way,
+				false);
+			sendMedia(
+				session,
+				bundle,
+				groupMedia.front(),
+				std::move(message),
+				way.sendImagesAsPhotos());
+		}
+		// if there are grouped messages
+		// "i" is incremented in prepareMedia
+	}
+	Ayu::Log::Write(u"forward"_q, u"ayu finished dest=%1 sent=%2"_q.arg(peer->id.value).arg(state->sentMessages));
+	state->updateBottomBar(*session, &peer->id, ForwardState::State::Finished);
+}
+
+template <typename MediaData>
+void ReattachSendExistingMedia(
+		MessageToSend &&message,
+		not_null<MediaData*> mediaData,
+		FullMsgId originId,
+		Fn<MTPInputMedia()> inputMedia,
+		Data::FileOrigin origin,
+		Fn<void(bool ok)> settleOne) {
+	const auto history = message.action.history;
+	const auto peer = history->peer;
+	const auto session = &history->session();
+	const auto api = &session->api();
+
+	applyGhostScheduling(message.action, message.textWithTags.text);
+
+	message.action.clearDraft = false;
+	message.action.generateLocal = true;
+	api->sendAction(message.action);
+
+	const auto newId = FullMsgId(
+		peer->id,
+		session->data().nextLocalMessageId());
+	const auto randomId = base::RandomValue<uint64>();
+	auto &action = message.action;
+
+	auto flags = NewMessageFlags(peer);
+	auto sendFlags = MTPmessages_SendMedia::Flags(0);
+	if (action.replyTo) {
+		flags |= MessageFlag::HasReplyInfo;
+		sendFlags |= MTPmessages_SendMedia::Flag::f_reply_to;
+	}
+	if (!action.options.scheduled
+		&& !action.options.shortcutId
+		&& session->ephemeralMessages().wouldSendMedia(
+			peer,
+			action.replyTo,
+			message.textWithTags.text)) {
+		flags |= MessageFlag::Ephemeral;
+	}
+	const auto silentPost = ShouldSendSilent(peer, action.options);
+	Api::FillMessagePostFlags(action, peer, flags);
+	if (silentPost) {
+		sendFlags |= MTPmessages_SendMedia::Flag::f_silent;
+	}
+	const auto sendAs = action.options.sendAs;
+	if (sendAs) {
+		sendFlags |= MTPmessages_SendMedia::Flag::f_send_as;
+	}
+	auto caption = TextWithEntities{
+		message.textWithTags.text,
+		TextUtilities::ConvertTextTagsToEntities(message.textWithTags.tags)
+	};
+	TextUtilities::Trim(caption);
+	const auto captionNormalized = reverseLocalPremiumEmoji(caption, history);
+	auto sentEntities = Api::EntitiesToMTP(
+		session,
+		captionNormalized.entities,
+		Api::ConvertOption::SkipLocal);
+	if (!sentEntities.v.isEmpty()) {
+		sendFlags |= MTPmessages_SendMedia::Flag::f_entities;
+	}
+	const auto captionText = caption.text;
+	const auto starsPaid = std::min(
+		peer->starsPerMessageChecked(),
+		action.options.starsApproved);
+	if (action.options.scheduled) {
+		flags |= MessageFlag::IsOrWasScheduled;
+		sendFlags |= MTPmessages_SendMedia::Flag::f_schedule_date;
+		if (action.options.scheduleRepeatPeriod) {
+			sendFlags |= MTPmessages_SendMedia::Flag::f_schedule_repeat_period;
+		}
+	}
+	if (action.options.shortcutId) {
+		flags |= MessageFlag::ShortcutMessage;
+		sendFlags |= MTPmessages_SendMedia::Flag::f_quick_reply_shortcut;
+	}
+	if (action.options.effectId) {
+		sendFlags |= MTPmessages_SendMedia::Flag::f_effect;
+	}
+	if (action.options.suggest) {
+		sendFlags |= MTPmessages_SendMedia::Flag::f_suggested_post;
+	}
+	if (action.options.invertCaption) {
+		flags |= MessageFlag::InvertMedia;
+		sendFlags |= MTPmessages_SendMedia::Flag::f_invert_media;
+	}
+	if (starsPaid) {
+		action.options.starsApproved -= starsPaid;
+		sendFlags |= MTPmessages_SendMedia::Flag::f_allow_paid_stars;
+	}
+
+	const auto item = history->addNewLocalMessage({
+		.id = newId.msg,
+		.flags = flags,
+		.from = NewMessageFromId(action),
+		.replyTo = action.replyTo,
+		.date = NewMessageDate(action.options),
+		.scheduleRepeatPeriod = action.options.scheduleRepeatPeriod,
+		.shortcutId = action.options.shortcutId,
+		.starsPaid = starsPaid,
+		.postAuthor = NewMessagePostAuthor(action),
+		.effectId = action.options.effectId,
+		.suggest = HistoryMessageSuggestInfo(action.options),
+		.mediaSpoiler = action.options.mediaSpoiler,
+	}, mediaData, caption);
+
+	session->data().registerMessageRandomId(randomId, newId);
+
+	if (session->ephemeralMessages().sendMedia(
+			item,
+			inputMedia(),
+			origin,
+			inputMedia)) {
+		Ayu::Log::Write(
+			u"forward"_q,
+			u"reattach ephemeral item=%1 dest=%2"_q
+				.arg(originId.msg.bare)
+				.arg(peer->id.value));
+		settleOne(true);
+		return;
+	}
+
+	auto realReplyTo = action.replyTo;
+	realReplyTo.messageId = history->owner().histories().convertTopicReplyToId(
+		history,
+		realReplyTo.messageId);
+	realReplyTo.topicRootId = history->owner().histories().convertTopicReplyToId(
+		history,
+		realReplyTo.topicRootId);
+
+	const auto logFail = [=](const MTP::Error &error) {
+		const auto &type = error.type();
+		auto kind = u"other"_q;
+		if (type == u"CHAT_FORWARDS_RESTRICTED"_q) {
+			kind = u"forwards_restricted"_q;
+		} else if (type.startsWith(u"FILE_REFERENCE_"_q)) {
+			kind = u"file_reference"_q;
+		} else if (MTP::IsFloodError(error)) {
+			kind = u"flood_wait"_q;
+		}
+		Ayu::Log::Write(
+			u"forward"_q,
+			u"reattach FAILED item=%1 dest=%2 kind=%3 type=%4"_q
+				.arg(originId.msg.bare)
+				.arg(peer->id.value)
+				.arg(kind)
+				.arg(type));
+	};
+
+	auto performRequest = [=](const auto &repeatRequest) -> void {
+		const auto usedFileReference = mediaData->fileReference();
+		// handle kept local: upstream SendExisting* hides it
+		[[maybe_unused]] const auto requestId = api->request(MTPmessages_SendMedia(
+			MTP_flags(sendFlags),
+			peer->input(),
+			Data::ReplyToForMTP(history, realReplyTo),
+			inputMedia(),
+			MTP_string(captionText),
+			MTP_long(randomId),
+			MTPReplyMarkup(),
+			sentEntities,
+			MTP_int(action.options.scheduled),
+			MTP_int(action.options.scheduleRepeatPeriod),
+			(sendAs ? sendAs->input() : MTP_inputPeerEmpty()),
+			Data::ShortcutIdToMTP(session, action.options.shortcutId),
+			MTP_long(action.options.effectId),
+			MTP_long(starsPaid),
+			Api::SuggestToMTP(action.options.suggest)
+		)).done([=](const MTPUpdates &result) {
+			Ayu::Log::Write(
+				u"forward"_q,
+				u"reattach sent ok item=%1 dest=%2"_q
+					.arg(originId.msg.bare)
+					.arg(peer->id.value));
+			api->applyUpdates(result, randomId);
+			AyuWorker::markAsOnline(&history->session());
+			settleOne(true);
+		}).fail([=](const MTP::Error &error) {
+			if (error.code() == 400
+				&& error.type().startsWith(u"FILE_REFERENCE_"_q)) {
+				api->refreshFileReference(origin, [=](const auto &) {
+					if (mediaData->fileReference() != usedFileReference) {
+						repeatRequest(repeatRequest);
+					} else {
+						logFail(error);
+						api->sendMessageFail(error, peer, randomId, newId);
+						settleOne(false);
+					}
+				});
+			} else {
+				logFail(error);
+				api->sendMessageFail(error, peer, randomId, newId);
+				settleOne(false);
+			}
+		}).handleFloodErrors().send();
+	};
+	performRequest(performRequest);
+}
+
+void ReattachSendExistingDocument(
+		MessageToSend &&message,
+		not_null<DocumentData*> document,
+		FullMsgId originId,
+		Fn<void(bool ok)> settleOne) {
+	if (!document->sticker()
+		&& !document->isVideoMessage()
+		&& !document->isVoiceMessage()) {
+		const auto clearReplyTo = prependPseudoReply(message);
+		if (clearReplyTo) {
+			message.action.replyTo.messageId = FullMsgId(
+				message.action.replyTo.messageId.peer,
+				message.action.replyTo.topicRootId);
+		}
+	} else if (message.action.replyTo && message.action.history) {
+		if (const auto item = message.action.history->session().data().message(message.action.replyTo.messageId)) {
+			if (item->isDeleted()) {
+				message.action.replyTo.messageId = FullMsgId(
+					message.action.replyTo.messageId.peer,
+					message.action.replyTo.topicRootId);
+			}
+		}
+	}
+
+	const auto inputMedia = [
+		document,
+		spoiler = message.action.options.mediaSpoiler
+	] {
+		return MTP_inputMediaDocument(
+			MTP_flags(spoiler
+				? MTPDinputMediaDocument::Flag::f_spoiler
+				: MTPDinputMediaDocument::Flags(0)),
+			document->mtpInput(),
+			MTPInputPhoto(), // video_cover
+			MTPint(), // ttl_seconds
+			MTPint(), // video_timestamp
+			MTPstring()); // query
+	};
+	ReattachSendExistingMedia(
+		std::move(message),
+		document,
+		originId,
+		inputMedia,
+		Data::FileOrigin(originId),
+		std::move(settleOne));
+
+	if (document->sticker()) {
+		document->owner().stickers().incrementSticker(document);
+	}
+}
+
+void ReattachSendExistingPhoto(
+		MessageToSend &&message,
+		not_null<PhotoData*> photo,
+		FullMsgId originId,
+		Fn<void(bool ok)> settleOne) {
+	const auto clearReplyTo = prependPseudoReply(message);
+	if (clearReplyTo) {
+		message.action.replyTo.messageId = FullMsgId(
+			message.action.replyTo.messageId.peer,
+			message.action.replyTo.topicRootId);
+	}
+
+	const auto inputMedia = [photo] {
+		return MTP_inputMediaPhoto(
+			MTP_flags(0),
+			photo->mtpInput(),
+			MTPint(), // ttl_seconds
+			MTPInputDocument()); // video
+	};
+	ReattachSendExistingMedia(
+		std::move(message),
+		photo,
+		originId,
+		inputMedia,
+		Data::FileOrigin(originId),
+		std::move(settleOne));
+}
+
 [[nodiscard]] bool reattachExistingMedia(
 		not_null<Main::Session*> session,
 		not_null<PeerData*> peer,
 		const std::vector<not_null<HistoryItem*>> &items,
 		const std::shared_ptr<ForwardState> &state,
-		const Api::SendAction &action) {
+		const Api::SendAction &action,
+		Data::ForwardOptions options) {
 	for (const auto item : items) {
 		const auto media = item->media();
 		if (!media
@@ -368,6 +826,76 @@ void intelligentForward(
 		}
 	}
 
+	auto failedIds = std::make_shared<std::vector<FullMsgId>>();
+	auto outstanding = std::make_shared<int>(0);
+	auto settled = std::make_shared<bool>(false);
+	const auto settle = [=] {
+		if (*settled || *outstanding > 0) {
+			return;
+		}
+		*settled = true;
+		state->updateBottomBar(
+			*session,
+			&peer->id,
+			ForwardState::State::Finished);
+		Ayu::Log::Write(
+			u"forward"_q,
+			u"reattach done items=%1 dest=%2"_q
+				.arg(ids.size())
+				.arg(peer->id.value));
+		if (failedIds->empty()) {
+			return;
+		}
+		if (!AyuSettings::getInstance().experimentalForward()) {
+			Ayu::Log::Write(
+				u"forward"_q,
+				u"reattach failed experimental off items=%1 dest=%2"_q
+					.arg(failedIds->size())
+					.arg(peer->id.value));
+			return;
+		}
+		auto fallbackItems = std::vector<not_null<HistoryItem*>>();
+		fallbackItems.reserve(failedIds->size());
+		for (const auto &id : *failedIds) {
+			if (const auto item = session->data().message(id)) {
+				fallbackItems.emplace_back(item);
+			}
+		}
+		if (fallbackItems.empty()) {
+			return;
+		}
+		Ayu::Log::Write(
+			u"forward"_q,
+			u"reattach fallback items=%1 dest=%2"_q
+				.arg(fallbackItems.size())
+				.arg(peer->id.value));
+		// WHY: re-entering forwardMessages would send the same existing
+		// media by reference and fail again forever, so the
+		// download-retransmit tail is extracted and called directly.
+		crl::async(crl::guard(session, [
+			session,
+			action,
+			options,
+			state,
+			items = std::move(fallbackItems)
+		]() mutable {
+			auto toBeDownloaded = std::vector<not_null<HistoryItem*>>();
+			toBeDownloaded.reserve(items.size());
+			for (const auto item : items) {
+				if (mediaDownloadable(item->media())) {
+					toBeDownloaded.push_back(item);
+				}
+			}
+			resendViaDownload(
+				session,
+				action,
+				options,
+				items,
+				toBeDownloaded,
+				state);
+		}));
+	};
+
 	const auto sendItems = [=] {
 		for (const auto id : ids) {
 			const auto item = session->data().message(id);
@@ -387,31 +915,40 @@ void intelligentForward(
 			message.action.options.effectId = 0;
 			message.action.replaceMediaOf = 0;
 			message.textWithTags = extractText(item);
+			const auto settleOne = [=](bool ok) {
+				if (!ok) {
+					failedIds->push_back(id);
+				}
+				(*outstanding)--;
+				settle();
+			};
 			if (const auto document = media->document()) {
 				Ayu::Log::Write(
 					u"forward"_q,
 					u"reattach document item=%1 dest=%2"_q
 						.arg(item->id.bare)
 						.arg(peer->id.value));
-				Api::SendExistingDocument(std::move(message), document);
+				(*outstanding)++;
+				ReattachSendExistingDocument(
+					std::move(message),
+					document,
+					id,
+					settleOne);
 			} else {
 				Ayu::Log::Write(
 					u"forward"_q,
 					u"reattach photo item=%1 dest=%2"_q
 						.arg(item->id.bare)
 						.arg(peer->id.value));
-				Api::SendExistingPhoto(std::move(message), media->photo());
+				(*outstanding)++;
+				ReattachSendExistingPhoto(
+					std::move(message),
+					media->photo(),
+					id,
+					settleOne);
 			}
 		}
-		state->updateBottomBar(
-			*session,
-			&peer->id,
-			ForwardState::State::Finished);
-		Ayu::Log::Write(
-			u"forward"_q,
-			u"reattach done items=%1 dest=%2"_q
-				.arg(ids.size())
-				.arg(peer->id.value));
+		settle();
 	};
 
 	// WHY: file_reference of source media expires after hours and
@@ -528,169 +1065,23 @@ void forwardMessages(
 	}
 	state->totalMessages = items.size();
 	if (!toBeDownloaded.empty()
-		&& reattachExistingMedia(session, peer, items, state, action)) {
-		return;
-	}
-
-	auto documentPaths = AyuSync::DocumentPaths();
-	if (!toBeDownloaded.empty()
-		&& !AyuSettings::getInstance().experimentalForward()) {
-		Ayu::Log::Write(
-			u"forward"_q,
-			u"experimental forward off: skip download-retransmit items=%1"
-			" dest=%2"_q.arg(items.size()).arg(peer->id.value));
-		state->updateBottomBar(
-			*session,
-			&peer->id,
-			ForwardState::State::Finished);
-		return;
-	}
-	if (!toBeDownloaded.empty()) {
-		state->state = ForwardState::State::Downloading;
-		state->updateBottomBar(*session, &peer->id, ForwardState::State::Downloading);
-		documentPaths = AyuSync::loadDocuments(
+		&& reattachExistingMedia(
 			session,
-			toBeDownloaded,
-			[state] { return state->stopRequested.load(); });
-	}
-	if (state->stopRequested) {
-		Ayu::Log::Write(u"forward"_q, u"ayu stopped before send dest=%1"_q.arg(peer->id.value));
-		state->updateBottomBar(*session, &peer->id, ForwardState::State::Finished);
+			peer,
+			items,
+			state,
+			action,
+			draft.options)) {
 		return;
 	}
 
-	state->sentMessages = 0;
-	state->updateBottomBar(*session, &peer->id, ForwardState::State::Sending);
-
-	for (int i = 0; i < items.size(); i++) {
-		const auto item = items[i];
-
-		if (state->stopRequested) {
-			state->updateBottomBar(*session, &peer->id, ForwardState::State::Finished);
-			return;
-		}
-		const auto updateProgress = gsl::finally([&] {
-			if (state->stopRequested) {
-				return;
-			}
-			state->sentMessages = i + 1;
-			state->updateBottomBar(
-				*session,
-				&peer->id,
-				ForwardState::State::Sending);
-		});
-
-		if (item->richPage()) {
-			state->updateBottomBar(*session, &peer->id, ForwardState::State::Downloading);
-
-			const auto sent = forwardRichMessage(session, item->fullId(), action, [state]
-			{
-				return state->stopRequested.load();
-			});
-
-			if (state->stopRequested) {
-				state->updateBottomBar(*session, &peer->id, ForwardState::State::Finished);
-				return;
-			}
-
-			state->updateBottomBar(*session, &peer->id, ForwardState::State::Sending);
-
-			if (sent) {
-				continue;
-			}
-		}
-
-		auto extractedText = extractText(item);
-		if (extractedText.empty() && !mediaDownloadable(item->media())) {
-			continue;
-		}
-
-		auto message = Api::MessageToSend(action);
-		message.action.options.invertCaption = item->invertMedia();
-		message.action.options.scheduled = 0;
-		message.action.options.suggest = {};
-		message.action.options.effectId = 0;
-		message.action.replaceMediaOf = 0;
-
-		if (draft.options != Data::ForwardOptions::NoNamesAndCaptions) {
-			message.textWithTags = extractedText;
-		}
-
-		if (!mediaDownloadable(item->media())) {
-			AyuSync::sendMessageSync(session, std::move(message));
-		} else if (const auto media = item->media()) {
-			if (media->poll()) {
-				AyuSync::sendMessageSync(session, std::move(message));
-				continue;
-			}
-
-			std::vector<not_null<Data::Media*>> groupMedia;
-			auto preparedMedia = prepareMedia(
-				session,
-				items,
-				i,
-				groupMedia,
-				documentPaths);
-
-			// remove not finished files
-			for (auto j = int(preparedMedia.files.size()); j != 0;) {
-				--j;
-				const auto &file = preparedMedia.files[j];
-
-				const auto fileInfo = QFileInfo(file.path);
-				const auto photo = groupMedia[j]->photo();
-				const auto document = groupMedia[j]->document();
-				const auto incompletePhoto = photo
-					&& (!fileInfo.isFile()
-						|| fileInfo.size()
-							< photo->imageByteSize(Data::PhotoSize::Large));
-				const auto incompleteDocument = document
-					&& (!fileInfo.isFile()
-						|| fileInfo.size() != document->size);
-				if (incompletePhoto || incompleteDocument) {
-					preparedMedia.files.erase(preparedMedia.files.begin() + j);
-					groupMedia.erase(groupMedia.begin() + j);
-				}
-			}
-
-			if (preparedMedia.files.empty()) {
-				if (!message.textWithTags.empty()) {
-					AyuSync::sendMessageSync(session, std::move(message));
-				}
-				continue;
-			}
-
-			auto way = Ui::SendFilesWay();
-			way.setGroupFiles(true);
-			way.setSendImagesAsPhotos(false);
-			for (const auto &groupItem : groupMedia) {
-				if (groupItem->photo()) {
-					way.setSendImagesAsPhotos(true);
-					break;
-				}
-			}
-
-			auto groups = Ui::DivideByGroups(
-				std::move(preparedMedia),
-				way,
-				peer->slowmodeApplied());
-
-			auto bundle = Ui::PrepareFilesBundle(
-				std::move(groups),
-				way,
-				false);
-			sendMedia(
-				session,
-				bundle,
-				groupMedia.front(),
-				std::move(message),
-				way.sendImagesAsPhotos());
-		}
-		// if there are grouped messages
-		// "i" is incremented in prepareMedia
-	}
-	Ayu::Log::Write(u"forward"_q, u"ayu finished dest=%1 sent=%2"_q.arg(peer->id.value).arg(state->sentMessages));
-	state->updateBottomBar(*session, &peer->id, ForwardState::State::Finished);
+	resendViaDownload(
+		session,
+		action,
+		draft.options,
+		items,
+		toBeDownloaded,
+		state);
 }
 
 void zeroCostForward(
