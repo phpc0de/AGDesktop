@@ -31,6 +31,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "ayu/utils/telegram_helpers.h"
+#include "ayu/ayu_settings.h"
 #include "ui/chat/chat_style.h"
 
 
@@ -538,10 +539,11 @@ void Entry::updateChatListEntryHeight() {
 }
 
 bool Entry::hasChatsFilterTags(FilterId exclude) const {
-	if (!owner().chatsFilters().tagsEnabled()) {
+	const auto force = AyuSettings::getInstance().folderTagsForce();
+	if (!owner().chatsFilters().tagsEnabled() && !force) {
 		return false;
 	}
-	if (exclude) {
+	if (exclude && !force) {
 		if (_tagColors.size() == 1) {
 			if (_tagColors.begin()->first == exclude) {
 				return false;

@@ -911,6 +911,7 @@ topBarMenuGroupCallSkip: 20px;
 topBarBack: icon {{ "title_back", lightButtonFg }};
 topBarArrowPadding: margins(39px, 8px, 17px, 8px);
 topBarNameRightPadding: 3px;
+topBarAyuTintStrip: 2px;
 topBarTitleAyuProtected: FlatLabel(defaultFlatLabel) {
 	textFg: attentionButtonFg;
 }

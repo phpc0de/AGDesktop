@@ -777,6 +777,16 @@ void TopBarWidget::paintTopBar(Painter &p) {
 			.availableWidth = namewidth,
 			.elisionLines = 1,
 		});
+		if (tint != TopBarTitleTint::None) {
+			p.fillRect(
+				0,
+				height() - st::topBarAyuTintStrip,
+				width(),
+				st::topBarAyuTintStrip,
+				tint == TopBarTitleTint::Banned
+					? st::topBarTitleAyuBanned.textFg
+					: st::topBarTitleAyuProtected.textFg);
+		}
 
 		p.setFont(st::dialogsTextFont);
 		if (!paintConnectingState(p, statusleft, statustop, width())
