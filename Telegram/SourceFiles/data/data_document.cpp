@@ -1276,6 +1276,16 @@ void DocumentData::save(
 		}
 	} else {
 		status = FileReady;
+		// Sexcat dedup: re-download would only duplicate library content.
+		if (!toFile.isEmpty()
+			&& SexCat::ShouldSkipDuplicateDownload(this, toFile)) {
+			setLocation(Core::FileLocation(toFile));
+			session().local().writeFileLocation(
+				mediaKey(),
+				Core::FileLocation(toFile));
+			owner().requestDocumentViewRepaint(this);
+			return;
+		}
 		auto reader = owner().streaming().sharedReader(this, origin, true);
 		if (reader) {
 			_loader = std::make_unique<Storage::StreamedFileDownloader>(

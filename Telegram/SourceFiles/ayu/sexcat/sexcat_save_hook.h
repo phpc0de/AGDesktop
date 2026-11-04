@@ -33,6 +33,10 @@ void NotifyDocumentSaved(
 	not_null<DocumentData*> document);
 void ForgetDoctrineSaveAs(not_null<DocumentData*> document);
 
+[[nodiscard]] bool ShouldSkipDuplicateDownload(
+	not_null<DocumentData*> document,
+	const QString &toFile);
+
 // Installs the download-manager hook once; safe to call repeatedly.
 void EnsureDownloadListener();
 

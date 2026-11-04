@@ -126,7 +126,18 @@ void Persist(
 		.saved_at = base::unixtime::now(),
 	};
 	const auto sha = entry.sha256;
-	if (!Database::instance().RecordSaved(std::move(entry))) {
+	// WHY: same-sha content must not grow the library, but a fresh
+	// copy still becomes the live carrier when every older one is gone.
+	auto live = false;
+	for (const auto &hit : Database::instance().LookupByHash(sha)) {
+		if (QFileInfo::exists(hit.saved_path)) {
+			live = true;
+			break;
+		}
+	}
+	if (live) {
+		LogFailure(u"duplicate content, record skipped: "_q + savedPath);
+	} else if (!Database::instance().RecordSaved(std::move(entry))) {
 		return;
 	}
 	HashStore::WriteAds(
@@ -180,6 +191,49 @@ void ResolveHashAndPersist(
 		});
 }
 
+[[nodiscard]] std::optional<Entry> FindRecordedForDocument(
+		not_null<DocumentData*> document,
+		const QString &toFile) {
+	const auto info = QFileInfo(toFile);
+	if (document->size <= 0
+		|| !info.isFile()
+		|| info.size() != document->size) {
+		return std::nullopt;
+	}
+	const auto ads = HashStore::ReadAds(toFile);
+	if (auto hit = Database::instance().FindByPath(toFile, document->size)) {
+		if (hit->sha256.size() == 32
+			&& (!ads || ads->sha256 == hit->sha256)) {
+			return hit;
+		}
+		return std::nullopt;
+	}
+	PruneStalePending();
+	const auto i = PendingMap().find(document.get());
+	if (i == end(PendingMap())) {
+		return std::nullopt;
+	}
+	const auto item = document->owner().message(i->second.contextId);
+	const auto peer = item ? item->history()->peer : nullptr;
+	if (!item || !item->isRegular() || !peer) {
+		return std::nullopt;
+	}
+	// Sidecar sha proves toFile really holds the pinned attachment.
+	const auto attach = ResolveAttachIndex(item);
+	for (const auto &entry
+		: Database::instance().LookupBySource(peer->id, item->id)) {
+		if (entry.src_attach != attach
+			|| entry.file_size != document->size
+			|| entry.sha256.size() != 32) {
+			continue;
+		}
+		return (ads && ads->sha256 == entry.sha256)
+			? std::optional<Entry>(entry)
+			: std::nullopt;
+	}
+	return std::nullopt;
+}
+
 void HandleLoadedDownload(not_null<const Data::DownloadedId*> id) {
 	if (!Enabled()) {
 		return;
@@ -221,6 +275,23 @@ void HandleLoadedDownload(not_null<const Data::DownloadedId*> id) {
 }
 
 } // namespace
+
+bool ShouldSkipDuplicateDownload(
+		not_null<DocumentData*> document,
+		const QString &toFile) {
+	EnsureDownloadListener();
+	if (!Enabled()
+		|| !Database::instance().Enabled()
+		|| toFile.isEmpty()) {
+		return false;
+	}
+	const auto hit = FindRecordedForDocument(document, toFile);
+	if (!hit) {
+		return false;
+	}
+	LogFailure(u"skipping duplicate download, already in library: "_q + toFile);
+	return true;
+}
 
 void RecordSaveAttempt(
 		const QString &savedPath,
