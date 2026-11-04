@@ -410,7 +410,10 @@ public:
 				return;
 			}
 			_selectedKey = entryKey(*entry);
-			_detail->setPlainText(entryText(*entry));
+			const auto text = entryText(*entry);
+			if (_detail->toPlainText() != text) {
+				_detail->setPlainText(text);
+			}
 			updateButtons();
 		});
 		connect(_hexView, &QPushButton::toggled, this, [=] {
@@ -593,6 +596,7 @@ private:
 		auto blocks = QStringList();
 		blocks.reserve(int(_rows.size()) * 2);
 		auto total = 0;
+		constexpr auto kCopyAllLimit = kMaxTextChars * 64;
 		for (const auto &entry : _rows) {
 			const auto time = QDateTime::fromMSecsSinceEpoch(entry.when)
 				.time().toString(u"HH:mm:ss.zzz"_q);
@@ -601,35 +605,42 @@ private:
 				.arg(time)
 				.arg(KindName(entry.kind))
 				.arg(FirstLine(entry.name));
-			blocks << entry.text;
-			total += int(entry.text.size()) + 4;
-			if (total > kMaxTextChars) {
+			auto text = entry.text;
+			if (text.size() > kMaxTextChars && !entry.body.isEmpty()) {
+				const auto *from = entry.body.constData();
+				text = DecodeTlBody(from, from + entry.body.size());
+			}
+			blocks << text;
+			total += int(text.size()) + 4;
+			if (total > kCopyAllLimit) {
+				blocks << u"... (copy limit reached)"_q;
 				break;
 			}
 		}
-		auto text = blocks.join(u"\n\n"_q);
-		if (text.size() > kMaxTextChars) {
-			text = text.left(kMaxTextChars) + u"\n... (truncated)"_q;
-		}
-		return text;
+		return blocks.join(u"\n\n"_q);
 	}
 
 	void refreshSoft() {
 		const auto bar = _list->verticalScrollBar();
 		const auto atBottom = bar && bar->value() >= bar->maximum();
+		const auto pos = bar ? bar->value() : 0;
 		const auto key = _selectedKey;
 		refresh();
+		auto restored = false;
 		if (key >= 0) {
 			for (auto i = 0; i != _list->count(); ++i) {
 				const auto entry = entryAt(i);
 				if (entry && entryKey(*entry) == key) {
 					_list->setCurrentRow(i);
+					restored = true;
 					break;
 				}
 			}
 		}
-		if (atBottom) {
-			_list->scrollToBottom();
+		if (bar && !restored) {
+			bar->setValue(atBottom
+				? bar->maximum()
+				: qMin(pos, bar->maximum()));
 		}
 	}
 

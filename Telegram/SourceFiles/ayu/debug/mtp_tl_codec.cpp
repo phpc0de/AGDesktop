@@ -287,7 +287,7 @@ void ReadBytes(Reader &reader, QByteArray &out) {
 	const auto lengthLow = int(first & 0xFF);
 	if (lengthLow == 254) {
 		const auto length = int((first >> 8) & 0xFFFFFF);
-		const auto need = (length + 3) / 4;
+		const auto need = (length + 6) / 4;
 		if (reader.remaining(need)) {
 			out = QByteArray(
 				reinterpret_cast<const char*>(reader.from),
@@ -434,7 +434,15 @@ void PackBytes(const QByteArray &bytes, QVector<mtpPrime> &out) {
 				continue;
 			}
 			if (type == u"true"_q) {
-				auto line = pad + u"  %1: true\n"_q.arg(name);
+				// WHY: a set flags.N?true field still carries its boolTrue
+				// word on the wire; not consuming it shifts every later
+				// field by one prime and garbles the rest of the ctor.
+				const auto marker = uint32_t(*reader.from++);
+				auto line = pad + u"  %1: %2\n"_q.arg(name).arg(
+					marker == mtpc_boolTrue
+						? u"true"_q
+						: u"true <marker 0x%1>"_q.arg(
+							marker, 8, 16, QChar(u'0')));
 				attachNote(line, name);
 				out += line;
 				continue;
@@ -477,10 +485,20 @@ void PackBytes(const QByteArray &bytes, QVector<mtpPrime> &out) {
 				.arg(fieldName)
 				.arg(id, 8, 16, QChar(u'0')));
 		auto hex = QString();
+		auto ascii = QByteArray();
 		while (reader.remaining(1) && hex.size() < kMaxRawHexChars) {
-			hex += u"%1 "_q.arg(uint32_t(*reader.from++), 8, 16, QChar(u'0'));
+			const auto word = uint32_t(*reader.from++);
+			hex += u"%1 "_q.arg(word, 8, 16, QChar(u'0'));
+			for (auto shift = 0; shift != 32; shift += 8) {
+				const auto byte = char((word >> shift) & 0xFF);
+				ascii += (byte >= 0x20 && byte < 0x7F) ? byte : '.';
+			}
 		}
 		out += pad + u"  raw: "_q + hex.trimmed() + u"\n"_q;
+		if (!ascii.isEmpty()) {
+			out += pad + u"  text: \""_q
+				+ QString::fromLatin1(ascii) + u"\"\n"_q;
+		}
 		out += pad + u"}\n"_q;
 		return out;
 	}
