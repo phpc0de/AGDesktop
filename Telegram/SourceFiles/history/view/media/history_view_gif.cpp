@@ -107,6 +107,28 @@ using ::Media::ValidFrameSize;
 	return QString::number(tier) + 'p';
 }
 
+void PaintDownloadedBadge(Painter &p, const QRect &media) {
+	const auto size = st::ayuDownloadedBadgeSize;
+	if (media.width() < 2 * size + st::ayuDownloadedBadgeSkip
+		|| media.height() < 2 * size + st::ayuDownloadedBadgeSkip) {
+		return;
+	}
+	const auto rect = QRect(
+		media.x() + media.width() - st::ayuDownloadedBadgeSkip - size,
+		media.y() + st::ayuDownloadedBadgeSkip,
+		size,
+		size);
+	p.setPen(Qt::NoPen);
+	p.setBrush(st::ayuDownloadedBadgeBg);
+	{
+		PainterHighQualityEnabler hq(p);
+		p.drawRoundedRect(rect, st::ayuDownloadedBadgeRadius, st::ayuDownloadedBadgeRadius);
+	}
+	p.setFont(st::ayuDownloadedBadgeFont);
+	p.setPen(st::ayuDownloadedBadgeFg);
+	p.drawText(rect, Qt::AlignCenter, u"✓"_q);
+}
+
 [[nodiscard]] bool IsHostedInstantViewMedia(not_null<const Element*> parent) {
 	return parent->Get<InstantViewMediaRuntime>() != nullptr;
 }
@@ -819,6 +841,14 @@ void Gif::draw(Painter &p, const PaintContext &context) const {
 	}
 	if (!isRound) {
 		paintTimestampMark(p, rthumb, rounding);
+	}
+	if (!skipDrawingContent
+		&& !fullHiddenBySpoiler
+		&& !isRound
+		&& !_ttlCover
+		&& !AyuFeatures::MessageShot::isTakingShot()
+		&& (loaded || _data->loadedInMediaCache())) {
+		PaintDownloadedBadge(p, rthumb);
 	}
 
 	if (revealed < 1.) {

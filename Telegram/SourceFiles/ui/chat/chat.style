@@ -103,6 +103,13 @@ msgDateDelta: point(2px, 5px);
 msgDateImgDelta: 4px;
 msgDateImgPadding: point(8px, 2px);
 
+ayuDownloadedBadgeSize: 18px;
+ayuDownloadedBadgeRadius: 4px;
+ayuDownloadedBadgeSkip: 5px;
+ayuDownloadedBadgeFont: font(11px);
+ayuDownloadedBadgeBg: msgDateImgBg;
+ayuDownloadedBadgeFg: msgDateImgFg;
+
 messageQuoteStyle: historyQuoteStyle;
 messageTextStyle: historyTextStyle;
 historyPagePreview: QuoteStyle(messageQuoteStyle) {

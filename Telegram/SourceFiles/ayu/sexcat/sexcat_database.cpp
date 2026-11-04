@@ -104,6 +104,25 @@ SavedFileRow RowFromEntry(const Entry &entry) {
 	return row;
 }
 
+void BackfillSourcelessRows(const QByteArray &sha256, const Entry &source) {
+	try {
+		std::lock_guard lock(storageMutex);
+		const auto blob = std::vector<char>(sha256.cbegin(), sha256.cend());
+		storage.update_all(
+			set(
+				c(&SavedFileRow::src_peer_id) = source.src_peer_id,
+				c(&SavedFileRow::src_msg_id) = source.src_msg_id,
+				c(&SavedFileRow::src_title) = source.src_title.toStdString(),
+				c(&SavedFileRow::src_attach) = source.src_attach),
+			where(
+				column<SavedFileRow>(&SavedFileRow::sha256) == blob
+				and column<SavedFileRow>(&SavedFileRow::src_peer_id) == int64(0)
+				and column<SavedFileRow>(&SavedFileRow::src_msg_id) == int64(0)));
+	} catch (const std::exception &ex) {
+		LogError(u"Failed to backfill source by hash: %1"_q.arg(QString::fromUtf8(ex.what())));
+	}
+}
+
 std::string LikePattern(const QString &search) {
 	const auto raw = search.toStdString();
 	auto escaped = std::string();
@@ -174,6 +193,9 @@ bool Database::RecordSaved(Entry entry) {
 		}
 	}
 	auto saved = EntryFromRow(std::move(row));
+	if (entry.src_peer_id != 0 && entry.src_msg_id != 0) {
+		BackfillSourcelessRows(entry.sha256, entry);
+	}
 	crl::on_main([saved = std::move(saved)]() mutable {
 		instance()._newSaved.fire_copy(std::move(saved));
 	});
