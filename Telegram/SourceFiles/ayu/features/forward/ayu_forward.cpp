@@ -333,6 +333,58 @@ void intelligentForward(
 	state->updateBottomBar(*session, &peer->id, ForwardState::State::Finished);
 }
 
+[[nodiscard]] bool reattachExistingMedia(
+		not_null<Main::Session*> session,
+		not_null<PeerData*> peer,
+		const std::vector<not_null<HistoryItem*>> &items,
+		const std::shared_ptr<ForwardState> &state,
+		const Api::SendAction &action) {
+	for (const auto item : items) {
+		const auto media = item->media();
+		if (!media
+			|| media->poll()
+			|| (!media->document() && !media->photo())) {
+			Ayu::Log::Write(
+				u"forward"_q,
+				u"reattach unsupported item=%1"_q.arg(item->id.bare));
+			return false;
+		}
+	}
+	state->updateBottomBar(*session, &peer->id, ForwardState::State::Sending);
+	for (const auto item : items) {
+		auto message = Api::MessageToSend(action);
+		message.action.options.invertCaption = item->invertMedia();
+		message.action.options.scheduled = 0;
+		message.action.options.suggest = {};
+		message.action.options.effectId = 0;
+		message.action.replaceMediaOf = 0;
+		message.textWithTags = extractText(item);
+		const auto media = item->media();
+		if (const auto document = media->document()) {
+			Ayu::Log::Write(
+				u"forward"_q,
+				u"reattach document item=%1 dest=%2"_q
+					.arg(item->id.bare)
+					.arg(peer->id.value));
+			Api::SendExistingDocument(std::move(message), document);
+		} else {
+			Ayu::Log::Write(
+				u"forward"_q,
+				u"reattach photo item=%1 dest=%2"_q
+					.arg(item->id.bare)
+					.arg(peer->id.value));
+			Api::SendExistingPhoto(std::move(message), media->photo());
+		}
+	}
+	state->updateBottomBar(*session, &peer->id, ForwardState::State::Finished);
+	Ayu::Log::Write(
+		u"forward"_q,
+		u"reattach done items=%1 dest=%2"_q
+			.arg(items.size())
+			.arg(peer->id.value));
+	return true;
+}
+
 void forwardMessages(
 	not_null<Main::Session*> session,
 	const Api::SendAction &action,
@@ -388,6 +440,11 @@ void forwardMessages(
 		}
 	}
 	state->totalMessages = items.size();
+	if (!toBeDownloaded.empty()
+		&& reattachExistingMedia(session, peer, items, state, action)) {
+		return;
+	}
+
 	auto documentPaths = AyuSync::DocumentPaths();
 	if (!toBeDownloaded.empty()
 		&& !AyuSettings::getInstance().experimentalForward()) {
