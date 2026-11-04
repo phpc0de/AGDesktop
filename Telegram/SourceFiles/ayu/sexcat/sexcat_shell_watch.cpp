@@ -15,6 +15,7 @@
 #include <QtWidgets/QWidget>
 
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
 
 #include <array>
@@ -64,10 +65,15 @@ void HandleRename(const QString &oldPath, const QString &newPath) {
 				entry->sha256,
 				PeerId(uint64(entry->src_peer_id)),
 				MsgId(entry->src_msg_id));
+				QFile::remove(newPath + u".sexcat.json"_q);
+			QFile::rename(
+				oldPath + u".sexcat.json"_q,
+				newPath + u".sexcat.json"_q);
 			LogFailure(u"shell watch relinked %1 -> %2"_q.arg(oldPath, newPath));
 		}
 		return;
 	}
+	LogFailure(u"shell watch rename miss: %1 -> %2"_q.arg(oldPath, newPath));
 	if (QFileInfo(newPath).isFile()) {
 		const auto hit = HashStore::ReadAds(newPath);
 		if (hit && hit->sha256.size() == 32) {

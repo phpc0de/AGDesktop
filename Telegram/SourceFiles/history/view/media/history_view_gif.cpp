@@ -2295,12 +2295,17 @@ void Gif::setStatusSize(int64 newSize) const {
 		_statusSize = newSize;
 		_statusText = Ui::FormatDurationText(_data->duration() / 1000);
 	} else {
+		const auto videoish = (_data->isVideoFile()
+			|| (_data->duration() > 0
+				&& !_data->isVoiceMessage()
+				&& !_data->isAudioFile()))
+			&& !_data->sticker();
 		File::setStatusSize(
 			newSize,
 			_data->size,
-			_data->isVideoFile() ? (_data->duration() / 1000) : -2,
+			videoish ? (_data->duration() / 1000) : -2,
 			0);
-		if (_data->isVideoFile() && !_data->sticker()) {
+		if (videoish) {
 			const auto badge = VideoResolutionBadge(
 				_data->resolveOriginalVideoQuality());
 			if (!badge.isEmpty()) {

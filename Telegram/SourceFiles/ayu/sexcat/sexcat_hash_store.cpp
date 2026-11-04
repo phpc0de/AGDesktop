@@ -25,7 +25,7 @@
 namespace SexCat {
 namespace {
 
-constexpr auto kMaxHashFileSize = int64(512) * 1024 * 1024;
+constexpr auto kMaxHashFileSize = int64(16) * 1024 * 1024 * 1024;
 constexpr auto kHashChunkSize = int64(1024) * 1024;
 
 void LogError(const QString &message) {
