@@ -168,9 +168,9 @@ rpl::producer<Entry> Database::newSaved() const {
 	return _newSaved.events();
 }
 
-bool Database::RecordSaved(Entry entry) {
-	if (!_enabled || entry.sha256.isEmpty()) {
-		return false;
+int64 Database::RecordSaved(Entry entry) {
+	if (!_enabled) {
+		return 0;
 	}
 	if (entry.saved_at == 0) {
 		entry.saved_at = base::unixtime::now();
@@ -189,16 +189,89 @@ bool Database::RecordSaved(Entry entry) {
 			} catch (...) {
 			}
 			LogError(u"Failed to record saved file: %1"_q.arg(QString::fromUtf8(ex.what())));
-			return false;
+			return 0;
 		}
 	}
-	auto saved = EntryFromRow(std::move(row));
-	if (entry.src_peer_id != 0 && entry.src_msg_id != 0) {
+	if (!entry.sha256.isEmpty()
+		&& entry.src_peer_id != 0
+		&& entry.src_msg_id != 0) {
 		BackfillSourcelessRows(entry.sha256, entry);
 	}
+	auto saved = EntryFromRow(std::move(row));
 	crl::on_main([saved = std::move(saved)]() mutable {
 		instance()._newSaved.fire_copy(std::move(saved));
 	});
+	return row.id;
+}
+
+bool Database::UpdateRowSha(int64 id, const QByteArray &sha256) {
+	if (!_enabled || id <= 0 || sha256.size() != 32) {
+		return false;
+	}
+	try {
+		std::lock_guard lock(storageMutex);
+		storage.update_all(
+			set(c(&SavedFileRow::sha256)
+				= std::vector<char>(sha256.cbegin(), sha256.cend())),
+			where(
+				column<SavedFileRow>(&SavedFileRow::id) == id
+				and column<SavedFileRow>(&SavedFileRow::sha256)
+					== std::vector<char>()));
+		return true;
+	} catch (const std::exception &ex) {
+		LogError(u"Failed to backfill sha256: %1"_q.arg(QString::fromUtf8(ex.what())));
+		return false;
+	}
+}
+
+bool Database::DropUnhashedRecord(int64 id) {
+	if (!_enabled || id <= 0) {
+		return false;
+	}
+	try {
+		std::lock_guard lock(storageMutex);
+		storage.remove_all<SavedFileRow>(
+			where(
+				column<SavedFileRow>(&SavedFileRow::id) == id
+				and column<SavedFileRow>(&SavedFileRow::sha256)
+					== std::vector<char>()));
+		return true;
+	} catch (const std::exception &ex) {
+		LogError(u"Failed to drop unhashed record: %1"_q.arg(QString::fromUtf8(ex.what())));
+		return false;
+	}
+}
+
+std::vector<Entry> Database::LookupUnhashed(int limit) {
+	if (!_enabled || limit <= 0) {
+		return {};
+	}
+	try {
+		std::lock_guard lock(storageMutex);
+		auto rows = storage.get_all<SavedFileRow>(
+			where(column<SavedFileRow>(&SavedFileRow::sha256)
+				== std::vector<char>()),
+			order_by(column<SavedFileRow>(&SavedFileRow::id)).asc(),
+			sqlite_orm::limit(limit));
+		auto result = std::vector<Entry>();
+		result.reserve(rows.size());
+		for (auto &row : rows) {
+			result.push_back(EntryFromRow(std::move(row)));
+		}
+		return result;
+	} catch (const std::exception &ex) {
+		LogError(u"Failed to look up unhashed records: %1"_q.arg(QString::fromUtf8(ex.what())));
+		return {};
+	}
+}
+
+bool Database::BackfillSourceByHash(
+		const QByteArray &sha256,
+		const Entry &source) {
+	if (sha256.size() != 32) {
+		return false;
+	}
+	BackfillSourcelessRows(sha256, source);
 	return true;
 }
 

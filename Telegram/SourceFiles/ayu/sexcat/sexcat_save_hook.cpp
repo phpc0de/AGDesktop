@@ -133,8 +133,9 @@ void ShowSavedToast() {
 }
 
 constexpr auto kMaxDuplicatePathProbes = 3;
+constexpr auto kMaxPendingRehashRows = 256;
 
-void Persist(
+void DedupeOrRecordHashed(
 		QString savedPath,
 		int64 fileSize,
 		int64 srcPeerId,
@@ -173,7 +174,7 @@ void Persist(
 	} else if (!hits.empty()) {
 		Database::instance().Relink(hits.front().id, savedPath);
 		LogFailure(u"duplicate content relinked to new copy: "_q + savedPath);
-	} else if (!Database::instance().RecordSaved(std::move(entry))) {
+	} else if (Database::instance().RecordSaved(std::move(entry)) <= 0) {
 		return;
 	}
 	HashStore::WriteAds(
@@ -186,6 +187,88 @@ void Persist(
 	}
 }
 
+// WHY: the row is written before hashing, so a restart cannot lose
+// it; the sha is backfilled once the hash queue reaches the file.
+int64 PersistRecord(
+		const QString &savedPath,
+		int64 fileSize,
+		int64 srcPeerId,
+		int64 srcMsgId,
+		const QString &srcTitle,
+		int srcAttach,
+		bool announce) {
+	auto entry = Entry{
+		.file_name = QFileInfo(savedPath).fileName(),
+		.saved_path = savedPath,
+		.file_size = fileSize,
+		.src_peer_id = srcPeerId,
+		.src_msg_id = srcMsgId,
+		.src_title = srcTitle,
+		.src_attach = srcAttach,
+		.saved_at = base::unixtime::now(),
+	};
+	const auto id = Database::instance().RecordSaved(std::move(entry));
+	if (id > 0 && announce) {
+		ShowSavedToast();
+	}
+	return id;
+}
+
+void FinishHashedRecord(
+		int64 rowId,
+		const QString &savedPath,
+		int64 srcPeerId,
+		int64 srcMsgId,
+		QString srcTitle,
+		int srcAttach,
+		QByteArray sha256) {
+	if (rowId <= 0) {
+		return;
+	}
+	if (sha256.isEmpty()) {
+		// the row stays unhashed and is requeued on the next launch
+		LogFailure(u"Failed to hash %1, record left pending rehash"_q.arg(savedPath));
+		return;
+	}
+	const auto sha = sha256;
+	// WHY: same-sha content must not grow the library, but a fresh
+	// copy still becomes the live carrier when every older one is gone.
+	const auto hits = Database::instance().LookupByHash(sha);
+	auto live = false;
+	for (auto i = 0;
+		i < kMaxDuplicatePathProbes && i < int(hits.size());
+		++i) {
+		if (QFileInfo::exists(hits[i].saved_path)) {
+			live = true;
+			break;
+		}
+	}
+	if (live) {
+		Database::instance().DropUnhashedRecord(rowId);
+		LogFailure(u"duplicate content, pending record dropped: "_q + savedPath);
+	} else if (!hits.empty()) {
+		Database::instance().Relink(hits.front().id, savedPath);
+		Database::instance().DropUnhashedRecord(rowId);
+		LogFailure(u"duplicate content relinked to new copy: "_q + savedPath);
+	} else if (Database::instance().UpdateRowSha(rowId, sha)) {
+		if (srcPeerId != 0 && srcMsgId != 0) {
+			auto source = Entry{
+				.sha256 = sha,
+				.src_peer_id = srcPeerId,
+				.src_msg_id = srcMsgId,
+				.src_title = std::move(srcTitle),
+				.src_attach = srcAttach,
+			};
+			Database::instance().BackfillSourceByHash(sha, source);
+		}
+	}
+	HashStore::WriteAds(
+		savedPath,
+		sha,
+		PeerId(uint64(srcPeerId)),
+		MsgId(srcMsgId));
+}
+
 void ResolveHashAndPersist(
 		QString savedPath,
 		int64 fileSize,
@@ -195,7 +278,7 @@ void ResolveHashAndPersist(
 		int srcAttach,
 		bool announce) {
 	if (const auto sha = TakeDownloadedSha(savedPath)) {
-		Persist(
+		DedupeOrRecordHashed(
 			std::move(savedPath),
 			fileSize,
 			srcPeerId,
@@ -208,7 +291,7 @@ void ResolveHashAndPersist(
 	}
 	if (const auto hit = HashStore::ReadAds(savedPath)) {
 		if (hit->sha256.size() == 32) {
-			Persist(
+			DedupeOrRecordHashed(
 				std::move(savedPath),
 				fileSize,
 				srcPeerId,
@@ -220,22 +303,28 @@ void ResolveHashAndPersist(
 			return;
 		}
 	}
+	const auto rowId = PersistRecord(
+		savedPath,
+		fileSize,
+		srcPeerId,
+		srcMsgId,
+		srcTitle,
+		srcAttach,
+		announce);
+	if (rowId <= 0) {
+		return;
+	}
 	HashStore::HashFileAsync(
 		savedPath,
-		[=, path = savedPath, title = srcTitle](QByteArray sha256) mutable {
-			if (sha256.isEmpty()) {
-				LogFailure(u"Failed to hash %1, save not recorded"_q.arg(path));
-				return;
-			}
-			Persist(
-				std::move(path),
-				fileSize,
+		[=, path = savedPath, title = std::move(srcTitle)](QByteArray sha256) mutable {
+			FinishHashedRecord(
+				rowId,
+				path,
 				srcPeerId,
 				srcMsgId,
 				std::move(title),
 				srcAttach,
-				std::move(sha256),
-				announce);
+				std::move(sha256));
 		});
 }
 
@@ -625,6 +714,35 @@ void ForgetDoctrineSaveAs(not_null<DocumentData*> document) {
 	PendingMap().erase(document.get());
 }
 
+// WHY: unhashed rows are the pending-hash marker; rehashing them on
+// the first save/download event recovers a queue lost to an exit.
+void RehashPendingRows() {
+	static bool done = false;
+	if (done) {
+		return;
+	}
+	done = true;
+	for (const auto &entry
+		: Database::instance().LookupUnhashed(kMaxPendingRehashRows)) {
+		if (!QFileInfo(entry.saved_path).isFile()) {
+			continue;
+		}
+		HashStore::HashFileAsync(
+			entry.saved_path,
+			[=, path = entry.saved_path, title = entry.src_title](
+				QByteArray sha256) mutable {
+				FinishHashedRecord(
+					entry.id,
+					path,
+					entry.src_peer_id,
+					entry.src_msg_id,
+					std::move(title),
+					entry.src_attach,
+					std::move(sha256));
+			});
+	}
+}
+
 void EnsureDownloadListener() {
 	static bool subscribed = false;
 	static rpl::lifetime lifetime;
@@ -634,9 +752,11 @@ void EnsureDownloadListener() {
 	subscribed = true;
 	Core::App().downloadManager().loadedAdded(
 	) | rpl::on_next([=](not_null<const Data::DownloadedId*> id) {
+		RehashPendingRows();
 		HandleLoadedDownload(id);
 	}, lifetime);
 	StartShellWatch();
+	RehashPendingRows();
 }
 
 } // namespace SexCat

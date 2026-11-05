@@ -49,8 +49,14 @@ public:
 	Database(const Database &other) = delete;
 	Database &operator=(const Database &other) = delete;
 
-	[[nodiscard]] bool RecordSaved(Entry entry);
+	[[nodiscard]] int64 RecordSaved(Entry entry);
+	[[nodiscard]] bool UpdateRowSha(int64 id, const QByteArray &sha256);
+	[[nodiscard]] bool DropUnhashedRecord(int64 id);
+	[[nodiscard]] std::vector<Entry> LookupUnhashed(int limit);
 	[[nodiscard]] std::vector<Entry> LookupByHash(QByteArray sha256);
+	[[nodiscard]] bool BackfillSourceByHash(
+		const QByteArray &sha256,
+		const Entry &source);
 	[[nodiscard]] std::vector<Entry> LookupBySource(PeerId peer, MsgId msg);
 	[[nodiscard]] std::optional<Entry> FindByPath(
 		const QString &savedPath,
