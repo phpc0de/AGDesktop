@@ -356,3 +356,10 @@ data_chat_filters.cpp:477/451 直接覆盖本地 _tagsEnabled → 设置被吞�
 [A✓] 手搓 MTPmessages_SendMedia 镜像 api_sending.cpp（ReattachSendExistingMedia :518-714），自持 requestId + .fail 四类错误（forwards_restricted/file_reference/flood_wait/other）逐条入 forward 日志；.handleFloodErrors() 让 FLOOD_WAIT 真正到达 .fail；FILE_REFERENCE 失败先刷新重试一次；字节档尾段抽成 resendViaDownload（逐字节一致），experimental 开启时失败子集自动降级重传。
 [B✓] Q3 容易档：Persist 前查同 sha 且存在活体副本→跳过入库写盘（无活体则新副本仍成载体，WHY 注释）；FindRecordedForDocument 按文档身份跳过重复保存。流式中止档未做（完成点判定已覆盖磁盘增长）。
 [立场记录] 用户两份"幽灵跃迁/蜃楼代理"计划经协议事实证伪（inputEncryptedFile E2E 密文体系 api.tl:534；requestWebView 绑定 bot 会话 api.tl:2647；inputMediaUploadedDocument 仍需 InputFile 字节句柄 api.tl:36），未实现也不实现。
+
+================ 2025-11-03 加大力度并发轮（用户回贴原始需求，5 commits） ================
+[QQ7✓] mtp_tl_codec 嵌套 ctor 递归（深度6，vector 元素逐个解包），ctor_0x...{raw} 消失。[Q1✓] file_reference 行尾 not-decodable 注释+base64 行。[QQ5/Q2✓] 根因=refreshSoft 尾随逻辑，改先原值恢复滚动位再 key 恢复选中，_detail 不再被刷新路径改写。[QQ6✓] Copy ALL (N)+Ctrl+Shift+C+截断日志。
+[QQ1✓] force 传入 paint 循环：不排除 context.filter（单文件夹有 chip）+跳过 NoRead hack（激活不掉签）；序列化写读对称无回写吞设。[QQ4✓] duration()>0→hasDuration()，duration==0 视频属性文档（含网页预览）也算 videoish。[QQ2✓] sexcat_save_hook 进程内 std::set<DocumentId> 注册表+gif 徽章判定 IsDownloadedDocument。
+[QQ3✓] 三色：服务器noforwards=橙/本地DIY=AyuRestricted紫/banned=红，TopBarTitleTintFg 统一。[Q51/Q52✓] 顶栏 checkpoint 键右侧两 IconButton 开两窗口，移除右键旧入口；母猪列表 QStackedWidget 两级（源→作品列表，Folder/Open 按钮 QDesktopServices）。
+[Q4✓] RecordedDocumentPath 命中且在盘→右键显示文件夹。[Q5✓] Persist 先 LookupByHash 去重：活体跳过/无活体 Relink 旧行不插新行。[Q49✓] 纯数字名+非空文本→清洗(文本)-原名（非法符清洗/保留名/240截断），同步 document location。[Q3✓] writeResultPart 严格顺序增量喂 SHA-256 完成点优先消费（逐块中止不做：乱序分片落盘不安全）。
+[Q54 已答] 512MB 是旧上限现 16GB；[Q50 已做待测] 相册右键批量；[Q53 已达标] 明文；[Q56 已达标] 用户贴的格式即现 mtpdump 输出。
