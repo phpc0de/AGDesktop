@@ -383,3 +383,10 @@ data_chat_filters.cpp:477/451 直接覆盖本地 _tagsEnabled → 设置被吞�
 [杂项] shell_watch.cpp:68 缩进多一层 tab（纯格式）；1.txt 游离文件有意保留（会话日志）。
 [裁决延续] 一轮的 ReadBytes (L+6)/4 与 guard→FnMut 维持原判。
 [累计 27 commits，最终闸门=CI]
+
+================ 2025-11-03 P1-8根治+P2×19 清账轮（push 前置） ================
+[devtools] RecordEnabled 门控(未开不解码)+FindCtor QHash 索引+DecodeTlBody 提前收尾+TakeEntriesSnapshot 原子快照(shared_ptr,兼容壳保留)+refreshSoft 300ms 去抖+增量 appendItem+Entries 改 deque O(1) 裁头。
+[sexcat/lists] P1-8 根治:Recent(limit,filter,offset) 真分页+SourceSummaries SQL GROUP BY 聚合+listCheckpoints(limit) 下推;FindSavedSource 单查询 LIMIT 1 消右键扫盘;Persist 探测限 3;改名 exists 复用;emptyText 短路。
+[ui] gif 徽章 rect 早退前置;folderTagsForce 提升到 paintEvent 读一次经 optional 下传(4 外部调用点零改动);data_document 负查询缓存(4096 上限+失效钩);finishLoad 异步化+guard;topbar 4 按钮懒构造+运行时开启订阅。
+[forward] InFlightRequest 槽(atomic id+guard cancel)接入 reattach/单媒体/相册/探针四处;settle 排空+erase 时 CancelInFlightRequests(用户 stop 实际取消路径,锁序单向);AyuDownloadHashStates 加 QMutex。
+[17 文件 +607/−192, mtp_devtools.h 兼容壳保留可编译] [累计 28 commits]
