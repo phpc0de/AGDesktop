@@ -390,3 +390,10 @@ data_chat_filters.cpp:477/451 直接覆盖本地 _tagsEnabled → 设置被吞�
 [ui] gif 徽章 rect 早退前置;folderTagsForce 提升到 paintEvent 读一次经 optional 下传(4 外部调用点零改动);data_document 负查询缓存(4096 上限+失效钩);finishLoad 异步化+guard;topbar 4 按钮懒构造+运行时开启订阅。
 [forward] InFlightRequest 槽(atomic id+guard cancel)接入 reattach/单媒体/相册/探针四处;settle 排空+erase 时 CancelInFlightRequests(用户 stop 实际取消路径,锁序单向);AyuDownloadHashStates 加 QMutex。
 [17 文件 +607/−192, mtp_devtools.h 兼容壳保留可编译] [累计 28 commits]
+
+================ 2025-11-03 CI 72 错修复轮（2 agents 并发，1 commit） ================
+[lists_window 18错→4根因] 缺 user/channel/chat.h 完整定义(补3 include);separateWindowFor 需显式 Window::SeparateId(peer)(两次用户转换非法);Ayu::Ui 内裸 Ui:: 名字遮蔽→全局限定 ::Ui::Toast::Show/::Ui::FormatSizeText(6处)。
+[ayu_forward 54错→1真实根因] MessageToSend 定义在 namespace Api,文件内裸名不可见→:620/:831/:884 补 Api:: 前缀(非 include 丢失);B簇 C7746/C3536/C2326/C2100 全为幻影级联(实读 :1078-1094 无自引用,Log::Write 29 处两参核实,for 合法),随 A 簇消除。
+[file_download C2280] optional<QCryptographicHash> 不可拷移: :76 emplace→try_emplace 原位构造;:108 值初始化→迭代器引用+result() 在 erase 前求值(语义等价)。
+[验证] 两文件全文重读括号配平(namespace :47/:1557,匿名 ns :35/:188)。
+[累计 30 commits → push]
