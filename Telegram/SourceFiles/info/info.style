@@ -918,6 +918,9 @@ topBarTitleAyuProtected: FlatLabel(defaultFlatLabel) {
 topBarTitleAyuBanned: FlatLabel(defaultFlatLabel) {
 	textFg: boxTextFgError;
 }
+topBarTitleAyuRestricted: FlatLabel(defaultFlatLabel) {
+	textFg: statisticsChartLinePurple;
+}
 topBarClearButton: RoundButton(defaultLightButton) {
 	width: -18px;
 }
@@ -949,6 +952,16 @@ topBarAyuCheckpoint: IconButton(topBarSearch) {
 topBarAyuDownloads: IconButton(topBarAyuCheckpoint) {
 	icon: icon {{ "menu/download", menuIconFg }};
 	iconOver: icon {{ "menu/download", menuIconFgOver }};
+	iconPosition: point(8px, 10px);
+}
+topBarAyuCheckpoints: IconButton(topBarAyuCheckpoint) {
+	icon: icon {{ "menu/rich/ordered_list", menuIconFg }};
+	iconOver: icon {{ "menu/rich/ordered_list", menuIconFgOver }};
+	iconPosition: point(8px, 10px);
+}
+topBarAyuSavedSource: IconButton(topBarAyuCheckpoint) {
+	icon: icon {{ "menu/article_rich", menuIconFg }};
+	iconOver: icon {{ "menu/article_rich", menuIconFgOver }};
 	iconPosition: point(8px, 10px);
 }
 topBarCallSkip: -1px;

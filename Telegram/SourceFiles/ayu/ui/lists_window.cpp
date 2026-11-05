@@ -24,10 +24,14 @@
 #include "window/window_session_controller.h"
 
 #include <QDateTime>
+#include <QDesktopServices>
+#include <QFileInfo>
 #include <QHBoxLayout>
 #include <QHeaderView>
+#include <QStackedWidget>
 #include <QPushButton>
 #include <QTreeWidget>
+#include <QUrl>
 #include <QVBoxLayout>
 
 #include <algorithm>
@@ -48,6 +52,13 @@ constexpr auto kSavedColSource = 0;
 constexpr auto kSavedColCount = 1;
 constexpr auto kSavedColSize = 2;
 constexpr auto kSavedColTotal = 3;
+
+constexpr auto kSavedFileColName = 0;
+constexpr auto kSavedFileColSize = 1;
+constexpr auto kSavedFileColTime = 2;
+constexpr auto kSavedFileColFolder = 3;
+constexpr auto kSavedFileColOpen = 4;
+constexpr auto kSavedFileColTotal = 5;
 
 [[nodiscard]] std::vector<Main::Session *> OrderedSessions() {
 	auto result = std::vector<Main::Session *>();
@@ -251,28 +262,20 @@ public:
 
 		auto *root = new QVBoxLayout(this);
 		auto *top = new QHBoxLayout();
+		_back = new QPushButton(u"Back"_q, this);
+		_back->setVisible(false);
 		_reload = new QPushButton(u"Reload"_q, this);
+		top->addWidget(_back);
 		top->addStretch(1);
 		top->addWidget(_reload);
 		root->addLayout(top);
 
-		_tree = new QTreeWidget(this);
-		_tree->setColumnCount(kSavedColTotal);
-		_tree->setHeaderLabels({
-			u"Source"_q,
-			u"Files"_q,
-			u"Size"_q,
-		});
-		_tree->setRootIsDecorated(false);
-		_tree->setUniformRowHeights(true);
-		_tree->setAllColumnsShowFocus(true);
-		_tree->setSelectionBehavior(QAbstractItemView::SelectRows);
-		_tree->setSelectionMode(QAbstractItemView::SingleSelection);
-		auto *header = _tree->header();
-		header->setSectionResizeMode(kSavedColSource, QHeaderView::Stretch);
-		header->setSectionResizeMode(kSavedColCount, QHeaderView::ResizeToContents);
-		header->setSectionResizeMode(kSavedColSize, QHeaderView::ResizeToContents);
-		root->addWidget(_tree, 1);
+		_stack = new QStackedWidget(this);
+		_sources = MakeSourceTree();
+		_stack->addWidget(_sources);
+		_files = MakeFileTree();
+		_stack->addWidget(_files);
+		root->addWidget(_stack, 1);
 
 		connect(this, &QObject::destroyed, [] {
 			Instance() = nullptr;
@@ -280,9 +283,12 @@ public:
 		connect(_reload, &QPushButton::clicked, this, [=] {
 			reload();
 		});
-		connect(_tree, &QTreeWidget::itemClicked, this, [=](
+		connect(_back, &QPushButton::clicked, this, [=] {
+			showSources();
+		});
+		connect(_sources, &QTreeWidget::itemClicked, this, [=](
 				QTreeWidgetItem *item,
-				int) { jump(_tree->indexOfTopLevelItem(item)); });
+				int) { openSource(_sources->indexOfTopLevelItem(item)); });
 
 		reload();
 	}
@@ -302,6 +308,53 @@ private:
 		return value;
 	}
 
+	[[nodiscard]] QTreeWidget *MakeSourceTree() {
+		auto *tree = new QTreeWidget(this);
+		tree->setColumnCount(kSavedColTotal);
+		tree->setHeaderLabels({
+			u"Source"_q,
+			u"Files"_q,
+			u"Size"_q,
+		});
+		tree->setRootIsDecorated(false);
+		tree->setUniformRowHeights(true);
+		tree->setAllColumnsShowFocus(true);
+		tree->setSelectionBehavior(QAbstractItemView::SelectRows);
+		tree->setSelectionMode(QAbstractItemView::SingleSelection);
+		auto *header = tree->header();
+		header->setSectionResizeMode(kSavedColSource, QHeaderView::Stretch);
+		header->setSectionResizeMode(kSavedColCount, QHeaderView::ResizeToContents);
+		header->setSectionResizeMode(kSavedColSize, QHeaderView::ResizeToContents);
+		return tree;
+	}
+
+	[[nodiscard]] QTreeWidget *MakeFileTree() {
+		auto *tree = new QTreeWidget(this);
+		tree->setColumnCount(kSavedFileColTotal);
+		tree->setHeaderLabels({
+			u"File"_q,
+			u"Size"_q,
+			u"Time"_q,
+			QString(),
+			QString(),
+		});
+		tree->setRootIsDecorated(false);
+		tree->setUniformRowHeights(true);
+		tree->setAllColumnsShowFocus(true);
+		tree->setSelectionBehavior(QAbstractItemView::SelectRows);
+		tree->setSelectionMode(QAbstractItemView::SingleSelection);
+		auto *header = tree->header();
+		header->setSectionResizeMode(kSavedFileColName, QHeaderView::Stretch);
+		header->setSectionResizeMode(kSavedFileColSize, QHeaderView::ResizeToContents);
+		header->setSectionResizeMode(kSavedFileColTime, QHeaderView::ResizeToContents);
+		header->setSectionResizeMode(kSavedFileColFolder, QHeaderView::Fixed);
+		header->setSectionResizeMode(kSavedFileColOpen, QHeaderView::Fixed);
+		const auto actionWidth = QPushButton(u"Folder"_q).sizeHint().width();
+		header->resizeSection(kSavedFileColFolder, actionWidth);
+		header->resizeSection(kSavedFileColOpen, actionWidth);
+		return tree;
+	}
+
 	void reload() {
 		auto groups = std::map<int64, SavedSourceRow>();
 		for (const auto &entry : SexCat::Database::instance().Recent(kMaxSavedRows)) {
@@ -315,7 +368,7 @@ private:
 
 		_rows.clear();
 		_rows.reserve(groups.size());
-		_tree->clear();
+		_sources->clear();
 		for (const auto &[id, group] : groups) {
 			auto row = group;
 			row.srcPeerId = id;
@@ -329,10 +382,23 @@ private:
 				return a.count > b.count;
 			});
 		for (const auto &row : _rows) {
-			auto *item = new QTreeWidgetItem(_tree);
+			auto *item = new QTreeWidgetItem(_sources);
 			item->setText(kSavedColSource, row.name);
 			item->setText(kSavedColCount, QString::number(row.count));
 			item->setText(kSavedColSize, Ui::FormatSizeText(row.totalSize));
+		}
+
+		const auto stillThere = _currentSource
+			&& std::any_of(
+				_rows.begin(),
+				_rows.end(),
+				[&](const SavedSourceRow &row) {
+					return row.srcPeerId == _currentSource;
+				});
+		if (stillThere) {
+			fillFiles();
+		} else {
+			showSources();
 		}
 	}
 
@@ -346,26 +412,96 @@ private:
 		return fallback.isEmpty() ? QString::number(srcPeerId) : fallback;
 	}
 
-	void jump(int row) {
+	void showSources() {
+		_currentSource = 0;
+		_back->setVisible(false);
+		setWindowTitle(u"Saved files by source"_q);
+		_stack->setCurrentWidget(_sources);
+	}
+
+	void openSource(int row) {
 		if (row < 0 || row >= int(_rows.size())) {
 			return;
 		}
-		const auto peerId = PeerId(uint64(_rows[row].srcPeerId));
-		for (const auto session : OrderedSessions()) {
-			if (session->data().peerLoaded(peerId)) {
-				const auto peer = session->data().peer(peerId);
-				if (const auto controller = WindowControllerFor(peer)) {
-					controller->showPeerHistory(peer, ForwardShow());
-				}
-				return;
-			}
-		}
-		Ui::Toast::Show(u"Chat is not available in any active account"_q);
+		_currentSource = _rows[row].srcPeerId;
+		fillFiles();
+		_back->setVisible(true);
+		setWindowTitle(
+			u"Saved files by source — %1"_q.arg(_rows[row].name));
+		_stack->setCurrentWidget(_files);
 	}
 
+	void fillFiles() {
+		_fileRows.clear();
+		_files->clear();
+		const auto filter = SexCat::Filter{ .src_peer_id = _currentSource };
+		const auto rows
+			= SexCat::Database::instance().Recent(kMaxSavedRows, filter);
+		const auto rowHeight = QPushButton(u"Folder"_q).sizeHint().height();
+		_fileRows.reserve(rows.size());
+		for (const auto &entry : rows) {
+			const auto index = int(_fileRows.size());
+			_fileRows.push_back(entry);
+			auto *item = new QTreeWidgetItem(_files);
+			item->setText(
+				kSavedFileColName,
+				entry.file_name.isEmpty()
+					? QFileInfo(entry.saved_path).fileName()
+					: entry.file_name);
+			item->setText(kSavedFileColSize, Ui::FormatSizeText(entry.file_size));
+			item->setText(
+				kSavedFileColTime,
+				langDateTime(QDateTime::fromSecsSinceEpoch(entry.saved_at)));
+			item->setSizeHint(kSavedFileColName, QSize(0, rowHeight));
+			item->setSizeHint(kSavedFileColFolder, QSize(0, rowHeight));
+			item->setSizeHint(kSavedFileColOpen, QSize(0, rowHeight));
+
+			auto *folder = new QPushButton(u"Folder"_q, _files);
+			connect(folder, &QPushButton::clicked, this, [=] {
+				openFolderOf(index);
+			});
+			_files->setItemWidget(item, kSavedFileColFolder, folder);
+			auto *open = new QPushButton(u"Open"_q, _files);
+			connect(open, &QPushButton::clicked, this, [=] {
+				openFileAt(index);
+			});
+			_files->setItemWidget(item, kSavedFileColOpen, open);
+		}
+	}
+
+	void openFileAt(int row) {
+		if (row < 0 || row >= int(_fileRows.size())) {
+			return;
+		}
+		const auto &entry = _fileRows[row];
+		if (entry.saved_path.isEmpty()) {
+			Ui::Toast::Show(u"File path is not recorded"_q);
+			return;
+		}
+		QDesktopServices::openUrl(QUrl::fromLocalFile(entry.saved_path));
+	}
+
+	void openFolderOf(int row) {
+		if (row < 0 || row >= int(_fileRows.size())) {
+			return;
+		}
+		const auto &entry = _fileRows[row];
+		const auto info = QFileInfo(entry.saved_path);
+		if (!info.exists()) {
+			Ui::Toast::Show(u"File is missing on disk"_q);
+			return;
+		}
+		QDesktopServices::openUrl(QUrl::fromLocalFile(info.absolutePath()));
+	}
+
+	QPushButton *_back = nullptr;
 	QPushButton *_reload = nullptr;
-	QTreeWidget *_tree = nullptr;
+	QStackedWidget *_stack = nullptr;
+	QTreeWidget *_sources = nullptr;
+	QTreeWidget *_files = nullptr;
 	std::vector<SavedSourceRow> _rows;
+	std::vector<SexCat::Entry> _fileRows;
+	int64 _currentSource = 0;
 
 };
 

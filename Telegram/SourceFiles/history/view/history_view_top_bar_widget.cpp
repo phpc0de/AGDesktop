@@ -77,6 +77,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ayu/data/entities.h"
 #include "ayu/data/messages_storage.h"
 #include "ayu/sexcat/sexcat_history_window.h"
+#include "ayu/ui/lists_window.h"
 #include "ayu/ui/toasts.h"
 #include "ayu/utils/ayu_log.h"
 #include "boxes/peers/edit_participants_box.h"
@@ -116,6 +117,7 @@ enum class TopBarTitleTint {
 	None,
 	Protected,
 	Banned,
+	AyuRestricted,
 };
 
 [[nodiscard]] TopBarTitleTint TopBarTitleTintOf(not_null<PeerData*> peer) {
@@ -123,17 +125,31 @@ enum class TopBarTitleTint {
 		if (channel->isForbidden() && channel->date != 0) {
 			// freshly created channels default to Forbidden until loaded
 			return TopBarTitleTint::Banned;
-		} else if (channel->isAyuNoForwards()
-			|| (channel->flags() & ChannelDataFlag::NoForwards)) {
+		} else if (channel->flags() & ChannelDataFlag::NoForwards) {
 			return TopBarTitleTint::Protected;
+		} else if (channel->isAyuNoForwards()) {
+			return TopBarTitleTint::AyuRestricted;
 		}
 	} else if (const auto chat = peer->asChat()) {
-		if (chat->isAyuNoForwards()
-			|| (chat->flags() & ChatDataFlag::NoForwards)) {
+		if (chat->flags() & ChatDataFlag::NoForwards) {
 			return TopBarTitleTint::Protected;
+		} else if (chat->isAyuNoForwards()) {
+			return TopBarTitleTint::AyuRestricted;
 		}
 	}
 	return TopBarTitleTint::None;
+}
+
+[[nodiscard]] const style::color &TopBarTitleTintFg(TopBarTitleTint tint) {
+	switch (tint) {
+	case TopBarTitleTint::None: break;
+	case TopBarTitleTint::Banned: return st::topBarTitleAyuBanned.textFg;
+	case TopBarTitleTint::Protected:
+		return st::topBarTitleAyuProtected.textFg;
+	case TopBarTitleTint::AyuRestricted:
+		return st::topBarTitleAyuRestricted.textFg;
+	}
+	return st::dialogsNameFg;
 }
 
 } // namespace
@@ -167,6 +183,8 @@ TopBarWidget::TopBarWidget(
 , _search(this, st::topBarSearch)
 , _jumpCheckpoint(this, st::topBarAyuCheckpoint)
 , _openDownloads(this, st::topBarAyuDownloads)
+, _openCheckpoints(this, st::topBarAyuCheckpoints)
+, _openSavedSource(this, st::topBarAyuSavedSource)
 , _infoToggle(this, st::topBarInfo)
 , _menuToggle(this, st::topBarMenuToggle)
 , _recentActions(this, st::topBarRecentActions)
@@ -210,6 +228,14 @@ TopBarWidget::TopBarWidget(
 	_jumpCheckpoint->setToolTip(tr::ayu_JumpToCheckpointMenuText(tr::now));
 	_openDownloads->setClickedCallback([=] { openDownloads(); });
 	_openDownloads->setToolTip(tr::lng_sexcat_history_title(tr::now));
+	_openCheckpoints->setClickedCallback([=] {
+		Ayu::Ui::OpenCheckpointListWindow();
+	});
+	_openCheckpoints->setToolTip(u"All checkpoints…"_q);
+	_openSavedSource->setClickedCallback([=] {
+		Ayu::Ui::OpenSavedBySourceWindow();
+	});
+	_openSavedSource->setToolTip(u"Saved by source…"_q);
 
 	_recentActions->setClickedCallback([=]
 	{
@@ -767,11 +793,7 @@ void TopBarWidget::paintTopBar(Painter &p) {
 		namewidth -= badgeWidth;
 
 		const auto tint = TopBarTitleTintOf(namePeer);
-		p.setPen(tint == TopBarTitleTint::Banned
-			? st::topBarTitleAyuBanned.textFg
-			: tint == TopBarTitleTint::Protected
-			? st::topBarTitleAyuProtected.textFg
-			: st::dialogsNameFg);
+		p.setPen(TopBarTitleTintFg(tint));
 		_title.draw(p, {
 			.position = { nameleft, nametop },
 			.availableWidth = namewidth,
@@ -783,9 +805,7 @@ void TopBarWidget::paintTopBar(Painter &p) {
 				height() - st::topBarAyuTintStrip,
 				width(),
 				st::topBarAyuTintStrip,
-				tint == TopBarTitleTint::Banned
-					? st::topBarTitleAyuBanned.textFg
-					: st::topBarTitleAyuProtected.textFg);
+				TopBarTitleTintFg(tint));
 		}
 
 		p.setFont(st::dialogsTextFont);
@@ -1203,6 +1223,8 @@ void TopBarWidget::updateSearchVisibility() {
 			&& _activeChat.key.sublist());
 	_jumpCheckpoint->setVisible(searchAllowedMode && !_chooseForReportReason);
 	_openDownloads->setVisible(searchAllowedMode && !_chooseForReportReason);
+	_openCheckpoints->setVisible(searchAllowedMode && !_chooseForReportReason);
+	_openSavedSource->setVisible(searchAllowedMode && !_chooseForReportReason);
 	_search->setVisible(searchAllowedMode && !_chooseForReportReason);
 }
 
@@ -1430,6 +1452,15 @@ void TopBarWidget::updateControlsGeometry() {
 	_admins->moveToRight(_rightTaken, otherButtonsTop);
 	if (!_admins->isHidden()) {
 		_rightTaken += _admins->width();
+	}
+
+	_openCheckpoints->moveToRight(_rightTaken, otherButtonsTop);
+	if (!_openCheckpoints->isHidden()) {
+		_rightTaken += _openCheckpoints->width();
+	}
+	_openSavedSource->moveToRight(_rightTaken, otherButtonsTop);
+	if (!_openSavedSource->isHidden()) {
+		_rightTaken += _openSavedSource->width();
 	}
 
 	_jumpCheckpoint->moveToRight(_rightTaken, otherButtonsTop);
