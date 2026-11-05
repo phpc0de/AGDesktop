@@ -6,6 +6,7 @@
 // Copyright @Radolyn, 2026
 #include "ayu/data/messages_storage.h"
 
+#include <QFile>
 #include <QJsonDocument>
 #include <QJsonObject>
 
