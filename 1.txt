@@ -397,3 +397,8 @@ data_chat_filters.cpp:477/451 直接覆盖本地 _tagsEnabled → 设置被吞�
 [file_download C2280] optional<QCryptographicHash> 不可拷移: :76 emplace→try_emplace 原位构造;:108 值初始化→迭代器引用+result() 在 erase 前求值(语义等价)。
 [验证] 两文件全文重读括号配平(namespace :47/:1557,匿名 ns :35/:188)。
 [累计 30 commits → push]
+
+================ 2025-11-03 v12 批量历史丢失根治（用户报告，1 commit） ================
+[真相] 记录行在异步哈希后才入库：HandleLoadedDownload→ResolveHashAndPersist→HashFileAsync→Persist 在哈希回调内。队列串行单 worker，v12 上限 16GB 后 GB 级文件每个阻塞数十秒~分钟；hashQueue 进程内 deque 退出无 flush→重启蒸发→批量全没记录；单个小文件毫秒哈秒入库所以还在。
+[根治] PersistRecord 下载完成立即写行（sha 空，即入库+toast）→FinishHashedRecord 按 row id UpdateRowSha 回填；去重移到有 sha 后（live→DropUnhashedRecord 自删 pending；全死→Relink+自删；无 sha 行不参与去重）；Q58 回填挂 UpdateRowSha 成功后；RehashPendingRows 首个 save 事件补算 ≤256 个 sha-less 行。
+[影响面] 去重/Relink 不增长语义保持；Q49 改名跟随 pending 行；pending 行历史窗口 sha 列空显示已有 isEmpty 分支。
