@@ -402,3 +402,9 @@ data_chat_filters.cpp:477/451 直接覆盖本地 _tagsEnabled → 设置被吞�
 [真相] 记录行在异步哈希后才入库：HandleLoadedDownload→ResolveHashAndPersist→HashFileAsync→Persist 在哈希回调内。队列串行单 worker，v12 上限 16GB 后 GB 级文件每个阻塞数十秒~分钟；hashQueue 进程内 deque 退出无 flush→重启蒸发→批量全没记录；单个小文件毫秒哈秒入库所以还在。
 [根治] PersistRecord 下载完成立即写行（sha 空，即入库+toast）→FinishHashedRecord 按 row id UpdateRowSha 回填；去重移到有 sha 后（live→DropUnhashedRecord 自删 pending；全死→Relink+自删；无 sha 行不参与去重）；Q58 回填挂 UpdateRowSha 成功后；RehashPendingRows 首个 save 事件补算 ≤256 个 sha-less 行。
 [影响面] 去重/Relink 不增长语义保持；Q49 改名跟随 pending 行；pending 行历史窗口 sha 列空显示已有 isEmpty 分支。
+
+================ 2025-11-03 CI 第二轮 3 错修复（1 commit） ================
+①ayu_database:736 C2064=形参 limit 在 using namespace sqlite_orm 下遮蔽 limit() 自由函数→sqlite_orm::limit(limit) 限定（先例 sexcat_database.cpp:255）。
+②sexcat_save_hook C2280=item?history()->peer:nullptr 三元式 nullptr 分支强走已删 not_null(nullptr_t) ctor→先判空早退再拷 not_null（History::peer 本就是 not_null，死代码判空删除）。
+③top_bar C2512=4 个 object_ptr<Ui::IconButton> 成员无初始化器→NSDMI = { nullptr }（类内 7 处既有同构先例），ensureSexCatButtonsCreated 懒构造语义不变。
+[累计 33 commits → push+移 tag]
