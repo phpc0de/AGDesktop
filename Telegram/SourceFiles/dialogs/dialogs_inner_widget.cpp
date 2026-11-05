@@ -1027,6 +1027,7 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 	auto dialogsClip = r;
 	const auto ms = crl::now();
 	const auto childListShown = _childListShown.current();
+	const auto folderTagsForce = AyuSettings::getInstance().folderTagsForce();
 	auto context = Ui::PaintContext{
 		.st = _st,
 		.topicJumpCache = _topicJumpCache.get(),
@@ -1122,7 +1123,9 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 		auto chatsFilterTags = std::vector<QImage*>();
 		if (context.narrow) {
 			context.chatsFilterTags = nullptr;
-		} else if (row->entry()->hasChatsFilterTags(context.filter)) {
+		} else if (row->entry()->hasChatsFilterTags(
+				context.filter,
+				folderTagsForce)) {
 			const auto a = active;
 			context.st = (forum || monoforum)
 				? &st::taggedForumDialogRow
@@ -1133,7 +1136,7 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 				- context.st->nameLeft;
 			auto more = uint8(0);
 			const auto &list = session().data().chatsFilters().list();
-			const auto force = AyuSettings::getInstance().folderTagsForce();
+			const auto force = folderTagsForce;
 			for (const auto &filter : list) {
 				if (!row->entry()->inChatList(filter.id())
 					|| (!force && filter.id() == context.filter)) {

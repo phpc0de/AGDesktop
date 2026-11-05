@@ -108,10 +108,15 @@ using ::Media::ValidFrameSize;
 	return QString::number(tier) + 'p';
 }
 
+[[nodiscard]] bool DownloadedBadgeFits(const QRect &media) {
+	const auto size = st::ayuDownloadedBadgeSize;
+	return media.width() >= 2 * size + st::ayuDownloadedBadgeSkip
+		&& media.height() >= 2 * size + st::ayuDownloadedBadgeSkip;
+}
+
 void PaintDownloadedBadge(Painter &p, const QRect &media) {
 	const auto size = st::ayuDownloadedBadgeSize;
-	if (media.width() < 2 * size + st::ayuDownloadedBadgeSkip
-		|| media.height() < 2 * size + st::ayuDownloadedBadgeSkip) {
+	if (!DownloadedBadgeFits(media)) {
 		return;
 	}
 	const auto rect = QRect(
@@ -848,6 +853,7 @@ void Gif::draw(Painter &p, const PaintContext &context) const {
 		&& !isRound
 		&& !_ttlCover
 		&& !AyuFeatures::MessageShot::isTakingShot()
+		&& DownloadedBadgeFits(rthumb)
 		&& (loaded
 			|| _data->loadedInMediaCache()
 			|| Ayu::SexCat::IsDownloadedDocument(_data))) {

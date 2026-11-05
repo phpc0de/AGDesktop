@@ -13,6 +13,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "dialogs/dialogs_common.h"
 #include "ui/unread_badge.h"
 
+#include <optional>
+
 class HistoryItem;
 class History;
 class UserData;
@@ -180,7 +182,9 @@ public:
 		return _chatListPeerBadge;
 	}
 
-	[[nodiscard]] bool hasChatsFilterTags(FilterId exclude) const;
+	[[nodiscard]] bool hasChatsFilterTags(
+		FilterId exclude,
+		std::optional<bool> force = std::nullopt) const;
 protected:
 	void notifyUnreadStateChange(const UnreadState &wasState);
 	inline auto unreadStateChangeNotifier(bool required);

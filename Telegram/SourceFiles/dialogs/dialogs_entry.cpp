@@ -538,12 +538,16 @@ void Entry::updateChatListEntryHeight() {
 	session().changes().entryUpdated(this, Data::EntryUpdate::Flag::Height);
 }
 
-bool Entry::hasChatsFilterTags(FilterId exclude) const {
-	const auto force = AyuSettings::getInstance().folderTagsForce();
-	if (!owner().chatsFilters().tagsEnabled() && !force) {
+bool Entry::hasChatsFilterTags(
+		FilterId exclude,
+		std::optional<bool> force) const {
+	const auto forced = force
+		? *force
+		: AyuSettings::getInstance().folderTagsForce();
+	if (!owner().chatsFilters().tagsEnabled() && !forced) {
 		return false;
 	}
-	if (exclude && !force) {
+	if (exclude && !forced) {
 		if (_tagColors.size() == 1) {
 			if (_tagColors.begin()->first == exclude) {
 				return false;

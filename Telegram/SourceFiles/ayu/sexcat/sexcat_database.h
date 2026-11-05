@@ -36,6 +36,12 @@ struct Filter {
 	QString search;
 };
 
+struct SourceSummary {
+	int64 src_peer_id = 0;
+	int count = 0;
+	int64 total_size = 0;
+};
+
 class Database final {
 public:
 	static Database &instance();
@@ -50,9 +56,18 @@ public:
 		const QString &savedPath,
 		int64 fileSize);
 	[[nodiscard]] std::optional<Entry> LookupByPath(const QString &savedPath);
+	[[nodiscard]] std::optional<Entry> FindSavedSource(
+		PeerId peer,
+		MsgId msg,
+		int attach,
+		int64 fileSize);
 	[[nodiscard]] std::vector<Entry> LookupByPathPrefix(const QString &prefix);
 	[[nodiscard]] bool Relink(int64 id, const QString &newPath);
-	[[nodiscard]] std::vector<Entry> Recent(int limit, Filter filter = {});
+	[[nodiscard]] std::vector<Entry> Recent(
+		int limit,
+		Filter filter = {},
+		int offset = 0);
+	[[nodiscard]] std::vector<SourceSummary> SourceSummaries(int limit);
 
 	[[nodiscard]] bool Enabled() const;
 	[[nodiscard]] rpl::producer<Entry> newSaved() const;

@@ -62,6 +62,72 @@ void SetForwardState(
 	forwardStates[id] = std::move(state);
 }
 
+// WHY: api request ids sent for a state used to be discarded, so a
+// state erased mid-flight (user stop) could not cancel its sends;
+// each slot holds the latest id until it settles or the state is erased.
+struct InFlightRequest {
+	const ForwardState *state = nullptr;
+	std::atomic<mtpRequestId> id = 0;
+	Fn<void(mtpRequestId)> cancel;
+};
+
+static QMutex inFlightRequestsMutex;
+static std::unordered_map<
+	const ForwardState*,
+	std::vector<std::shared_ptr<InFlightRequest>>> inFlightRequests;
+
+static std::shared_ptr<InFlightRequest> TrackInFlightRequest(
+		not_null<Main::Session*> session,
+		const ForwardState *state) {
+	auto request = std::make_shared<InFlightRequest>();
+	request->state = state;
+	request->cancel = crl::guard(session, [
+		api = &session->api()
+	](mtpRequestId requestId) {
+		api->request(requestId).cancel();
+	});
+	QMutexLocker lock(&inFlightRequestsMutex);
+	inFlightRequests[state].push_back(request);
+	return request;
+}
+
+static void SettleInFlightRequest(
+		const std::shared_ptr<InFlightRequest> &request) {
+	if (const auto id = request->id.exchange(0, std::memory_order_relaxed)) {
+		request->cancel(id);
+	}
+	QMutexLocker lock(&inFlightRequestsMutex);
+	const auto i = inFlightRequests.find(request->state);
+	if (i == inFlightRequests.end()) {
+		return;
+	}
+	auto &requests = i->second;
+	requests.erase(
+		std::remove(requests.begin(), requests.end(), request),
+		requests.end());
+	if (requests.empty()) {
+		inFlightRequests.erase(i);
+	}
+}
+
+static void CancelInFlightRequests(const ForwardState *state) {
+	auto requests = std::vector<std::shared_ptr<InFlightRequest>>();
+	{
+		QMutexLocker lock(&inFlightRequestsMutex);
+		const auto i = inFlightRequests.find(state);
+		if (i == inFlightRequests.end()) {
+			return;
+		}
+		requests = std::move(i->second);
+		inFlightRequests.erase(i);
+	}
+	for (const auto &request : requests) {
+		if (const auto id = request->id.exchange(0, std::memory_order_relaxed)) {
+			request->cancel(id);
+		}
+	}
+}
+
 // WHY: forwardStates used to keep entries for idle peers forever; the
 // bar poll reads only isForwarding/stateName, which both handle a
 // missing entry, so a Finished state can be erased right away.
@@ -73,6 +139,8 @@ void EraseFinishedForwardState(const PeerId &id, const ForwardState *state) {
 		&& i->second->state == ForwardState::State::Finished) {
 		forwardStates.erase(i);
 	}
+	// a replaced state's in-flight sends are doomed too, so cancel
+	CancelInFlightRequests(state);
 }
 
 bool isForwarding(const PeerId &id) {
@@ -554,6 +622,7 @@ void ReattachSendExistingMedia(
 		FullMsgId originId,
 		Fn<MTPInputMedia()> inputMedia,
 		Data::FileOrigin origin,
+		const ForwardState *state,
 		Fn<void(bool ok)> settleOne) {
 	const auto history = message.action.history;
 	const auto peer = history->peer;
@@ -696,10 +765,15 @@ void ReattachSendExistingMedia(
 				.arg(type));
 	};
 
+	const auto tracked = TrackInFlightRequest(session, state);
+	const auto settleThis = [=](bool ok) {
+		SettleInFlightRequest(tracked);
+		settleOne(ok);
+	};
 	auto performRequest = [=](const auto &repeatRequest) -> void {
 		const auto usedFileReference = mediaData->fileReference();
 		// handle kept local: upstream SendExisting* hides it
-		[[maybe_unused]] const auto requestId = api->request(MTPmessages_SendMedia(
+		tracked->id.store(api->request(MTPmessages_SendMedia(
 			MTP_flags(sendFlags),
 			peer->input(),
 			Data::ReplyToForMTP(history, realReplyTo),
@@ -723,7 +797,7 @@ void ReattachSendExistingMedia(
 					.arg(peer->id.value));
 			api->applyUpdates(result, randomId);
 			AyuWorker::markAsOnline(&history->session());
-			settleOne(true);
+			settleThis(true);
 		})).fail(crl::guard(session, [=](const MTP::Error &error) {
 			if (error.code() == 400
 				&& error.type().startsWith(u"FILE_REFERENCE_"_q)) {
@@ -732,7 +806,7 @@ void ReattachSendExistingMedia(
 					if (media != mediaData.get() || media->isNull()) {
 						logFail(error);
 						api->sendMessageFail(error, peer, randomId, newId);
-						settleOne(false);
+						settleThis(false);
 						return;
 					}
 					if (media->fileReference() != usedFileReference) {
@@ -740,15 +814,15 @@ void ReattachSendExistingMedia(
 					} else {
 						logFail(error);
 						api->sendMessageFail(error, peer, randomId, newId);
-						settleOne(false);
+						settleThis(false);
 					}
 				}));
 			} else {
 				logFail(error);
 				api->sendMessageFail(error, peer, randomId, newId);
-				settleOne(false);
+				settleThis(false);
 			}
-		})).handleFloodErrors().send();
+		})).handleFloodErrors().send());
 	};
 	performRequest(performRequest);
 }
@@ -757,6 +831,7 @@ void ReattachSendExistingDocument(
 		MessageToSend &&message,
 		not_null<DocumentData*> document,
 		FullMsgId originId,
+		const ForwardState *state,
 		Fn<void(bool ok)> settleOne) {
 	if (!document->sticker()
 		&& !document->isVideoMessage()
@@ -797,6 +872,7 @@ void ReattachSendExistingDocument(
 		originId,
 		inputMedia,
 		Data::FileOrigin(originId),
+		state,
 		std::move(settleOne));
 
 	if (document->sticker()) {
@@ -808,6 +884,7 @@ void ReattachSendExistingPhoto(
 		MessageToSend &&message,
 		not_null<PhotoData*> photo,
 		FullMsgId originId,
+		const ForwardState *state,
 		Fn<void(bool ok)> settleOne) {
 	const auto clearReplyTo = prependPseudoReply(message);
 	if (clearReplyTo) {
@@ -829,6 +906,7 @@ void ReattachSendExistingPhoto(
 		originId,
 		inputMedia,
 		Data::FileOrigin(originId),
+		state,
 		std::move(settleOne));
 }
 
@@ -974,6 +1052,7 @@ void ReattachSendExistingPhoto(
 					std::move(message),
 					document,
 					id,
+					state.get(),
 					settleOne);
 			} else {
 				Ayu::Log::Write(
@@ -986,6 +1065,7 @@ void ReattachSendExistingPhoto(
 					std::move(message),
 					media->photo(),
 					id,
+					state.get(),
 					settleOne);
 			}
 		}
@@ -1323,8 +1403,9 @@ void zeroCostForward(
 				Api::ConvertOption::SkipLocal);
 			if (unit.items.size() == 1) {
 				const auto itemId = item->fullId();
+				const auto tracked = TrackInFlightRequest(session, state.get());
 				(*remaining)++;
-				session->api().request(MTPmessages_SendMedia(
+				tracked->id.store(session->api().request(MTPmessages_SendMedia(
 					MTP_flags(MTPmessages_SendMedia::Flags(0)),
 					peer->input(),
 					MTPInputReplyTo(),
@@ -1346,6 +1427,7 @@ void zeroCostForward(
 						u"zerocost media ok item=%1 dest=%2"_q
 							.arg(itemId.msg.bare)
 							.arg(peer->id.value));
+					SettleInFlightRequest(tracked);
 					session->api().applyUpdates(result);
 					state->sentMessages++;
 					(*remaining)--;
@@ -1357,10 +1439,11 @@ void zeroCostForward(
 							.arg(itemId.msg.bare)
 							.arg(peer->id.value)
 							.arg(error.type()));
+					SettleInFlightRequest(tracked);
 					fallbackIds->push_back(itemId);
 					(*remaining)--;
 					settle();
-				}).send();
+				}).send());
 				continue;
 			}
 
@@ -1385,7 +1468,8 @@ void zeroCostForward(
 						Api::ConvertOption::SkipLocal)));
 			}
 			(*remaining)++;
-			session->api().request(MTPmessages_SendMultiMedia(
+			const auto tracked = TrackInFlightRequest(session, state.get());
+			tracked->id.store(session->api().request(MTPmessages_SendMultiMedia(
 				MTP_flags(MTPmessages_SendMultiMedia::Flags(0)),
 				peer->input(),
 				MTPInputReplyTo(),
@@ -1401,6 +1485,7 @@ void zeroCostForward(
 					u"zerocost album ok count=%1 dest=%2"_q
 						.arg(unitIds.size())
 						.arg(peer->id.value));
+				SettleInFlightRequest(tracked);
 				session->api().applyUpdates(result);
 				state->sentMessages += int(unitIds.size());
 				(*remaining)--;
@@ -1412,12 +1497,13 @@ void zeroCostForward(
 						.arg(unitIds.size())
 						.arg(peer->id.value)
 						.arg(error.type()));
+				SettleInFlightRequest(tracked);
 				for (const auto &id : unitIds) {
 					fallbackIds->push_back(id);
 				}
 				(*remaining)--;
 				settle();
-			}).send();
+			}).send());
 		}
 		settle();
 	};
@@ -1430,7 +1516,8 @@ void zeroCostForward(
 	using ProbeFlag = MTPmessages_ForwardMessages::Flag;
 	const auto probeFlags = ProbeFlag() | ProbeFlag::f_drop_author
 		| ProbeFlag::f_drop_media_captions;
-	session->api().request(MTPmessages_ForwardMessages(
+	const auto probeTracked = TrackInFlightRequest(session, state.get());
+	probeTracked->id.store(session->api().request(MTPmessages_ForwardMessages(
 		MTP_flags(probeFlags),
 		probeFromPeer->input(),
 		MTP_vector<MTPint>(probeIds),
@@ -1450,6 +1537,7 @@ void zeroCostForward(
 		Ayu::Log::Write(
 			u"forward"_q,
 			u"zerocost probe dropauthor ok items=%1"_q.arg(probeIds.size()));
+		SettleInFlightRequest(probeTracked);
 		session->api().applyUpdates(result);
 		state->sentMessages = state->totalMessages;
 		*remaining = 0;
@@ -1461,8 +1549,9 @@ void zeroCostForward(
 		Ayu::Log::Write(
 			u"forward"_q,
 			u"zerocost probe dropauthor FAILED type=%1"_q.arg(error.type()));
+		SettleInFlightRequest(probeTracked);
 		sendUnits();
-	}).send();
+	}).send());
 }
 
 } // namespace AyuForward

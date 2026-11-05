@@ -155,6 +155,7 @@ private:
 	void updateInfoButtonVisibility();
 	void refreshLang();
 	void updateSearchVisibility();
+	void ensureSexCatButtonsCreated();
 	void jumpToCheckpoint();
 	void openDownloads();
 	void updateSearchJumpToDateVisibility();

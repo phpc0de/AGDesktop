@@ -181,10 +181,6 @@ TopBarWidget::TopBarWidget(
 , _call(this, st::topBarCall)
 , _groupCall(this, st::topBarGroupCall)
 , _search(this, st::topBarSearch)
-, _jumpCheckpoint(this, st::topBarAyuCheckpoint)
-, _openDownloads(this, st::topBarAyuDownloads)
-, _openCheckpoints(this, st::topBarAyuCheckpoints)
-, _openSavedSource(this, st::topBarAyuSavedSource)
 , _infoToggle(this, st::topBarInfo)
 , _menuToggle(this, st::topBarMenuToggle)
 , _recentActions(this, st::topBarRecentActions)
@@ -224,18 +220,6 @@ TopBarWidget::TopBarWidget(
 	_menuToggle->addClickHandler([=](auto) { showPeerMenu(); });
 	_menuToggle->setAcceptBoth(true, true);
 	_infoToggle->setClickedCallback([=] { toggleInfoSection(); });
-	_jumpCheckpoint->setClickedCallback([=] { jumpToCheckpoint(); });
-	_jumpCheckpoint->setToolTip(tr::ayu_JumpToCheckpointMenuText(tr::now));
-	_openDownloads->setClickedCallback([=] { openDownloads(); });
-	_openDownloads->setToolTip(tr::lng_sexcat_history_title(tr::now));
-	_openCheckpoints->setClickedCallback([=] {
-		Ayu::Ui::OpenCheckpointListWindow();
-	});
-	_openCheckpoints->setToolTip(u"All checkpoints…"_q);
-	_openSavedSource->setClickedCallback([=] {
-		Ayu::Ui::OpenSavedBySourceWindow();
-	});
-	_openSavedSource->setToolTip(u"Saved by source…"_q);
 
 	_recentActions->setClickedCallback([=]
 	{
@@ -253,6 +237,12 @@ TopBarWidget::TopBarWidget(
 
 	AyuSettings::getInstance().quickAdminShortcutsChanges(
 	) | rpl::on_next([=](bool) {
+		updateControlsVisibility();
+	}, lifetime());
+
+	AyuSettings::getInstance().sexcatEnabledChanges(
+	) | rpl::on_next([=] {
+		ensureSexCatButtonsCreated();
 		updateControlsVisibility();
 	}, lifetime());
 
@@ -1211,6 +1201,32 @@ int TopBarWidget::countSelectedButtonsTop(float64 selectedShown) {
 	return (1. - selectedShown) * (-st::topBarHeight);
 }
 
+void TopBarWidget::ensureSexCatButtonsCreated() {
+	if (_openDownloads) {
+		return;
+	}
+	const auto &settings = AyuSettings::getInstance();
+	if (!settings.sexcatEnabled()) {
+		return;
+	}
+	_jumpCheckpoint.create(this, st::topBarAyuCheckpoint);
+	_openDownloads.create(this, st::topBarAyuDownloads);
+	_openCheckpoints.create(this, st::topBarAyuCheckpoints);
+	_openSavedSource.create(this, st::topBarAyuSavedSource);
+	_jumpCheckpoint->setClickedCallback([=] { jumpToCheckpoint(); });
+	_jumpCheckpoint->setToolTip(tr::ayu_JumpToCheckpointMenuText(tr::now));
+	_openDownloads->setClickedCallback([=] { openDownloads(); });
+	_openDownloads->setToolTip(tr::lng_sexcat_history_title(tr::now));
+	_openCheckpoints->setClickedCallback([=] {
+		Ayu::Ui::OpenCheckpointListWindow();
+	});
+	_openCheckpoints->setToolTip(u"All checkpoints…"_q);
+	_openSavedSource->setClickedCallback([=] {
+		Ayu::Ui::OpenSavedBySourceWindow();
+	});
+	_openSavedSource->setToolTip(u"Saved by source…"_q);
+}
+
 void TopBarWidget::updateSearchVisibility() {
 	const auto pinnedInSavedMessages = (_activeChat.section == Section::Pinned)
 		&& _activeChat.key.peer()
@@ -1221,11 +1237,21 @@ void TopBarWidget::updateSearchVisibility() {
 			&& !pinnedInSavedMessages)
 		|| (_activeChat.section == Section::SavedSublist
 			&& _activeChat.key.sublist());
-	_jumpCheckpoint->setVisible(searchAllowedMode && !_chooseForReportReason);
-	_openDownloads->setVisible(searchAllowedMode && !_chooseForReportReason);
-	_openCheckpoints->setVisible(searchAllowedMode && !_chooseForReportReason);
-	_openSavedSource->setVisible(searchAllowedMode && !_chooseForReportReason);
-	_search->setVisible(searchAllowedMode && !_chooseForReportReason);
+	ensureSexCatButtonsCreated();
+	const auto shown = searchAllowedMode && !_chooseForReportReason;
+	if (_jumpCheckpoint) {
+		_jumpCheckpoint->setVisible(shown);
+	}
+	if (_openDownloads) {
+		_openDownloads->setVisible(shown);
+	}
+	if (_openCheckpoints) {
+		_openCheckpoints->setVisible(shown);
+	}
+	if (_openSavedSource) {
+		_openSavedSource->setVisible(shown);
+	}
+	_search->setVisible(shown);
 }
 
 void TopBarWidget::jumpToCheckpoint() {
@@ -1454,23 +1480,31 @@ void TopBarWidget::updateControlsGeometry() {
 		_rightTaken += _admins->width();
 	}
 
-	_openCheckpoints->moveToRight(_rightTaken, otherButtonsTop);
-	if (!_openCheckpoints->isHidden()) {
-		_rightTaken += _openCheckpoints->width();
+	if (_openCheckpoints) {
+		_openCheckpoints->moveToRight(_rightTaken, otherButtonsTop);
+		if (!_openCheckpoints->isHidden()) {
+			_rightTaken += _openCheckpoints->width();
+		}
 	}
-	_openSavedSource->moveToRight(_rightTaken, otherButtonsTop);
-	if (!_openSavedSource->isHidden()) {
-		_rightTaken += _openSavedSource->width();
+	if (_openSavedSource) {
+		_openSavedSource->moveToRight(_rightTaken, otherButtonsTop);
+		if (!_openSavedSource->isHidden()) {
+			_rightTaken += _openSavedSource->width();
+		}
 	}
 
-	_jumpCheckpoint->moveToRight(_rightTaken, otherButtonsTop);
-	if (!_jumpCheckpoint->isHidden()) {
-		_rightTaken += _jumpCheckpoint->width();
+	if (_jumpCheckpoint) {
+		_jumpCheckpoint->moveToRight(_rightTaken, otherButtonsTop);
+		if (!_jumpCheckpoint->isHidden()) {
+			_rightTaken += _jumpCheckpoint->width();
+		}
 	}
 
-	_openDownloads->moveToRight(_rightTaken, otherButtonsTop);
-	if (!_openDownloads->isHidden()) {
-		_rightTaken += _openDownloads->width();
+	if (_openDownloads) {
+		_openDownloads->moveToRight(_rightTaken, otherButtonsTop);
+		if (!_openDownloads->isHidden()) {
+			_rightTaken += _openDownloads->width();
+		}
 	}
 
 	_search->moveToRight(_rightTaken, otherButtonsTop);

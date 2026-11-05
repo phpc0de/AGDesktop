@@ -339,8 +339,8 @@ std::vector<Entry> Database::LookupBySource(PeerId peer, MsgId msg) {
 	}
 }
 
-std::vector<Entry> Database::Recent(int limit, Filter filter) {
-	if (!_enabled || limit <= 0) {
+std::vector<Entry> Database::Recent(int limit, Filter filter, int offset) {
+	if (!_enabled || limit <= 0 || offset < 0) {
 		return {};
 	}
 	try {
@@ -357,7 +357,7 @@ std::vector<Entry> Database::Recent(int limit, Filter filter) {
 					or like(column<SavedFileRow>(&SavedFileRow::src_title), pattern, "\\"))
 			),
 			order_by(column<SavedFileRow>(&SavedFileRow::id)).desc(),
-			sqlite_orm::limit(limit)
+			sqlite_orm::limit(limit, sqlite_orm::offset(offset))
 		);
 		auto result = std::vector<Entry>();
 		result.reserve(rows.size());
@@ -367,6 +367,65 @@ std::vector<Entry> Database::Recent(int limit, Filter filter) {
 		return result;
 	} catch (const std::exception &ex) {
 		LogError(u"Failed to read recent saved files: %1"_q.arg(QString::fromUtf8(ex.what())));
+		return {};
+	}
+}
+
+std::optional<Entry> Database::FindSavedSource(
+		PeerId peer,
+		MsgId msg,
+		int attach,
+		int64 fileSize) {
+	if (!_enabled || !peer || !msg) {
+		return std::nullopt;
+	}
+	try {
+		std::lock_guard lock(storageMutex);
+		auto rows = storage.get_all<SavedFileRow>(
+			where(
+				column<SavedFileRow>(&SavedFileRow::src_peer_id) == int64(peer.value)
+				and column<SavedFileRow>(&SavedFileRow::src_msg_id) == msg.bare
+				and column<SavedFileRow>(&SavedFileRow::src_attach) == attach
+				and column<SavedFileRow>(&SavedFileRow::file_size) == fileSize
+			),
+			order_by(column<SavedFileRow>(&SavedFileRow::id)).desc(),
+			sqlite_orm::limit(1)
+		);
+		return rows.empty()
+			? std::nullopt
+			: std::optional<Entry>(EntryFromRow(std::move(rows.front())));
+	} catch (const std::exception &ex) {
+		LogError(u"Failed to find saved file by source: %1"_q.arg(QString::fromUtf8(ex.what())));
+		return std::nullopt;
+	}
+}
+
+std::vector<SourceSummary> Database::SourceSummaries(int limit) {
+	if (!_enabled || limit <= 0) {
+		return {};
+	}
+	try {
+		std::lock_guard lock(storageMutex);
+		auto rows = storage.select(
+			columns(
+				column<SavedFileRow>(&SavedFileRow::src_peer_id),
+				count(column<SavedFileRow>(&SavedFileRow::id)),
+				sum(column<SavedFileRow>(&SavedFileRow::file_size))),
+			group_by(column<SavedFileRow>(&SavedFileRow::src_peer_id)),
+			order_by(count(column<SavedFileRow>(&SavedFileRow::id))).desc(),
+			sqlite_orm::limit(limit));
+		auto result = std::vector<SourceSummary>();
+		result.reserve(rows.size());
+		for (auto &[peerId, counted, totalSize] : rows) {
+			result.push_back(SourceSummary{
+				.src_peer_id = peerId,
+				.count = counted,
+				.total_size = totalSize ? int64(*totalSize) : 0,
+			});
+		}
+		return result;
+	} catch (const std::exception &ex) {
+		LogError(u"Failed to read source summaries: %1"_q.arg(QString::fromUtf8(ex.what())));
 		return {};
 	}
 }

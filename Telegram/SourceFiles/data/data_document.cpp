@@ -46,7 +46,12 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtCore/QMimeType>
 #include <QtCore/QMimeDatabase>
 
+#include <map>
+#include <set>
+
 // AyuGram includes
+#include "ayu/ayu_settings.h"
+#include "ayu/sexcat/sexcat_database.h"
 #include "ayu/sexcat/sexcat_save_hook.h"
 
 
@@ -109,6 +114,41 @@ void UpdateStickerSetIdentifier(
 			|| attributesQuality > transcodeMax * 1.5))
 		? transcodeMax
 		: attributesQuality;
+}
+
+constexpr auto kMaxSexCatSkipLookups = 4096;
+
+// WHY: the duplicate-download probe stats the target and reads ADS +
+// SQLite on every save() retry; remember misses per (document, file)
+// until a library record for that pair is persisted again.
+std::set<std::pair<DocumentId, QString>> &SexCatSkipLookups() {
+	static std::set<std::pair<DocumentId, QString>> result;
+	return result;
+}
+
+[[nodiscard]] bool SexCatShouldSkipDuplicate(
+		not_null<DocumentData*> document,
+		const QString &toFile) {
+	const auto key = std::pair(document->id, toFile);
+	if (SexCatSkipLookups().contains(key)) {
+		return false;
+	}
+	if (SexCat::ShouldSkipDuplicateDownload(document, toFile)) {
+		return true;
+	}
+	if (AyuSettings::getInstance().sexcatEnabled()
+		&& SexCat::Database::instance().Enabled()) {
+		auto &cache = SexCatSkipLookups();
+		while (cache.size() >= size_t(kMaxSexCatSkipLookups)) {
+			cache.erase(cache.begin());
+		}
+		cache.insert(key);
+	}
+	return false;
+}
+
+void SexCatForgetSkipLookup(DocumentId id, const QString &toFile) {
+	SexCatSkipLookups().erase(std::pair(id, toFile));
 }
 
 } // namespace
@@ -1070,7 +1110,15 @@ void DocumentData::finishLoad() {
 		media->setBytes(_loader->bytes());
 		media->checkStickerLarge(_loader.get());
 	}
-	SexCat::NotifyDocumentSaved(_loader->fileName(), this);
+	const auto savedTo = _loader->fileName();
+	SexCatForgetSkipLookup(id, savedTo);
+	// WHY: the hook stats the file and reads ADS synchronously; queue it
+	// through the same async path HashFileAsync callbacks arrive on.
+	crl::async([guard = crl::guard(&session(), [=] {
+		SexCat::NotifyDocumentSaved(savedTo, this);
+	})] {
+		crl::on_main(std::move(guard));
+	});
 }
 
 void DocumentData::destroyLoader() {
@@ -1258,6 +1306,7 @@ void DocumentData::save(
 				}
 				l.accessDisable();
 			}
+			SexCatForgetSkipLookup(id, toFile);
 			SexCat::NotifyDocumentSaved(toFile, this);
 		}
 		return;
@@ -1278,7 +1327,7 @@ void DocumentData::save(
 		status = FileReady;
 		// Sexcat dedup: re-download would only duplicate library content.
 		if (!toFile.isEmpty()
-			&& SexCat::ShouldSkipDuplicateDownload(this, toFile)) {
+			&& SexCatShouldSkipDuplicate(this, toFile)) {
 			setLocation(Core::FileLocation(toFile));
 			session().local().writeFileLocation(
 				mediaKey(),

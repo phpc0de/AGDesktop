@@ -132,6 +132,8 @@ void ShowSavedToast() {
 	return 0;
 }
 
+constexpr auto kMaxDuplicatePathProbes = 3;
+
 void Persist(
 		QString savedPath,
 		int64 fileSize,
@@ -157,8 +159,11 @@ void Persist(
 	// copy still becomes the live carrier when every older one is gone.
 	const auto hits = Database::instance().LookupByHash(sha);
 	auto live = false;
-	for (const auto &hit : hits) {
-		if (QFileInfo::exists(hit.saved_path)) {
+	// probing every duplicate would walk the disk on each save
+	for (auto i = 0;
+		i < kMaxDuplicatePathProbes && i < int(hits.size());
+		++i) {
+		if (QFileInfo::exists(hits[i].saved_path)) {
 			live = true;
 			break;
 		}
@@ -368,6 +373,9 @@ constexpr auto kAugmentedNameTries = 100;
 	if (!IsAllDigitsName(stem)) {
 		return savedPath;
 	}
+	if (item->emptyText()) {
+		return savedPath;
+	}
 	const auto candidate = BuildAugmentedName(original, extractText(item).text);
 	if (candidate.isEmpty()) {
 		return savedPath;
@@ -381,13 +389,12 @@ constexpr auto kAugmentedNameTries = 100;
 	const auto candidateExt = (dotCandidate > 0)
 		? candidate.mid(dotCandidate)
 		: QString();
-	for (auto i = 2; i < kAugmentedNameTries; ++i) {
-		if (!QFileInfo::exists(target)) {
-			break;
-		}
+	auto available = !QFileInfo::exists(target);
+	for (auto i = 2; !available && i < kAugmentedNameTries; ++i) {
 		target = dir.filePath(candidateStem + u" (%1)"_q.arg(i) + candidateExt);
+		available = !QFileInfo::exists(target);
 	}
-	if (QFileInfo::exists(target) || !QFile::rename(savedPath, target)) {
+	if (!available || !QFile::rename(savedPath, target)) {
 		LogFailure(u"failed to rename saved file to %1"_q.arg(target));
 		return savedPath;
 	}
@@ -479,18 +486,15 @@ QString RecordedDocumentPath(
 	if (!peer) {
 		return {};
 	}
-	const auto attach = ResolveAttachIndex(item);
-	for (const auto &entry
-		: Database::instance().LookupBySource(peer->id, item->id)) {
-		if (entry.src_attach != attach
-			|| entry.file_size != document->size) {
-			continue;
-		}
-		if (QFileInfo::exists(entry.saved_path)) {
-			return entry.saved_path;
-		}
+	const auto hit = Database::instance().FindSavedSource(
+		peer->id,
+		item->id,
+		ResolveAttachIndex(item),
+		document->size);
+	if (!hit || !QFileInfo::exists(hit->saved_path)) {
+		return {};
 	}
-	return {};
+	return hit->saved_path;
 }
 
 bool ShouldTrackDownloadHash() {

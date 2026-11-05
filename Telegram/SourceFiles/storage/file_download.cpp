@@ -25,6 +25,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "ayu/sexcat/sexcat_save_hook.h"
+#include <QMutex>
 
 #include <QCryptographicHash>
 
@@ -54,6 +55,8 @@ struct AyuDownloadHashState {
 	bool sequential = true;
 };
 
+QMutex AyuDownloadHashStatesMutex;
+
 std::map<const FileLoader*, AyuDownloadHashState> &AyuDownloadHashStates() {
 	static std::map<const FileLoader*, AyuDownloadHashState> result;
 	return result;
@@ -63,6 +66,7 @@ void AyuFeedDownloadHash(
 		const FileLoader *loader,
 		int64 offset,
 		bytes::const_span buffer) {
+	QMutexLocker lock(&AyuDownloadHashStatesMutex);
 	auto &states = AyuDownloadHashStates();
 	auto it = states.find(loader);
 	if (it == end(states)) {
@@ -86,6 +90,7 @@ void AyuFeedDownloadHash(
 }
 
 void AyuDropDownloadHash(const FileLoader *loader) {
+	QMutexLocker lock(&AyuDownloadHashStatesMutex);
 	AyuDownloadHashStates().erase(loader);
 }
 
@@ -94,6 +99,7 @@ void AyuPublishDownloadHash(
 		int64 skippedBytes,
 		int64 fullSize,
 		const QString &filename) {
+	QMutexLocker lock(&AyuDownloadHashStatesMutex);
 	auto &states = AyuDownloadHashStates();
 	const auto i = states.find(loader);
 	if (i == end(states)) {

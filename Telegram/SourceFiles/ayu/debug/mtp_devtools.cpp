@@ -41,6 +41,7 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
+#include <QMutex>
 #include <QPlainTextEdit>
 #include <QPointer>
 #include <QPushButton>
@@ -49,12 +50,29 @@
 #include <QVBoxLayout>
 #include <crl/crl.h>
 
+#include <deque>
+#include <memory>
+
 namespace Ayu::Debug {
 namespace {
 
 constexpr auto kMaxEntries = 600;
 constexpr auto kMaxDumpPrimes = 8192;
 constexpr auto kMaxTextChars = 24000;
+constexpr auto kRefreshDebounce = 300;
+
+bool RecordEnabled = false;
+
+void RecordRequestForced(
+	mtpRequestId id,
+	const MTP::details::SerializedRequest &request,
+	MTP::ShiftedDcId dc);
+void RecordResponseForced(mtpRequestId id, const mtpBuffer &reply);
+void RecordResponseForced(
+	mtpRequestId id,
+	const mtpPrime *from,
+	const mtpPrime *end);
+void RecordErrorForced(mtpRequestId id, const MTP::Error &error);
 
 QString DumpPrimes(const mtpPrime *from, const mtpPrime *end) {
 	if (!from || end <= from) {
@@ -80,6 +98,49 @@ QString KindName(int kind) {
 	case 1: return u"res"_q;
 	default: return u"err"_q;
 	}
+}
+
+QString RowTitle(const MtpEntry &entry) {
+	const auto time = QDateTime::fromMSecsSinceEpoch(entry.when)
+		.time().toString(u"HH:mm:ss.zzz"_q);
+	return u"#%1  %2  %3  %4"_q
+		.arg(entry.requestId)
+		.arg(time)
+		.arg(KindName(entry.kind))
+		.arg(FirstLine(entry.name));
+}
+
+std::deque<MtpEntry> Entries;
+QMutex EntriesMutex;
+std::shared_ptr<const std::vector<MtpEntry>> Snapshot =
+	std::make_shared<std::vector<MtpEntry>>();
+rpl::event_stream<> Updates;
+
+void PublishSnapshot() {
+	auto next = std::make_shared<std::vector<MtpEntry>>(
+		Entries.begin(),
+		Entries.end());
+	QMutexLocker lock(&EntriesMutex);
+	Snapshot = std::move(next);
+}
+
+[[nodiscard]] std::shared_ptr<const std::vector<MtpEntry>>
+TakeEntriesSnapshot() {
+	QMutexLocker lock(&EntriesMutex);
+	return Snapshot;
+}
+
+void Push(MtpEntry entry) {
+	if (entry.text.size() > kMaxTextChars) {
+		entry.text = entry.text.left(kMaxTextChars)
+			+ u"\n... (truncated)"_q;
+	}
+	Entries.push_back(std::move(entry));
+	if (Entries.size() > kMaxEntries) {
+		Entries.pop_front();
+	}
+	PublishSnapshot();
+	Updates.fire({});
 }
 
 struct RawPreset {
@@ -296,21 +357,21 @@ void SendRawConsoleRequest(const QString &preset, const QString &json) {
 	}
 	auto request = it->build(session, doc.object());
 	const auto newId = MTP::details::GetNextRequestId();
-	RecordMtpRequest(newId, request);
+	RecordRequestForced(newId, request, 0);
 	auto &instance = Core::App().activeAccount().mtp();
 	instance.sendSerialized(
 		newId,
 		std::move(request),
 		MTP::ResponseHandler{
 			.done = [=](const MTP::Response &response) {
-				RecordMtpResponse(newId, response.reply);
+				RecordResponseForced(newId, response.reply);
 				Ayu::Log::Write(
 					u"mtpdev"_q,
 					u"raw %1 new=%2 done"_q.arg(preset).arg(newId));
 				return true;
 			},
 			.fail = [=](const MTP::Error &failError, const MTP::Response &) {
-				RecordMtpError(newId, failError);
+				RecordErrorForced(newId, failError);
 				Ayu::Log::Write(
 					u"mtpdev"_q,
 					u"raw %1 new=%2 fail %3"_q
@@ -396,8 +457,15 @@ public:
 		_consoleParams->setPlaceholderText(u"JSON params (peer: {\"user\":id} / {\"chat\":id} / {\"channel\":id})"_q);
 		root->addWidget(_consoleParams);
 
+		_refreshTimer = new QTimer(this);
+		_refreshTimer->setSingleShot(true);
+		_refreshTimer->setInterval(kRefreshDebounce);
+		connect(_refreshTimer, &QTimer::timeout, this, [=] {
+			refreshSoft();
+		});
+
 		connect(_filter, &QLineEdit::textChanged, this, [=] {
-			refresh();
+			_refreshTimer->start();
 		});
 		connect(_pin, &QPushButton::toggled, this, [=](bool checked) {
 			setWindowFlag(Qt::WindowStaysOnTopHint, checked);
@@ -556,7 +624,7 @@ public:
 		MtpEntriesUpdates(
 		) | rpl::on_next([=] {
 			if (isVisible()) {
-				refreshSoft();
+				_refreshTimer->start();
 			}
 		}, _lifetime);
 
@@ -608,13 +676,7 @@ private:
 		auto copied = 0;
 		constexpr auto kCopyAllLimit = kMaxTextChars * 64;
 		for (const auto &entry : _rows) {
-			const auto time = QDateTime::fromMSecsSinceEpoch(entry.when)
-				.time().toString(u"HH:mm:ss.zzz"_q);
-			blocks << u"#%1  %2  %3  %4"_q
-				.arg(entry.requestId)
-				.arg(time)
-				.arg(KindName(entry.kind))
-				.arg(FirstLine(entry.name));
+			blocks << RowTitle(entry);
 			auto text = entry.text;
 			if (text.size() > kMaxTextChars && !entry.body.isEmpty()) {
 				const auto *from = entry.body.constData();
@@ -637,7 +699,42 @@ private:
 		return blocks.join(u"\n\n"_q);
 	}
 
+	[[nodiscard]] bool canAppendFrom(
+			const std::vector<MtpEntry> &entries) const {
+		if (_filtered || int(entries.size()) <= _renderedCount) {
+			return false;
+		}
+		if (_renderedCount == 0) {
+			return true;
+		}
+		if (_rows.empty()) {
+			return false;
+		}
+		// WHY: growth plus an unchanged head can only be appends since
+		// the last render; a cap trim or a clear would move or shrink it.
+		const auto &head = entries.front();
+		const auto &rendered = _rows.front();
+		return head.when == rendered.when
+			&& head.requestId == rendered.requestId
+			&& head.kind == rendered.kind;
+	}
+
+	void appendRow(const MtpEntry &entry) {
+		_rows.push_back(entry);
+		_list->addItem(RowTitle(entry));
+	}
+
 	void refreshSoft() {
+		const auto entries = TakeEntriesSnapshot();
+		const auto needle = _filter->text().trimmed();
+		if (needle.isEmpty() && canAppendFrom(*entries)) {
+			for (auto i = _renderedCount; i != int(entries->size()); ++i) {
+				appendRow((*entries)[i]);
+			}
+			_renderedCount = int(entries->size());
+			updateButtons();
+			return;
+		}
 		const auto bar = _list->verticalScrollBar();
 		const auto pos = bar ? bar->value() : 0;
 		const auto key = _selectedKey;
@@ -660,20 +757,16 @@ private:
 	}
 
 	void refresh() {
+		const auto entries = TakeEntriesSnapshot();
 		const auto needle = _filter->text().trimmed();
-		const auto entries = MtpEntriesSnapshot();
+		_filtered = !needle.isEmpty();
 		_rebuilding = true;
 		_rows.clear();
 		_list->clear();
-		for (const auto &entry : entries) {
-			const auto time = QDateTime::fromMSecsSinceEpoch(entry.when)
-				.time().toString(u"HH:mm:ss.zzz"_q);
-			const auto line = u"#%1  %2  %3  %4"_q
-				.arg(entry.requestId)
-				.arg(time)
-				.arg(KindName(entry.kind))
-				.arg(FirstLine(entry.name));
-			if (!needle.isEmpty()
+		_rows.reserve(int(entries->size()));
+		for (const auto &entry : *entries) {
+			const auto line = RowTitle(entry);
+			if (_filtered
 				&& !entry.text.contains(needle, Qt::CaseInsensitive)
 				&& !line.contains(needle, Qt::CaseInsensitive)) {
 				continue;
@@ -681,6 +774,7 @@ private:
 			_rows.push_back(entry);
 			_list->addItem(line);
 		}
+		_renderedCount = int(entries->size());
 		_rebuilding = false;
 		updateButtons();
 	}
@@ -689,6 +783,9 @@ private:
 	std::vector<MtpEntry> _rows;
 	qint64 _selectedKey = -1;
 	bool _rebuilding = false;
+	int _renderedCount = 0;
+	bool _filtered = false;
+	QTimer *_refreshTimer = nullptr;
 	QLineEdit *_filter = nullptr;
 	QPushButton *_hexView = nullptr;
 	QPushButton *_pin = nullptr;
@@ -706,21 +803,7 @@ private:
 
 };
 
-std::vector<MtpEntry> Entries;
-rpl::event_stream<> Updates;
 QPointer<DevtoolsWindow> Window;
-
-void Push(MtpEntry entry) {
-	if (entry.text.size() > kMaxTextChars) {
-		entry.text = entry.text.left(kMaxTextChars)
-			+ u"\n... (truncated)"_q;
-	}
-	Entries.push_back(std::move(entry));
-	if (Entries.size() > kMaxEntries) {
-		Entries.erase(Entries.begin(), Entries.end() - kMaxEntries);
-	}
-	Updates.fire({});
-}
 
 [[nodiscard]] QString RedactDump(const QString &text) {
 	static const auto hash = QRegularExpression(u"access_hash: \\S+"_q);
@@ -731,17 +814,7 @@ void Push(MtpEntry entry) {
 	return out;
 }
 
-} // namespace
-
-std::vector<MtpEntry> MtpEntriesSnapshot() {
-	return Entries;
-}
-
-rpl::producer<> MtpEntriesUpdates() {
-	return Updates.events();
-}
-
-void RecordMtpRequest(
+void RecordRequestForced(
 		mtpRequestId id,
 		const MTP::details::SerializedRequest &request,
 		MTP::ShiftedDcId dc) {
@@ -760,12 +833,9 @@ void RecordMtpRequest(
 	};
 	const auto count = buffer.size()
 		- MTP::details::SerializedRequest::kMessageBodyPosition;
-	entry.body.reserve(count);
 	const auto *first = buffer.constData()
 		+ MTP::details::SerializedRequest::kMessageBodyPosition;
-	for (int i = 0; i < count; ++i) {
-		entry.body.push_back(first[i]);
-	}
+	entry.body = QVector<mtpPrime>(first, first + count);
 	const auto *from = entry.body.constData();
 	const auto *end = from + entry.body.size();
 	entry.text = DecodeTlBody(from, end);
@@ -779,12 +849,12 @@ void RecordMtpRequest(
 	Push(std::move(entry));
 }
 
-void RecordMtpResponse(mtpRequestId id, const mtpBuffer &reply) {
+void RecordResponseForced(mtpRequestId id, const mtpBuffer &reply) {
 	const auto *from = reply.constData();
-	RecordMtpResponse(id, from, from + reply.size());
+	RecordResponseForced(id, from, from + reply.size());
 }
 
-void RecordMtpResponse(
+void RecordResponseForced(
 		mtpRequestId id,
 		const mtpPrime *from,
 		const mtpPrime *end) {
@@ -811,7 +881,7 @@ void RecordMtpResponse(
 	Push(std::move(entry));
 }
 
-void RecordMtpError(mtpRequestId id, const MTP::Error &error) {
+void RecordErrorForced(mtpRequestId id, const MTP::Error &error) {
 	auto entry = MtpEntry{
 		.requestId = id,
 		.when = crl::now(),
@@ -823,6 +893,50 @@ void RecordMtpError(mtpRequestId id, const MTP::Error &error) {
 		.arg(error.type())
 		.arg(error.description());
 	Push(std::move(entry));
+}
+
+} // namespace
+
+std::vector<MtpEntry> MtpEntriesSnapshot() {
+	return *TakeEntriesSnapshot();
+}
+
+rpl::producer<> MtpEntriesUpdates() {
+	return Updates.events();
+}
+
+void RecordMtpRequest(
+		mtpRequestId id,
+		const MTP::details::SerializedRequest &request,
+		MTP::ShiftedDcId dc) {
+	if (!RecordEnabled) {
+		return;
+	}
+	RecordRequestForced(id, request, dc);
+}
+
+void RecordMtpResponse(mtpRequestId id, const mtpBuffer &reply) {
+	if (!RecordEnabled) {
+		return;
+	}
+	RecordResponseForced(id, reply);
+}
+
+void RecordMtpResponse(
+		mtpRequestId id,
+		const mtpPrime *from,
+		const mtpPrime *end) {
+	if (!RecordEnabled) {
+		return;
+	}
+	RecordResponseForced(id, from, end);
+}
+
+void RecordMtpError(mtpRequestId id, const MTP::Error &error) {
+	if (!RecordEnabled) {
+		return;
+	}
+	RecordErrorForced(id, error);
 }
 
 void ReplayMtpRequest(
@@ -860,21 +974,21 @@ void ReplayMtpRequest(
 		(*request).push_back(prime);
 	}
 	const auto newId = MTP::details::GetNextRequestId();
-	RecordMtpRequest(newId, request);
+	RecordRequestForced(newId, request, 0);
 	auto &instance = Core::App().activeAccount().mtp();
 	instance.sendSerialized(
 		newId,
 		std::move(request),
 		MTP::ResponseHandler{
 			.done = [=](const MTP::Response &response) {
-				RecordMtpResponse(newId, response.reply);
+				RecordResponseForced(newId, response.reply);
 				Ayu::Log::Write(
 					u"mtpdev"_q,
 					u"replay src=%1 new=%2 done"_q.arg(id).arg(newId));
 				return true;
 			},
 			.fail = [=](const MTP::Error &error, const MTP::Response &) {
-				RecordMtpError(newId, error);
+				RecordErrorForced(newId, error);
 				Ayu::Log::Write(
 					u"mtpdev"_q,
 					u"replay src=%1 new=%2 fail type=%3"_q
@@ -894,9 +1008,13 @@ void ReplayMtpRequest(
 
 void ClearMtpEntries() {
 	Entries.clear();
+	auto next = std::make_shared<std::vector<MtpEntry>>();
+	QMutexLocker lock(&EntriesMutex);
+	Snapshot = std::move(next);
 }
 
 void ShowMtpDevtools() {
+	RecordEnabled = true;
 	if (!Window) {
 		Window = new DevtoolsWindow();
 	}

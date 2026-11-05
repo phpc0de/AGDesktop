@@ -35,7 +35,6 @@
 #include <QVBoxLayout>
 
 #include <algorithm>
-#include <map>
 
 namespace Ayu::Ui {
 namespace {
@@ -201,10 +200,12 @@ private:
 		_tree->clear();
 		for (const auto session : OrderedSessions()) {
 			const auto userId = ID(session->userId().bare & PeerId::kChatTypeMask);
-			for (const auto &checkpoint : AyuDatabase::listCheckpoints(userId)) {
-				if (_rows.size() >= kMaxCheckpointRows) {
-					return;
-				}
+			const auto remaining = kMaxCheckpointRows - int(_rows.size());
+			if (remaining <= 0) {
+				break;
+			}
+			for (const auto &checkpoint
+				: AyuDatabase::listCheckpoints(userId, remaining)) {
 				const auto peer = ResolveDialogPeer(session, checkpoint.dialogId);
 				auto *item = new QTreeWidgetItem(_tree);
 				item->setText(
@@ -367,31 +368,18 @@ private:
 	}
 
 	void reload() {
-		auto groups = std::map<int64, SavedSourceRow>();
-		for (const auto &entry : SexCat::Database::instance().Recent(kMaxSourceRows)) {
-			auto &row = groups[entry.src_peer_id];
-			++row.count;
-			row.totalSize += entry.file_size;
-			if (row.name.isEmpty() && !entry.src_title.isEmpty()) {
-				row.name = entry.src_title;
-			}
-		}
-
 		_rows.clear();
-		_rows.reserve(groups.size());
+		_rows.reserve(kMaxSourceRows);
 		_sources->clear();
-		for (const auto &[id, group] : groups) {
-			auto row = group;
-			row.srcPeerId = id;
-			row.name = SourceName(id, row.name);
-			_rows.push_back(std::move(row));
-		}
-		std::sort(
-			_rows.begin(),
-			_rows.end(),
-			[](const SavedSourceRow &a, const SavedSourceRow &b) {
-				return a.count > b.count;
+		for (const auto &summary
+			: SexCat::Database::instance().SourceSummaries(kMaxSourceRows)) {
+			_rows.push_back(SavedSourceRow{
+				.srcPeerId = summary.src_peer_id,
+				.name = SourceName(summary.src_peer_id, QString()),
+				.count = summary.count,
+				.totalSize = summary.total_size,
 			});
+		}
 		for (const auto &row : _rows) {
 			auto *item = new QTreeWidgetItem(_sources);
 			item->setText(kSavedColSource, row.name);
@@ -453,14 +441,14 @@ private:
 		const auto loaded = int(_fileRows.size());
 		const auto filter = SexCat::Filter{ .src_peer_id = _currentSource };
 		const auto rows = SexCat::Database::instance().Recent(
-			loaded + kFilesPageSize,
-			filter);
-		const auto available = int(rows.size());
-		_loadMore->setVisible(available > loaded);
-		if (available <= loaded) {
+			kFilesPageSize,
+			filter,
+			loaded);
+		_loadMore->setVisible(int(rows.size()) == kFilesPageSize);
+		if (rows.empty()) {
 			return;
 		}
-		_fileRows.insert(_fileRows.end(), rows.begin() + loaded, rows.end());
+		_fileRows.insert(_fileRows.end(), rows.begin(), rows.end());
 		const auto rowHeight = QPushButton(u"Folder"_q).sizeHint().height();
 		for (auto i = loaded; i < int(_fileRows.size()); ++i) {
 			const auto &entry = _fileRows[i];

@@ -19,6 +19,7 @@ https://<obf:github-repo-ref>/blob/dev/LEGAL
 #include "scheme.h"
 
 #include <QtCore/QByteArray>
+#include <QtCore/QHash>
 #include <QtCore/QStringList>
 #include <QtCore/QVector>
 
@@ -32,14 +33,21 @@ using Scheme::CtorDesc;
 constexpr auto kVectorCtor = 0x1cb5c415; // vector#1cb5c415
 constexpr auto kMaxRawHexChars = 4096;
 constexpr auto kMaxCtorDepth = 6;
+constexpr auto kMaxTextChars = 24000;
 
 [[nodiscard]] const CtorDesc *FindCtor(uint32_t id) {
-	for (auto i = 0; i != Scheme::kCtorsCount; ++i) {
-		if (Scheme::kCtors[i].id == id) {
-			return &Scheme::kCtors[i];
+	static const auto index = [] {
+		auto hash = QHash<uint32_t, const CtorDesc *>();
+		hash.reserve(Scheme::kCtorsCount);
+		for (auto i = 0; i != Scheme::kCtorsCount; ++i) {
+			// First table entry wins, matching the old linear scan.
+			if (!hash.contains(Scheme::kCtors[i].id)) {
+				hash.insert(Scheme::kCtors[i].id, &Scheme::kCtors[i]);
+			}
 		}
-	}
-	return nullptr;
+		return hash;
+	}();
+	return index.value(id, nullptr);
 }
 
 [[nodiscard]] const CtorDesc *FindCtor(const QString &name) {
@@ -274,11 +282,17 @@ constexpr auto kMaxCtorDepth = 6;
 struct Reader {
 	const mtpPrime *from = nullptr;
 	const mtpPrime *end = nullptr;
+	int used = 0;
 
 	[[nodiscard]] bool remaining(int count) const {
 		return from && (end - from) >= count;
 	}
 };
+
+[[nodiscard]] QString Counted(Reader &reader, QString text) {
+	reader.used += int(text.size());
+	return text;
+}
 
 void ReadBytes(Reader &reader, QByteArray &out) {
 	if (!reader.remaining(1)) {
@@ -457,6 +471,10 @@ void PackBytes(const QByteArray &bytes, QVector<mtpPrime> &out) {
 		auto rendered = DecodeValue(reader, type, name, depth + 1, ctorName);
 		attachNote(rendered, name);
 		out += rendered;
+		if (reader.used > kMaxTextChars) {
+			out += pad + u"  // <output limit>\n"_q;
+			break;
+		}
 	}
 	if (depth == 0 && reader.from < reader.end) {
 		out += pad + u"  // %1 trailing primes\n"_q.arg(reader.end - reader.from);
@@ -495,7 +513,7 @@ void PackBytes(const QByteArray &bytes, QVector<mtpPrime> &out) {
 			+ QString::fromLatin1(ascii) + u"\"\n"_q;
 	}
 	out += pad + u"}\n"_q;
-	return out;
+	return Counted(reader, std::move(out));
 }
 
 // Element type is unknown here: ctor elements recurse, rest stay words.
@@ -534,6 +552,10 @@ void PackBytes(const QByteArray &bytes, QVector<mtpPrime> &out) {
 			out += DecodeCtorBody(reader, desc, depth + 1);
 		} else {
 			out += pad + u"  %1\n"_q.arg(int32_t(id));
+		}
+		if (reader.used > kMaxTextChars) {
+			out += pad + u"  // <output limit>\n"_q;
+			break;
 		}
 	}
 	out += pad + u"}\n"_q;
@@ -614,6 +636,10 @@ void PackBytes(const QByteArray &bytes, QVector<mtpPrime> &out) {
 			} else {
 				out += DecodeCtorValue(reader, QString(), depth + 1);
 			}
+			if (reader.used > kMaxTextChars) {
+				out += pad + u"  // <output limit>\n"_q;
+				break;
+			}
 		}
 		out += pad + u"}\n"_q;
 		return out;
@@ -626,7 +652,13 @@ void PackBytes(const QByteArray &bytes, QVector<mtpPrime> &out) {
 		if (expect == u"string"_q) {
 			auto bytes = QByteArray();
 			ReadBytes(reader, bytes);
-			return pad + u"%1\"%2\"\n"_q.arg(prefix).arg(EscapeBytes(bytes));
+			auto text = EscapeBytes(bytes);
+			// A single huge value must not consume the whole budget.
+			const auto room = qMax(kMaxTextChars - reader.used, 0);
+			if (text.size() > room) {
+				text = text.left(room) + u"… <output limit>"_q;
+			}
+			return Counted(reader, pad + u"%1\"%2\"\n"_q.arg(prefix).arg(text));
 		}
 		if (expect == u"bytes"_q) {
 			auto bytes = QByteArray();
@@ -645,16 +677,16 @@ void PackBytes(const QByteArray &bytes, QVector<mtpPrime> &out) {
 				line += u"\n"_q + pad + u"// base64: "_q
 					+ QString::fromLatin1(bytes.toBase64());
 			}
-			return line + u"\n"_q;
+			return Counted(reader, line + u"\n"_q);
 		}
 		if (expect == u"Bool"_q) {
 			const auto value = uint32_t(*reader.from++);
-			return pad + u"%1%2\n"_q
+			return Counted(reader, pad + u"%1%2\n"_q
 				.arg(prefix)
-				.arg(value == mtpc_boolTrue ? u"true"_q : u"false"_q);
+				.arg(value == mtpc_boolTrue ? u"true"_q : u"false"_q));
 		}
 		if (expect == u"true"_q) {
-			return pad + u"%1true\n"_q.arg(prefix);
+			return Counted(reader, pad + u"%1true\n"_q.arg(prefix));
 		}
 		if (expect == u"double"_q) {
 			if (!reader.remaining(2)) {
@@ -666,9 +698,9 @@ void PackBytes(const QByteArray &bytes, QVector<mtpPrime> &out) {
 			const auto bits = low | (high << 32);
 			auto value = 0.0;
 			memcpy(&value, &bits, sizeof(value));
-			return pad + u"%1%2\n"_q
+			return Counted(reader, pad + u"%1%2\n"_q
 				.arg(prefix)
-				.arg(QString::number(value, 'g', 17));
+				.arg(QString::number(value, 'g', 17)));
 		}
 		if (expect == u"int128"_q || expect == u"int256"_q) {
 			const auto count = (expect == u"int128"_q) ? 4 : 8;
@@ -681,7 +713,9 @@ void PackBytes(const QByteArray &bytes, QVector<mtpPrime> &out) {
 				hex += u"%1"_q
 					.arg(uint32_t(*reader.from++), 8, 16, QChar(u'0'));
 			}
-			return pad + u"%1int128/256: 0x%2\n"_q.arg(prefix).arg(hex);
+			return Counted(
+				reader,
+				pad + u"%1int128/256: 0x%2\n"_q.arg(prefix).arg(hex));
 		}
 		if (expect == u"long"_q || expect == u"int53"_q || expect == u"int64"_q) {
 			if (!reader.remaining(2)) {
@@ -691,23 +725,23 @@ void PackBytes(const QByteArray &bytes, QVector<mtpPrime> &out) {
 			const auto low = quint64(uint32_t(*reader.from++));
 			const auto high = quint64(uint32_t(*reader.from++));
 			const auto value = qint64(low | (high << 32));
-			return pad + u"%1%2%3\n"_q
+			return Counted(reader, pad + u"%1%2%3\n"_q
 				.arg(prefix)
 				.arg(value)
 				.arg(fieldName.isEmpty()
 					? QString()
-					: PeerAnnotation(fieldName, value, owner));
+					: PeerAnnotation(fieldName, value, owner)));
 		}
 		const auto value = qint32(uint32_t(*reader.from++));
 		if (expect == u"#"_q) {
-			return pad + u"%1flags: 0x%2\n"_q
+			return Counted(reader, pad + u"%1flags: 0x%2\n"_q
 				.arg(prefix)
-				.arg(uint32_t(value), 8, 16, QChar(u'0'));
+				.arg(uint32_t(value), 8, 16, QChar(u'0')));
 		}
-		return pad + u"%1%2%3\n"_q
+		return Counted(reader, pad + u"%1%2%3\n"_q
 			.arg(prefix)
 			.arg(value)
-			.arg(PeerAnnotation(fieldName, value, owner));
+			.arg(PeerAnnotation(fieldName, value, owner)));
 	}
 	return DecodeCtorValue(reader, fieldName, depth);
 }
