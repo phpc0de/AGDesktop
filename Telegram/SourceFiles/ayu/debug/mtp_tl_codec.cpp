@@ -31,6 +31,7 @@ using Scheme::CtorDesc;
 
 constexpr auto kVectorCtor = 0x1cb5c415; // vector#1cb5c415
 constexpr auto kMaxRawHexChars = 4096;
+constexpr auto kMaxCtorDepth = 6;
 
 [[nodiscard]] const CtorDesc *FindCtor(uint32_t id) {
 	for (auto i = 0; i != Scheme::kCtorsCount; ++i) {
@@ -467,6 +468,78 @@ void PackBytes(const QByteArray &bytes, QVector<mtpPrime> &out) {
 	return out;
 }
 
+[[nodiscard]] QString RawCtorValue(
+		Reader &reader,
+		uint32_t id,
+		const QString &fieldName,
+		int depth) {
+	const auto pad = QString(depth * 2, QChar(u' '));
+	auto out = pad + (fieldName.isEmpty()
+		? u"ctor_0x%1 {\n"_q.arg(id, 8, 16, QChar(u'0'))
+		: u"%1: ctor_0x%2 {\n"_q
+			.arg(fieldName)
+			.arg(id, 8, 16, QChar(u'0')));
+	auto hex = QString();
+	auto ascii = QByteArray();
+	while (reader.remaining(1) && hex.size() < kMaxRawHexChars) {
+		const auto word = uint32_t(*reader.from++);
+		hex += u"%1 "_q.arg(word, 8, 16, QChar(u'0'));
+		for (auto shift = 0; shift != 32; shift += 8) {
+			const auto byte = char((word >> shift) & 0xFF);
+			ascii += (byte >= 0x20 && byte < 0x7F) ? byte : '.';
+		}
+	}
+	out += pad + u"  raw: "_q + hex.trimmed() + u"\n"_q;
+	if (!ascii.isEmpty()) {
+		out += pad + u"  text: \""_q
+			+ QString::fromLatin1(ascii) + u"\"\n"_q;
+	}
+	out += pad + u"}\n"_q;
+	return out;
+}
+
+// Element type is unknown here: ctor elements recurse, rest stay words.
+[[nodiscard]] QString DecodeUnknownVector(
+		Reader &reader,
+		const QString &fieldName,
+		int depth) {
+	const auto pad = QString(depth * 2, QChar(u' '));
+	const auto prefix = fieldName.isEmpty()
+		? QString()
+		: fieldName + u": "_q;
+	if (depth > kMaxCtorDepth) {
+		return pad + u"%1vector // <depth limit>\n"_q.arg(prefix);
+	}
+	if (!reader.remaining(1)) {
+		reader.from = reader.end;
+		return pad + u"%1// <buffer end>\n"_q.arg(prefix);
+	}
+	const auto count = int32_t(*reader.from++);
+	// A garbage count would run primes past the payload; skip instead.
+	if (count < 0 || count > reader.end - reader.from) {
+		return pad + u"%1vector // <bad count %2, skipped>\n"_q
+			.arg(prefix)
+			.arg(count);
+	}
+	auto out = pad + u"%1vector {\n"_q.arg(prefix);
+	for (auto i = 0; i != count; ++i) {
+		if (!reader.remaining(1)) {
+			out += pad + u"  // <buffer end at item %1>\n"_q.arg(i);
+			break;
+		}
+		const auto id = uint32_t(*reader.from++);
+		if (id == kVectorCtor) {
+			out += DecodeUnknownVector(reader, QString(), depth + 1);
+		} else if (const auto desc = FindCtor(id)) {
+			out += DecodeCtorBody(reader, desc, depth + 1);
+		} else {
+			out += pad + u"  %1\n"_q.arg(int32_t(id));
+		}
+	}
+	out += pad + u"}\n"_q;
+	return out;
+}
+
 [[nodiscard]] QString DecodeCtorValue(
 		Reader &reader,
 		const QString &fieldName,
@@ -477,36 +550,20 @@ void PackBytes(const QByteArray &bytes, QVector<mtpPrime> &out) {
 		return pad + u"// <buffer end>\n"_q;
 	}
 	const auto id = uint32_t(*reader.from++);
-	const auto desc = FindCtor(id);
-	if (!desc) {
-		auto out = pad + (fieldName.isEmpty()
-			? u"ctor_0x%1 {\n"_q.arg(id, 8, 16, QChar(u'0'))
-			: u"%1: ctor_0x%2 {\n"_q
-				.arg(fieldName)
-				.arg(id, 8, 16, QChar(u'0')));
-		auto hex = QString();
-		auto ascii = QByteArray();
-		while (reader.remaining(1) && hex.size() < kMaxRawHexChars) {
-			const auto word = uint32_t(*reader.from++);
-			hex += u"%1 "_q.arg(word, 8, 16, QChar(u'0'));
-			for (auto shift = 0; shift != 32; shift += 8) {
-				const auto byte = char((word >> shift) & 0xFF);
-				ascii += (byte >= 0x20 && byte < 0x7F) ? byte : '.';
-			}
-		}
-		out += pad + u"  raw: "_q + hex.trimmed() + u"\n"_q;
-		if (!ascii.isEmpty()) {
-			out += pad + u"  text: \""_q
-				+ QString::fromLatin1(ascii) + u"\"\n"_q;
-		}
-		out += pad + u"}\n"_q;
-		return out;
+	if (depth > kMaxCtorDepth) {
+		return RawCtorValue(reader, id, fieldName, depth);
 	}
-	if (!fieldName.isEmpty()) {
-		return pad + fieldName + u": "_q
-			+ DecodeCtorBody(reader, desc, depth).trimmed() + u"\n"_q;
+	if (const auto desc = FindCtor(id)) {
+		if (!fieldName.isEmpty()) {
+			return pad + fieldName + u": "_q
+				+ DecodeCtorBody(reader, desc, depth).trimmed() + u"\n"_q;
+		}
+		return DecodeCtorBody(reader, desc, depth);
 	}
-	return DecodeCtorBody(reader, desc, depth);
+	if (id == kVectorCtor) {
+		return DecodeUnknownVector(reader, fieldName, depth);
+	}
+	return RawCtorValue(reader, id, fieldName, depth);
 }
 
 [[nodiscard]] QString DecodeValue(
@@ -575,11 +632,20 @@ void PackBytes(const QByteArray &bytes, QVector<mtpPrime> &out) {
 			auto bytes = QByteArray();
 			ReadBytes(reader, bytes);
 			const auto shown = qMin<qsizetype>(bytes.size(), 32);
-			return pad + u"%1bytes[%2]: 0x%3%4\n"_q
+			auto line = pad + u"%1bytes[%2]: 0x%3%4"_q
 				.arg(prefix)
 				.arg(bytes.size())
 				.arg(HexBytes(bytes.left(shown)))
 				.arg(bytes.size() > 32 ? u"…"_q : QString());
+			if (fieldName == u"file_reference"_q && !bytes.isEmpty()) {
+				// WHY: the ticket is opaque on the wire; the base64 copy
+				// lets tickets be compared across packets without a tool.
+				line += u" // opaque access ticket, not decodable (%1 bytes)"_q
+					.arg(bytes.size());
+				line += u"\n"_q + pad + u"// base64: "_q
+					+ QString::fromLatin1(bytes.toBase64());
+			}
+			return line + u"\n"_q;
 		}
 		if (expect == u"Bool"_q) {
 			const auto value = uint32_t(*reader.from++);

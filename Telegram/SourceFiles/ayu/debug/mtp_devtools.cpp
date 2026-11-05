@@ -9,6 +9,7 @@
 #include "ayu/debug/mtp_tl_codec.h"
 
 #include <QtGui/QFontDatabase>
+#include <QtGui/QKeySequence>
 #include <QRegularExpression>
 
 #include "ayu/ui/toasts.h"
@@ -359,9 +360,9 @@ public:
 		root->addLayout(split, 1);
 
 		auto *buttons = new QHBoxLayout();
-		_copyText = new QPushButton(u"Copy TL"_q, this);
-		_copyHex = new QPushButton(u"Copy hex"_q, this);
-		_copyAll = new QPushButton(u"Copy all"_q, this);
+		_copyText = new QPushButton(u"Copy Text"_q, this);
+		_copyHex = new QPushButton(u"Copy Hex"_q, this);
+		_copyAll = new QPushButton(u"Copy ALL packets"_q, this);
 		_replay = new QPushButton(u"Replay"_q, this);
 		_editReplay = new QPushButton(u"Edit & Replay"_q, this);
 		buttons->addWidget(_copyText);
@@ -387,7 +388,9 @@ public:
 		_hexView->setToolTip(
 			u"Show raw 32-bit words instead of the decoded TL tree."_q);
 		_copyHex->setToolTip(u"Copy raw 32-bit words of the packet."_q);
-		_copyAll->setToolTip(u"Copy every visible row with its header and text."_q);
+		_copyAll->setToolTip(
+			u"Copy every visible row with its header and text (Ctrl+Shift+C)."_q);
+		_copyAll->setShortcut(QKeySequence(u"Ctrl+Shift+C"_q));
 		_consoleParams = new QPlainTextEdit(this);
 		_consoleParams->setMaximumHeight(110);
 		_consoleParams->setPlaceholderText(u"JSON params (peer: {\"user\":id} / {\"chat\":id} / {\"channel\":id})"_q);
@@ -579,6 +582,7 @@ private:
 		_replay->setEnabled(replayable);
 		_editReplay->setEnabled(replayable);
 		_copyHex->setEnabled(entry && !entry->body.isEmpty());
+		_copyAll->setText(u"Copy ALL packets (%1)"_q.arg(int(_rows.size())));
 		_copyAll->setEnabled(!_rows.empty());
 	}
 
@@ -601,6 +605,7 @@ private:
 		auto blocks = QStringList();
 		blocks.reserve(int(_rows.size()) * 2);
 		auto total = 0;
+		auto copied = 0;
 		constexpr auto kCopyAllLimit = kMaxTextChars * 64;
 		for (const auto &entry : _rows) {
 			const auto time = QDateTime::fromMSecsSinceEpoch(entry.when)
@@ -617,8 +622,15 @@ private:
 			}
 			blocks << text;
 			total += int(text.size()) + 4;
+			++copied;
 			if (total > kCopyAllLimit) {
 				blocks << u"... (copy limit reached)"_q;
+				Ayu::Log::Write(
+					u"mtpdev"_q,
+					u"copy all truncated: %1 of %2 rows, %3 chars"_q
+						.arg(copied)
+						.arg(int(_rows.size()))
+						.arg(total));
 				break;
 			}
 		}
@@ -627,29 +639,23 @@ private:
 
 	void refreshSoft() {
 		const auto bar = _list->verticalScrollBar();
-		const auto atBottom = bar && bar->value() >= bar->maximum();
 		const auto pos = bar ? bar->value() : 0;
 		const auto key = _selectedKey;
-		const auto detailText = _detail->toPlainText();
 		refresh();
-		auto restored = false;
+		// WHY: rebuild resets the scrollbar to 0, so the old value is
+		// always re-applied; the view must never auto-move on its own.
+		if (bar) {
+			bar->setValue(qMin(pos, bar->maximum()));
+		}
 		if (key >= 0) {
 			for (auto i = 0; i != _list->count(); ++i) {
 				const auto entry = entryAt(i);
 				if (entry && entryKey(*entry) == key) {
 					_list->setCurrentRow(i);
-					restored = true;
-					break;
+					return;
 				}
 			}
-		}
-		if (bar && !restored) {
-			bar->setValue(atBottom
-				? bar->maximum()
-				: qMin(pos, bar->maximum()));
-		}
-		if (!restored && key >= 0) {
-			_detail->setPlainText(detailText);
+			_selectedKey = -1;
 		}
 	}
 
