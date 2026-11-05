@@ -62,6 +62,19 @@ void SetForwardState(
 	forwardStates[id] = std::move(state);
 }
 
+// WHY: forwardStates used to keep entries for idle peers forever; the
+// bar poll reads only isForwarding/stateName, which both handle a
+// missing entry, so a Finished state can be erased right away.
+void EraseFinishedForwardState(const PeerId &id, const ForwardState *state) {
+	QMutexLocker lock(&forwardStatesMutex);
+	const auto i = forwardStates.find(id);
+	if (i != forwardStates.end()
+		&& i->second.get() == state
+		&& i->second->state == ForwardState::State::Finished) {
+		forwardStates.erase(i);
+	}
+}
+
 bool isForwarding(const PeerId &id) {
 	const auto fwState = FindForwardState(id);
 	if (id.value && fwState) {
@@ -79,6 +92,7 @@ void cancelForward(const PeerId &id, const Main::Session &session) {
 	if (const auto fwState = FindForwardState(id)) {
 		fwState->stopRequested = true;
 		fwState->updateBottomBar(session, &id, ForwardState::State::Finished);
+		EraseFinishedForwardState(id, fwState.get());
 	}
 }
 
@@ -126,9 +140,10 @@ std::pair<QString, QString> stateName(const PeerId &id) {
 void ForwardState::updateBottomBar(const Main::Session &session, const PeerId *peer, const State &st) {
 	state = st;
 	auto peerCopy = *peer;
-	crl::on_main([&, peerCopy]
+	const auto sessionPtr = &session;
+	crl::on_main([=]
 	{
-		session.changes().peerUpdated(session.data().peer(peerCopy), Data::PeerUpdate::Flag::Rights);
+		sessionPtr->changes().peerUpdated(sessionPtr->data().peer(peerCopy), Data::PeerUpdate::Flag::Rights);
 	});
 }
 
@@ -342,6 +357,7 @@ void intelligentForward(
 	}
 
 	state->updateBottomBar(*session, &peer->id, ForwardState::State::Finished);
+	EraseFinishedForwardState(peer->id, state.get());
 }
 
 void resendViaDownload(
@@ -364,6 +380,7 @@ void resendViaDownload(
 			*session,
 			&peer->id,
 			ForwardState::State::Finished);
+		EraseFinishedForwardState(peer->id, state.get());
 		return;
 	}
 	if (!toBeDownloaded.empty()) {
@@ -377,6 +394,7 @@ void resendViaDownload(
 	if (state->stopRequested) {
 		Ayu::Log::Write(u"forward"_q, u"ayu stopped before send dest=%1"_q.arg(peer->id.value));
 		state->updateBottomBar(*session, &peer->id, ForwardState::State::Finished);
+		EraseFinishedForwardState(peer->id, state.get());
 		return;
 	}
 
@@ -388,6 +406,7 @@ void resendViaDownload(
 
 		if (state->stopRequested) {
 			state->updateBottomBar(*session, &peer->id, ForwardState::State::Finished);
+			EraseFinishedForwardState(peer->id, state.get());
 			return;
 		}
 		const auto updateProgress = gsl::finally([&] {
@@ -411,6 +430,7 @@ void resendViaDownload(
 
 			if (state->stopRequested) {
 				state->updateBottomBar(*session, &peer->id, ForwardState::State::Finished);
+				EraseFinishedForwardState(peer->id, state.get());
 				return;
 			}
 
@@ -512,6 +532,19 @@ void resendViaDownload(
 	}
 	Ayu::Log::Write(u"forward"_q, u"ayu finished dest=%1 sent=%2"_q.arg(peer->id.value).arg(state->sentMessages));
 	state->updateBottomBar(*session, &peer->id, ForwardState::State::Finished);
+	EraseFinishedForwardState(peer->id, state.get());
+}
+
+static DocumentData *LookupMediaById(
+		not_null<Main::Session*> session,
+		const DocumentData *media) {
+	return session->data().document(media->id).get();
+}
+
+static PhotoData *LookupMediaById(
+		not_null<Main::Session*> session,
+		const PhotoData *media) {
+	return session->data().photo(media->id).get();
 }
 
 template <typename MediaData>
@@ -682,7 +715,7 @@ void ReattachSendExistingMedia(
 			MTP_long(action.options.effectId),
 			MTP_long(starsPaid),
 			Api::SuggestToMTP(action.options.suggest)
-		)).done([=](const MTPUpdates &result) {
+		)).done(crl::guard(session, [=](const MTPUpdates &result) {
 			Ayu::Log::Write(
 				u"forward"_q,
 				u"reattach sent ok item=%1 dest=%2"_q
@@ -691,24 +724,31 @@ void ReattachSendExistingMedia(
 			api->applyUpdates(result, randomId);
 			AyuWorker::markAsOnline(&history->session());
 			settleOne(true);
-		}).fail([=](const MTP::Error &error) {
+		})).fail(crl::guard(session, [=](const MTP::Error &error) {
 			if (error.code() == 400
 				&& error.type().startsWith(u"FILE_REFERENCE_"_q)) {
-				api->refreshFileReference(origin, [=](const auto &) {
-					if (mediaData->fileReference() != usedFileReference) {
+				api->refreshFileReference(origin, crl::guard(session, [=](const auto &) {
+					const auto media = LookupMediaById(session, mediaData.get());
+					if (media != mediaData.get() || media->isNull()) {
+						logFail(error);
+						api->sendMessageFail(error, peer, randomId, newId);
+						settleOne(false);
+						return;
+					}
+					if (media->fileReference() != usedFileReference) {
 						repeatRequest(repeatRequest);
 					} else {
 						logFail(error);
 						api->sendMessageFail(error, peer, randomId, newId);
 						settleOne(false);
 					}
-				});
+				}));
 			} else {
 				logFail(error);
 				api->sendMessageFail(error, peer, randomId, newId);
 				settleOne(false);
 			}
-		}).handleFloodErrors().send();
+		})).handleFloodErrors().send();
 	};
 	performRequest(performRequest);
 }
@@ -838,6 +878,7 @@ void ReattachSendExistingPhoto(
 			*session,
 			&peer->id,
 			ForwardState::State::Finished);
+		EraseFinishedForwardState(peer->id, state.get());
 		Ayu::Log::Write(
 			u"forward"_q,
 			u"reattach done items=%1 dest=%2"_q
@@ -1136,7 +1177,7 @@ void zeroCostForward(
 	}
 
 	auto remaining = std::make_shared<int>(0);
-	auto fallback = std::make_shared<std::vector<not_null<HistoryItem*>>>();
+	auto fallbackIds = std::make_shared<std::vector<FullMsgId>>();
 	auto finished = std::make_shared<bool>(false);
 	const auto settle = [=] {
 		Ayu::Log::Write(
@@ -1144,7 +1185,7 @@ void zeroCostForward(
 			u"zerocost settle sent=%1 total=%2 fallback=%3 dest=%4"_q
 				.arg(state->sentMessages)
 				.arg(state->totalMessages)
-				.arg(fallback->size())
+				.arg(fallbackIds->size())
 				.arg(peer->id.value));
 		if (*finished || *remaining > 0) {
 			return;
@@ -1154,15 +1195,29 @@ void zeroCostForward(
 			u"forward"_q,
 			u"zerocost done sent=%1 fallback=%2 dest=%3"_q
 				.arg(state->sentMessages)
-				.arg(fallback->size())
+				.arg(fallbackIds->size())
 				.arg(peer->id.value));
 		state->state = ForwardState::State::Finished;
 		state->updateBottomBar(*session, &peer->id, ForwardState::State::Finished);
-		if (!fallback->empty()) {
+		EraseFinishedForwardState(peer->id, state.get());
+		if (!fallbackIds->empty()) {
 			Ayu::Log::Write(
 				u"forward"_q,
-				u"zerocost fallback full items=%1"_q.arg(fallback->size()));
-			auto fallbackItems = std::move(*fallback);
+				u"zerocost fallback full items=%1"_q.arg(fallbackIds->size()));
+			auto fallbackItems = std::vector<not_null<HistoryItem*>>();
+			fallbackItems.reserve(fallbackIds->size());
+			for (const auto &id : *fallbackIds) {
+				if (const auto item = session->data().message(id)) {
+					fallbackItems.emplace_back(item);
+				} else {
+					Ayu::Log::Write(
+						u"forward"_q,
+						u"zerocost fallback skip lost item=%1"_q.arg(id.msg.bare));
+				}
+			}
+			if (fallbackItems.empty()) {
+				return;
+			}
 			Ayu::Log::Write(
 				u"forward"_q,
 				u"zerocost fallback async dispatch items=%1 dest=%2"_q
@@ -1239,7 +1294,7 @@ void zeroCostForward(
 			const auto media = item->media();
 			if (!media || media->poll() || media->ttlSeconds()) {
 				if (media && (media->poll() || media->ttlSeconds())) {
-					fallback->push_back(item);
+					fallbackIds->push_back(item->fullId());
 					continue;
 				}
 				auto extracted = extractText(item);
@@ -1267,6 +1322,7 @@ void zeroCostForward(
 				caption.entities,
 				Api::ConvertOption::SkipLocal);
 			if (unit.items.size() == 1) {
+				const auto itemId = item->fullId();
 				(*remaining)++;
 				session->api().request(MTPmessages_SendMedia(
 					MTP_flags(MTPmessages_SendMedia::Flags(0)),
@@ -1288,11 +1344,9 @@ void zeroCostForward(
 					Ayu::Log::Write(
 						u"forward"_q,
 						u"zerocost media ok item=%1 dest=%2"_q
-							.arg(item->id.bare)
+							.arg(itemId.msg.bare)
 							.arg(peer->id.value));
-					crl::on_main([=] {
-						session->api().applyUpdates(result);
-					});
+					session->api().applyUpdates(result);
 					state->sentMessages++;
 					(*remaining)--;
 					settle();
@@ -1300,16 +1354,21 @@ void zeroCostForward(
 					Ayu::Log::Write(
 						u"forward"_q,
 						u"zerocost media FAILED item=%1 dest=%2 type=%3"_q
-							.arg(item->id.bare)
+							.arg(itemId.msg.bare)
 							.arg(peer->id.value)
 							.arg(error.type()));
-					fallback->push_back(item);
+					fallbackIds->push_back(itemId);
 					(*remaining)--;
 					settle();
 				}).send();
 				continue;
 			}
 
+			auto unitIds = std::vector<FullMsgId>();
+			unitIds.reserve(unit.items.size());
+			for (const auto groupItem : unit.items) {
+				unitIds.push_back(groupItem->fullId());
+			}
 			auto singles = QVector<MTPInputSingleMedia>();
 			for (const auto groupItem : unit.items) {
 				const auto groupCaption = captionOf(groupItem);
@@ -1340,23 +1399,21 @@ void zeroCostForward(
 				Ayu::Log::Write(
 					u"forward"_q,
 					u"zerocost album ok count=%1 dest=%2"_q
-						.arg(unit.items.size())
+						.arg(unitIds.size())
 						.arg(peer->id.value));
-				crl::on_main([=] {
-					session->api().applyUpdates(result);
-				});
-				state->sentMessages += int(unit.items.size());
+				session->api().applyUpdates(result);
+				state->sentMessages += int(unitIds.size());
 				(*remaining)--;
 				settle();
 			}).fail([=](const MTP::Error &error) {
 				Ayu::Log::Write(
 					u"forward"_q,
 					u"zerocost album FAILED count=%1 dest=%2 type=%3"_q
-						.arg(unit.items.size())
+						.arg(unitIds.size())
 						.arg(peer->id.value)
 						.arg(error.type()));
-				for (const auto groupItem : unit.items) {
-					fallback->push_back(groupItem);
+				for (const auto &id : unitIds) {
+					fallbackIds->push_back(id);
 				}
 				(*remaining)--;
 				settle();
@@ -1393,14 +1450,13 @@ void zeroCostForward(
 		Ayu::Log::Write(
 			u"forward"_q,
 			u"zerocost probe dropauthor ok items=%1"_q.arg(probeIds.size()));
-		crl::on_main([=] {
-			session->api().applyUpdates(result);
-		});
+		session->api().applyUpdates(result);
 		state->sentMessages = state->totalMessages;
 		*remaining = 0;
 		*finished = true;
 		state->state = ForwardState::State::Finished;
 		state->updateBottomBar(*session, &peer->id, ForwardState::State::Finished);
+		EraseFinishedForwardState(peer->id, state.get());
 	}).fail([=, sendUnits = std::move(sendUnits)](const MTP::Error &error) {
 		Ayu::Log::Write(
 			u"forward"_q,

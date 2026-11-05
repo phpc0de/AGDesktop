@@ -794,8 +794,16 @@ void RecordMtpResponse(
 		.kind = 1,
 	};
 	StripTlEnvelope(from, end);
+	const auto total = int(end - from);
+	const auto truncated = total > kMaxDumpPrimes;
+	if (truncated) {
+		end = from + kMaxDumpPrimes;
+	}
 	entry.body = QVector<mtpPrime>(from, end);
 	entry.text = DecodeTlBody(from, end);
+	if (truncated) {
+		entry.text += u"\n…(truncated %1 primes)"_q.arg(total - kMaxDumpPrimes);
+	}
 	entry.name = DecodeTlRowName(entry.body);
 	if (entry.name.isEmpty()) {
 		entry.name = FirstLine(entry.text);

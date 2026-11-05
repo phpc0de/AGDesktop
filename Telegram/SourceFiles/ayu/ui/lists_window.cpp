@@ -40,7 +40,9 @@
 namespace Ayu::Ui {
 namespace {
 
-constexpr auto kMaxSavedRows = 100000;
+constexpr auto kMaxSourceRows = 1000;
+constexpr auto kFilesPageSize = 500;
+constexpr auto kMaxCheckpointRows = 1000;
 
 constexpr auto kCheckpointColChat = 0;
 constexpr auto kCheckpointColTopic = 1;
@@ -200,6 +202,9 @@ private:
 		for (const auto session : OrderedSessions()) {
 			const auto userId = ID(session->userId().bare & PeerId::kChatTypeMask);
 			for (const auto &checkpoint : AyuDatabase::listCheckpoints(userId)) {
+				if (_rows.size() >= kMaxCheckpointRows) {
+					return;
+				}
 				const auto peer = ResolveDialogPeer(session, checkpoint.dialogId);
 				auto *item = new QTreeWidgetItem(_tree);
 				item->setText(
@@ -264,9 +269,12 @@ public:
 		auto *top = new QHBoxLayout();
 		_back = new QPushButton(u"Back"_q, this);
 		_back->setVisible(false);
+		_loadMore = new QPushButton(u"Load more"_q, this);
+		_loadMore->setVisible(false);
 		_reload = new QPushButton(u"Reload"_q, this);
 		top->addWidget(_back);
 		top->addStretch(1);
+		top->addWidget(_loadMore);
 		top->addWidget(_reload);
 		root->addLayout(top);
 
@@ -282,6 +290,9 @@ public:
 		});
 		connect(_reload, &QPushButton::clicked, this, [=] {
 			reload();
+		});
+		connect(_loadMore, &QPushButton::clicked, this, [=] {
+			appendFilesPage();
 		});
 		connect(_back, &QPushButton::clicked, this, [=] {
 			showSources();
@@ -357,7 +368,7 @@ private:
 
 	void reload() {
 		auto groups = std::map<int64, SavedSourceRow>();
-		for (const auto &entry : SexCat::Database::instance().Recent(kMaxSavedRows)) {
+		for (const auto &entry : SexCat::Database::instance().Recent(kMaxSourceRows)) {
 			auto &row = groups[entry.src_peer_id];
 			++row.count;
 			row.totalSize += entry.file_size;
@@ -415,6 +426,7 @@ private:
 	void showSources() {
 		_currentSource = 0;
 		_back->setVisible(false);
+		_loadMore->setVisible(false);
 		setWindowTitle(u"Saved files by source"_q);
 		_stack->setCurrentWidget(_sources);
 	}
@@ -434,14 +446,24 @@ private:
 	void fillFiles() {
 		_fileRows.clear();
 		_files->clear();
+		appendFilesPage();
+	}
+
+	void appendFilesPage() {
+		const auto loaded = int(_fileRows.size());
 		const auto filter = SexCat::Filter{ .src_peer_id = _currentSource };
-		const auto rows
-			= SexCat::Database::instance().Recent(kMaxSavedRows, filter);
+		const auto rows = SexCat::Database::instance().Recent(
+			loaded + kFilesPageSize,
+			filter);
+		const auto available = int(rows.size());
+		_loadMore->setVisible(available > loaded);
+		if (available <= loaded) {
+			return;
+		}
+		_fileRows.insert(_fileRows.end(), rows.begin() + loaded, rows.end());
 		const auto rowHeight = QPushButton(u"Folder"_q).sizeHint().height();
-		_fileRows.reserve(rows.size());
-		for (const auto &entry : rows) {
-			const auto index = int(_fileRows.size());
-			_fileRows.push_back(entry);
+		for (auto i = loaded; i < int(_fileRows.size()); ++i) {
+			const auto &entry = _fileRows[i];
 			auto *item = new QTreeWidgetItem(_files);
 			item->setText(
 				kSavedFileColName,
@@ -456,6 +478,7 @@ private:
 			item->setSizeHint(kSavedFileColFolder, QSize(0, rowHeight));
 			item->setSizeHint(kSavedFileColOpen, QSize(0, rowHeight));
 
+			const auto index = i;
 			auto *folder = new QPushButton(u"Folder"_q, _files);
 			connect(folder, &QPushButton::clicked, this, [=] {
 				openFolderOf(index);
@@ -495,6 +518,7 @@ private:
 	}
 
 	QPushButton *_back = nullptr;
+	QPushButton *_loadMore = nullptr;
 	QPushButton *_reload = nullptr;
 	QStackedWidget *_stack = nullptr;
 	QTreeWidget *_sources = nullptr;

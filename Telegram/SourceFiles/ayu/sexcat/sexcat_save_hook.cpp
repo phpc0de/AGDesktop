@@ -641,6 +641,8 @@ namespace Ayu::SexCat {
 
 namespace {
 
+constexpr auto kMaxDownloadedDocumentIds = 8192;
+
 std::set<DocumentId> &DownloadedDocumentIds() {
 	static std::set<DocumentId> result;
 	return result;
@@ -651,7 +653,11 @@ std::set<DocumentId> &DownloadedDocumentIds() {
 // WHY: DocumentData objects can be recreated mid-session while the
 // file stays on disk, so ids are tracked instead of object pointers.
 void RememberDownloadedDocument(not_null<const DocumentData*> document) {
-	DownloadedDocumentIds().insert(document->id);
+	auto &ids = DownloadedDocumentIds();
+	while (ids.size() >= size_t(kMaxDownloadedDocumentIds)) {
+		ids.erase(ids.begin());
+	}
+	ids.insert(document->id);
 }
 
 bool IsDownloadedDocument(not_null<const DocumentData*> document) {
