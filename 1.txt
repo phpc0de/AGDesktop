@@ -375,3 +375,11 @@ data_chat_filters.cpp:477/451 直接覆盖本地 _tagsEnabled → 设置被吞�
 [裁决1] mtp_tl_codec.cpp:291 ReadBytes 254 分支 (L+6)/4 被质疑与 PackBytes (L+3)/4 不一致——保留不改：读侧 254 marker 单独消费后剩 3字节长+payload，ceil((L+3)/4)=(L+6)/4 数学正确，且 round-4 实测对齐修复（写侧 PackBytes 是 replay 罕路，两态语义不同）。若 CI/实测再现错位再回访。
 [裁决2] ayu_forward.cpp:730 crl::guard→FnMut 组合无单文件先例——保留：unique_function 接受可移动可调用体，机制上可编译，CI 兜底。
 [最终闸门] 一切以 CI 编译为准。
+
+================ 2025-11-03 二轮编译审计（换角度：语言/构建/ODR/Qt 层，4 域） ================
+[已修] messages_storage.cpp 补 <QFile>（原先靠传递包含，链变动即断）。
+[全过] 指派初始化器严格升序（HistoryItemCommonFields 12字段逐对）/窄化齐全/无 /WX（上游 W3）/std include 齐/not_null const 方向正确/泛型 lambda 可实例化；style 继承链+svg 大小写逐字核+lang 键唯一+CMake 注册全；include 无环+跨 TU 匿名空间符号零冲突+ODR 净；Qt6 8/8（setShortcut/setItemWidget/Toast::Show/QCrypographicHash movable/arg 链）。
+[不可本地证] CI 侧 /WX、lib_ui 子模块（IconButton 原定义+colors.palette）——已用可编译兄弟样式+8-16 处旁证覆盖。
+[杂项] shell_watch.cpp:68 缩进多一层 tab（纯格式）；1.txt 游离文件有意保留（会话日志）。
+[裁决延续] 一轮的 ReadBytes (L+6)/4 与 guard→FnMut 维持原判。
+[累计 27 commits，最终闸门=CI]
