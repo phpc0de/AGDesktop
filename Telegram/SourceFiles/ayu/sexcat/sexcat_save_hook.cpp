@@ -351,10 +351,10 @@ void ResolveHashAndPersist(
 		return std::nullopt;
 	}
 	const auto item = document->owner().message(i->second.contextId);
-	const auto peer = item ? item->history()->peer : nullptr;
-	if (!item || !item->isRegular() || !peer) {
+	if (!item || !item->isRegular()) {
 		return std::nullopt;
 	}
+	const auto peer = item->history()->peer;
 	// Sidecar sha proves toFile really holds the pinned attachment.
 	const auto attach = ResolveAttachIndex(item);
 	for (const auto &entry

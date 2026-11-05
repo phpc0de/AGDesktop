@@ -733,7 +733,7 @@ std::vector<Checkpoint> listCheckpoints(ID userId, int limit) {
 				column<Checkpoint>(&Checkpoint::userId) == userId
 			),
 			order_by(column<Checkpoint>(&Checkpoint::fakeId)).desc(),
-			limit(limit)
+			sqlite_orm::limit(limit)
 		);
 	} catch (std::exception &ex) {
 		LOG(("Failed to list checkpoints for some reason: %1").arg(ex.what()));

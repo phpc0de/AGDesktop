@@ -261,10 +261,10 @@ private:
 	object_ptr<Ui::IconButton> _call;
 	object_ptr<Ui::IconButton> _groupCall;
 	object_ptr<Ui::IconButton> _search;
-	object_ptr<Ui::IconButton> _jumpCheckpoint;
-	object_ptr<Ui::IconButton> _openDownloads;
-	object_ptr<Ui::IconButton> _openCheckpoints;
-	object_ptr<Ui::IconButton> _openSavedSource;
+	object_ptr<Ui::IconButton> _jumpCheckpoint = { nullptr };
+	object_ptr<Ui::IconButton> _openDownloads = { nullptr };
+	object_ptr<Ui::IconButton> _openCheckpoints = { nullptr };
+	object_ptr<Ui::IconButton> _openSavedSource = { nullptr };
 	object_ptr<Ui::IconButton> _infoToggle;
 	object_ptr<Ui::IconButton> _menuToggle;
 	object_ptr<Ui::IconButton> _recentActions;
