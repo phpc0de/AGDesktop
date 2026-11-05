@@ -11,8 +11,10 @@
 #include "ayu/sexcat/sexcat_hash_store.h"
 #include "ayu/sexcat/sexcat_shell_watch.h"
 #include "ayu/utils/ayu_log.h"
+#include "ayu/utils/telegram_helpers.h"
 #include "base/unixtime.h"
 #include "core/application.h"
+#include "core/file_location.h"
 #include "data/data_document.h"
 #include "data/data_download_manager.h"
 #include "data/data_peer.h"
@@ -21,15 +23,21 @@
 #include "history/history.h"
 #include "history/history_item.h"
 #include "lang_auto.h"
+#include "main/main_session.h"
 #include "rpl/rpl.h"
+#include "storage/storage_account.h"
 #include "ui/text/text_entity.h"
 #include "ui/toast/toast.h"
 #include "window/window_controller.h"
 #include "window/window_session_controller.h"
 
+#include <QFile>
 #include <QFileInfo>
+#include <QRegularExpression>
 #include <map>
 #include <optional>
+#include <set>
+#include <vector>
 
 namespace SexCat {
 namespace {
@@ -70,6 +78,25 @@ void PruneStalePending() {
 
 void LogFailure(const QString &message) {
 	Ayu::Log::Write(u"sexcat"_q, message);
+}
+
+constexpr auto kMaxDownloadedShas = 64;
+
+std::map<QString, QByteArray> &DownloadedShaMap() {
+	static std::map<QString, QByteArray> result;
+	return result;
+}
+
+[[nodiscard]] std::optional<QByteArray> TakeDownloadedSha(
+		const QString &path) {
+	auto &map = DownloadedShaMap();
+	const auto i = map.find(path);
+	if (i == end(map)) {
+		return std::nullopt;
+	}
+	auto sha = std::move(i->second);
+	map.erase(i);
+	return sha;
 }
 
 void ShowSavedToast() {
@@ -128,8 +155,9 @@ void Persist(
 	const auto sha = entry.sha256;
 	// WHY: same-sha content must not grow the library, but a fresh
 	// copy still becomes the live carrier when every older one is gone.
+	const auto hits = Database::instance().LookupByHash(sha);
 	auto live = false;
-	for (const auto &hit : Database::instance().LookupByHash(sha)) {
+	for (const auto &hit : hits) {
 		if (QFileInfo::exists(hit.saved_path)) {
 			live = true;
 			break;
@@ -137,6 +165,9 @@ void Persist(
 	}
 	if (live) {
 		LogFailure(u"duplicate content, record skipped: "_q + savedPath);
+	} else if (!hits.empty()) {
+		Database::instance().Relink(hits.front().id, savedPath);
+		LogFailure(u"duplicate content relinked to new copy: "_q + savedPath);
 	} else if (!Database::instance().RecordSaved(std::move(entry))) {
 		return;
 	}
@@ -158,6 +189,18 @@ void ResolveHashAndPersist(
 		QString srcTitle,
 		int srcAttach,
 		bool announce) {
+	if (const auto sha = TakeDownloadedSha(savedPath)) {
+		Persist(
+			std::move(savedPath),
+			fileSize,
+			srcPeerId,
+			srcMsgId,
+			std::move(srcTitle),
+			srcAttach,
+			std::move(*sha),
+			announce);
+		return;
+	}
 	if (const auto hit = HashStore::ReadAds(savedPath)) {
 		if (hit->sha256.size() == 32) {
 			Persist(
@@ -234,7 +277,134 @@ void ResolveHashAndPersist(
 	return std::nullopt;
 }
 
+constexpr auto kMaxAugmentedNameLength = 240;
+constexpr auto kAugmentedNameTries = 100;
+
+[[nodiscard]] bool IsAllDigitsName(const QString &stem) {
+	static const QRegularExpression digits(u"^[0-9]+$"_q);
+	return !stem.isEmpty() && digits.match(stem).hasMatch();
+}
+
+[[nodiscard]] bool IsReservedWindowsName(const QString &name) {
+	static const auto reserved = [] {
+		auto names = std::vector<QString>{
+			u"CON"_q, u"PRN"_q, u"AUX"_q, u"NUL"_q,
+		};
+		for (auto i = 1; i != 10; ++i) {
+			const auto digit = QString::number(i);
+			names.push_back(u"COM"_q + digit);
+			names.push_back(u"LPT"_q + digit);
+		}
+		return names;
+	}();
+	const auto dot = name.indexOf(u'.');
+	const auto stem = (dot >= 0) ? name.left(dot) : name;
+	for (const auto &reservedName : reserved) {
+		if (stem.compare(reservedName, Qt::CaseInsensitive) == 0) {
+			return true;
+		}
+	}
+	return false;
+}
+
+[[nodiscard]] QString CleanSaveNameText(const QString &raw) {
+	static const auto illegal = u"\\/:*?\"<>|"_q;
+	auto cleaned = QString();
+	cleaned.reserve(raw.size());
+	for (const auto ch : raw) {
+		if (ch.category() == QChar::Other_Control || illegal.contains(ch)) {
+			cleaned += u' ';
+		} else {
+			cleaned += ch;
+		}
+	}
+	const auto isEdgeJunk = [](QChar ch) {
+		return ch == u' ' || ch == u'.';
+	};
+	auto start = 0;
+	auto end = cleaned.size();
+	while (start < end && isEdgeJunk(cleaned.at(start))) {
+		++start;
+	}
+	while (end > start && isEdgeJunk(cleaned.at(end - 1))) {
+		--end;
+	}
+	return cleaned.mid(start, end - start);
+}
+
+[[nodiscard]] QString BuildAugmentedName(
+		const QString &original,
+		const QString &text) {
+	auto cleaned = CleanSaveNameText(text);
+	if (cleaned.isEmpty()) {
+		return {};
+	}
+	if (IsReservedWindowsName(cleaned)) {
+		cleaned = u"_"_q + cleaned;
+	}
+	auto name = cleaned + u'-' + original;
+	if (name.size() > kMaxAugmentedNameLength) {
+		const auto keep = kMaxAugmentedNameLength - original.size() - 1;
+		if (keep <= 0) {
+			return {};
+		}
+		name = cleaned.left(keep) + u'-' + original;
+	}
+	return name;
+}
+
+// The server names captioned videos by bare numeric ids.
+[[nodiscard]] QString MaybeAugmentedSavePath(
+		const QString &savedPath,
+		not_null<DocumentData*> document,
+		HistoryItem *item) {
+	if (!item) {
+		return savedPath;
+	}
+	const auto info = QFileInfo(savedPath);
+	const auto original = info.fileName();
+	const auto dot = original.lastIndexOf(u'.');
+	const auto stem = (dot > 0) ? original.left(dot) : original;
+	if (!IsAllDigitsName(stem)) {
+		return savedPath;
+	}
+	const auto candidate = BuildAugmentedName(original, extractText(item).text);
+	if (candidate.isEmpty()) {
+		return savedPath;
+	}
+	const auto dir = info.dir();
+	auto target = dir.filePath(candidate);
+	const auto dotCandidate = candidate.lastIndexOf(u'.');
+	const auto candidateStem = (dotCandidate > 0)
+		? candidate.left(dotCandidate)
+		: candidate;
+	const auto candidateExt = (dotCandidate > 0)
+		? candidate.mid(dotCandidate)
+		: QString();
+	for (auto i = 2; i < kAugmentedNameTries; ++i) {
+		if (!QFileInfo::exists(target)) {
+			break;
+		}
+		target = dir.filePath(candidateStem + u" (%1)"_q.arg(i) + candidateExt);
+	}
+	if (QFileInfo::exists(target) || !QFile::rename(savedPath, target)) {
+		LogFailure(u"failed to rename saved file to %1"_q.arg(target));
+		return savedPath;
+	}
+	if (document->filepath() == savedPath) {
+		document->setLocation(Core::FileLocation(target));
+		document->session().local().writeFileLocation(
+			document->mediaKey(),
+			Core::FileLocation(target));
+	}
+	LogFailure(u"save name augmented: %1 -> %2"_q.arg(original, target));
+	return target;
+}
+
 void HandleLoadedDownload(not_null<const Data::DownloadedId*> id) {
+	if (id->object && id->object->document) {
+		Ayu::SexCat::RememberDownloadedDocument(id->object->document);
+	}
 	if (!Enabled()) {
 		return;
 	}
@@ -293,12 +463,58 @@ bool ShouldSkipDuplicateDownload(
 	return true;
 }
 
+QString RecordedDocumentPath(
+		not_null<DocumentData*> document,
+		FullMsgId contextId) {
+	if (!Enabled() || !Database::instance().Enabled()) {
+		return {};
+	}
+	const auto item = contextId
+		? document->owner().message(contextId)
+		: nullptr;
+	if (!item || !item->isRegular()) {
+		return {};
+	}
+	const auto peer = item->history()->peer;
+	if (!peer) {
+		return {};
+	}
+	const auto attach = ResolveAttachIndex(item);
+	for (const auto &entry
+		: Database::instance().LookupBySource(peer->id, item->id)) {
+		if (entry.src_attach != attach
+			|| entry.file_size != document->size) {
+			continue;
+		}
+		if (QFileInfo::exists(entry.saved_path)) {
+			return entry.saved_path;
+		}
+	}
+	return {};
+}
+
+bool ShouldTrackDownloadHash() {
+	return Enabled() && Database::instance().Enabled();
+}
+
+void NoteDownloadedSha(const QString &path, const QByteArray &sha256) {
+	if (!Enabled() || path.isEmpty() || sha256.size() != 32) {
+		return;
+	}
+	auto &map = DownloadedShaMap();
+	while (map.size() >= size_t(kMaxDownloadedShas)) {
+		map.erase(map.begin());
+	}
+	map.insert_or_assign(path, sha256);
+}
+
 void RecordSaveAttempt(
 		const QString &savedPath,
 		not_null<DocumentData*> document,
 		FullMsgId contextId,
 		int attachIndex) {
 	EnsureDownloadListener();
+	Ayu::SexCat::RememberDownloadedDocument(document);
 	if (!Enabled()) {
 		return;
 	}
@@ -312,6 +528,7 @@ void RecordSaveAttempt(
 	const auto item = contextId
 		? document->owner().message(contextId)
 		: nullptr;
+	const auto path = MaybeAugmentedSavePath(savedPath, document, item);
 	if (item) {
 		if (const auto peer = item->history()->peer) {
 			srcPeerId = int64(peer->id.value);
@@ -320,11 +537,11 @@ void RecordSaveAttempt(
 		srcMsgId = int64(item->id.bare);
 	}
 	if (!Database::instance().Enabled()) {
-		LogFailure(u"database unavailable, save not recorded: "_q + savedPath);
+		LogFailure(u"database unavailable, save not recorded: "_q + path);
 		return;
 	}
 	ResolveHashAndPersist(
-		savedPath,
+		path,
 		info.size(),
 		srcPeerId,
 		srcMsgId,
@@ -419,3 +636,26 @@ void EnsureDownloadListener() {
 }
 
 } // namespace SexCat
+
+namespace Ayu::SexCat {
+
+namespace {
+
+std::set<DocumentId> &DownloadedDocumentIds() {
+	static std::set<DocumentId> result;
+	return result;
+}
+
+} // namespace
+
+// WHY: DocumentData objects can be recreated mid-session while the
+// file stays on disk, so ids are tracked instead of object pointers.
+void RememberDownloadedDocument(not_null<const DocumentData*> document) {
+	DownloadedDocumentIds().insert(document->id);
+}
+
+bool IsDownloadedDocument(not_null<const DocumentData*> document) {
+	return DownloadedDocumentIds().contains(document->id);
+}
+
+} // namespace Ayu::SexCat

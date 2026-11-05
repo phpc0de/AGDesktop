@@ -23,6 +23,14 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "core/crash_reports.h"
 #include "base/bytes.h"
 
+// AyuGram includes
+#include "ayu/sexcat/sexcat_save_hook.h"
+
+#include <QCryptographicHash>
+
+#include <map>
+
+
 namespace {
 
 [[nodiscard]] QByteArray OwningBytes(const QByteArray &data) {
@@ -35,6 +43,74 @@ namespace {
 	return (data.capacity() < data.size())
 		? QByteArray(data.constData(), data.size())
 		: data;
+}
+
+// WHY: parts can arrive out of order, so the hash is only fed on
+// strictly sequential writes and abandoned otherwise; sexcat then
+// falls back to re-reading the finished file instead of aborting.
+struct AyuDownloadHashState {
+	std::optional<QCryptographicHash> hasher;
+	int64 nextOffset = 0;
+	bool sequential = true;
+};
+
+std::map<const FileLoader*, AyuDownloadHashState> &AyuDownloadHashStates() {
+	static std::map<const FileLoader*, AyuDownloadHashState> result;
+	return result;
+}
+
+void AyuFeedDownloadHash(
+		const FileLoader *loader,
+		int64 offset,
+		bytes::const_span buffer) {
+	auto &states = AyuDownloadHashStates();
+	auto it = states.find(loader);
+	if (it == end(states)) {
+		if (!SexCat::ShouldTrackDownloadHash()) {
+			return;
+		}
+		it = states.emplace(loader, AyuDownloadHashState()).first;
+	}
+	auto &state = it->second;
+	if (!state.sequential || offset != state.nextOffset) {
+		state.sequential = false;
+		return;
+	}
+	if (!state.hasher) {
+		state.hasher.emplace(QCryptographicHash::Sha256);
+	}
+	state.hasher->addData(
+		reinterpret_cast<const char*>(buffer.data()),
+		qsizetype(buffer.size()));
+	state.nextOffset += int64(buffer.size());
+}
+
+void AyuDropDownloadHash(const FileLoader *loader) {
+	AyuDownloadHashStates().erase(loader);
+}
+
+void AyuPublishDownloadHash(
+		const FileLoader *loader,
+		int64 skippedBytes,
+		int64 fullSize,
+		const QString &filename) {
+	auto &states = AyuDownloadHashStates();
+	const auto i = states.find(loader);
+	if (i == end(states)) {
+		return;
+	}
+	const auto state = std::move(i->second);
+	states.erase(i);
+	if (!state.sequential
+		|| !state.hasher
+		|| filename.isEmpty()
+		|| skippedBytes != 0
+		|| state.nextOffset != fullSize) {
+		return;
+	}
+	SexCat::NoteDownloadedSha(
+		QFileInfo(filename).absoluteFilePath(),
+		state.hasher->result());
 }
 
 class FromMemoryLoader final : public FileLoader {
@@ -128,6 +204,7 @@ FileLoader::FileLoader(
 
 FileLoader::~FileLoader() {
 	Expects(_finished);
+	AyuDropDownloadHash(this);
 }
 
 Main::Session &FileLoader::session() const {
@@ -157,6 +234,7 @@ void FileLoader::finishWithBytes(const QByteArray &data) {
 		Platform::File::PostprocessDownloaded(
 			QFileInfo(_file).absoluteFilePath());
 	}
+	AyuPublishDownloadHash(this, _skippedBytes, _fullSize, _filename);
 	const auto session = _session;
 	_updates.fire_done();
 	session->notifyDownloaderTaskFinished();
@@ -347,6 +425,7 @@ void FileLoader::cancel() {
 void FileLoader::cancel(FailureReason fail) {
 	const auto started = (currentOffset() > 0);
 
+	AyuDropDownloadHash(this);
 	cancelHook();
 
 	_cancelled = true;
@@ -380,6 +459,7 @@ bool FileLoader::writeResultPart(int64 offset, bytes::const_span buffer) {
 	if (buffer.empty()) {
 		return true;
 	}
+	AyuFeedDownloadHash(this, offset, buffer);
 	if (_fileIsOpen) {
 		auto fsize = _file.size();
 		if (offset < fsize) {
@@ -458,6 +538,7 @@ bool FileLoader::finalizeResult() {
 		Platform::File::PostprocessDownloaded(
 			QFileInfo(_file).absoluteFilePath());
 	}
+	AyuPublishDownloadHash(this, _skippedBytes, _fullSize, _filename);
 	if (_localStatus == LocalStatus::NotFound) {
 		if (const auto key = fileLocationKey()) {
 			if (!_filename.isEmpty()) {

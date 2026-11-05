@@ -434,10 +434,14 @@ void OpenGif(not_null<ListWidget*> list, FullMsgId itemId) {
 	}
 }
 
-void ShowInFolder(not_null<DocumentData*> document) {
+void ShowInFolder(
+		not_null<DocumentData*> document,
+		const QString &recordedPath) {
 	const auto filepath = document->filepath(true);
 	if (!filepath.isEmpty()) {
 		File::ShowInFolder(filepath);
+	} else if (!recordedPath.isEmpty()) {
+		File::ShowInFolder(recordedPath);
 	}
 }
 
@@ -501,12 +505,13 @@ void AddDocumentActions(
 			[=] { ToggleFavedSticker(controller, document, contextId); },
 			isFaved ? &st::menuIconUnfave : &st::menuIconFave);
 	}
-	if (!document->filepath(true).isEmpty()) {
+	const auto recordedPath = SexCat::RecordedDocumentPath(document, contextId);
+	if (!document->filepath(true).isEmpty() || !recordedPath.isEmpty()) {
 		menu->addAction(
 			(Platform::IsMac()
 				? tr::lng_context_show_in_finder(tr::now)
 				: tr::lng_context_show_in_folder(tr::now)),
-			[=] { ShowInFolder(document); },
+			[=] { ShowInFolder(document, recordedPath); },
 			&st::menuIconShowInFolder);
 	}
 	if (document->hasAttachedStickers()) {
