@@ -71,6 +71,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "ayu/features/message_shot/message_shot.h"
+#include "ayu/sexcat/sexcat_save_hook.h"
 
 
 namespace HistoryView {
@@ -847,7 +848,9 @@ void Gif::draw(Painter &p, const PaintContext &context) const {
 		&& !isRound
 		&& !_ttlCover
 		&& !AyuFeatures::MessageShot::isTakingShot()
-		&& (loaded || _data->loadedInMediaCache())) {
+		&& (loaded
+			|| _data->loadedInMediaCache()
+			|| Ayu::SexCat::IsDownloadedDocument(_data))) {
 		PaintDownloadedBadge(p, rthumb);
 	}
 
@@ -2326,7 +2329,7 @@ void Gif::setStatusSize(int64 newSize) const {
 		_statusText = Ui::FormatDurationText(_data->duration() / 1000);
 	} else {
 		const auto videoish = (_data->isVideoFile()
-			|| (_data->duration() > 0
+			|| (_data->hasDuration()
 				&& !_data->isVoiceMessage()
 				&& !_data->isAudioFile()))
 			&& !_data->sticker();

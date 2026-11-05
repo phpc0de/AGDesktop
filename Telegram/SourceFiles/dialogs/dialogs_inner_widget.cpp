@@ -103,6 +103,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <unordered_map>
 
 // AyuGram includes
+#include "ayu/ayu_settings.h"
 #include "ayu/ui/ayu_userpic.h"
 #include "ayu/utils/telegram_helpers.h"
 #include "styles/style_ayu_icons.h"
@@ -1132,12 +1133,14 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 				- context.st->nameLeft;
 			auto more = uint8(0);
 			const auto &list = session().data().chatsFilters().list();
+			const auto force = AyuSettings::getInstance().folderTagsForce();
 			for (const auto &filter : list) {
 				if (!row->entry()->inChatList(filter.id())
-					|| (filter.id() == context.filter)) {
+					|| (!force && filter.id() == context.filter)) {
 					continue;
 				}
-				if (active
+				if (!force
+					&& active
 					&& (filter.flags() & Data::ChatFilter::Flag::NoRead)
 					&& !filter.contains(history, true)) {
 					// Hack for History::fakeUnreadWhileOpened().
