@@ -363,3 +363,9 @@ data_chat_filters.cpp:477/451 直接覆盖本地 _tagsEnabled → 设置被吞�
 [QQ3✓] 三色：服务器noforwards=橙/本地DIY=AyuRestricted紫/banned=红，TopBarTitleTintFg 统一。[Q51/Q52✓] 顶栏 checkpoint 键右侧两 IconButton 开两窗口，移除右键旧入口；母猪列表 QStackedWidget 两级（源→作品列表，Folder/Open 按钮 QDesktopServices）。
 [Q4✓] RecordedDocumentPath 命中且在盘→右键显示文件夹。[Q5✓] Persist 先 LookupByHash 去重：活体跳过/无活体 Relink 旧行不插新行。[Q49✓] 纯数字名+非空文本→清洗(文本)-原名（非法符清洗/保留名/240截断），同步 document location。[Q3✓] writeResultPart 严格顺序增量喂 SHA-256 完成点优先消费（逐块中止不做：乱序分片落盘不安全）。
 [Q54 已答] 512MB 是旧上限现 16GB；[Q50 已做待测] 相册右键批量；[Q53 已达标] 明文；[Q56 已达标] 用户贴的格式即现 mtpdump 输出。
+
+================ 2025-11-03 ab39aaf..HEAD 内存审计轮（audit ×4 + 修复 ×1） ================
+[P0×5✓] forwardStates 无 erase→Finished 后 erase(10处)；reattach 回调链全包 crl::guard+按 id 重验；zeroCost fallback 改存 FullMsgId 重解析；三处删 on_main 直调 applyUpdates；updateBottomBar 改按值捕 Session*。
+[P1×3✓] devtools body 8192 primes 截断；DownloadedDocumentIds 8192 淘汰；lists_window 源1000/作品500分页/checkpoint 1000 截断。
+[P2 27项待办] FindCtor QHash 索引、DecodeTlBody 提前收尾、Snapshot 拷贝、列表去抖、SQL GROUP BY、右键菜单 exists 扫盘、gif 每帧判定缓存、force 读提升、hashStates 加锁等——已全录报告，下一轮按需清。
+[累计 22 commits]
