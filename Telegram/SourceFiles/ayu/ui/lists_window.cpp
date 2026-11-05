@@ -9,10 +9,13 @@
 #include "ayu/data/ayu_database.h"
 #include "ayu/sexcat/sexcat_database.h"
 #include "core/application.h"
+#include "data/data_channel.h"
+#include "data/data_chat.h"
 #include "data/data_forum.h"
 #include "data/data_peer.h"
 #include "data/data_peer_id.h"
 #include "data/data_session.h"
+#include "data/data_user.h"
 #include "lang/lang_keys.h"
 #include "main/main_account.h"
 #include "main/main_domain.h"
@@ -94,7 +97,8 @@ constexpr auto kSavedFileColTotal = 5;
 }
 
 [[nodiscard]] Window::SessionController *WindowControllerFor(PeerData *peer) {
-	const auto separate = Core::App().separateWindowFor(peer);
+	const auto separate = Core::App().separateWindowFor(
+		Window::SeparateId(peer));
 	return separate
 		? separate->sessionController()
 		: peer->session().tryResolveWindow(peer);
@@ -238,7 +242,7 @@ private:
 		const auto &entry = _rows[row];
 		const auto peer = FindDialogPeer(entry.dialogId);
 		if (!peer) {
-			Ui::Toast::Show(u"Chat is not available in any active account"_q);
+			::Ui::Toast::Show(u"Chat is not available in any active account"_q);
 			return;
 		}
 		JumpToPeerMessage(peer, entry.topicId, entry.messageId);
@@ -384,7 +388,7 @@ private:
 			auto *item = new QTreeWidgetItem(_sources);
 			item->setText(kSavedColSource, row.name);
 			item->setText(kSavedColCount, QString::number(row.count));
-			item->setText(kSavedColSize, Ui::FormatSizeText(row.totalSize));
+			item->setText(kSavedColSize, ::Ui::FormatSizeText(row.totalSize));
 		}
 
 		const auto stillThere = _currentSource
@@ -458,7 +462,7 @@ private:
 				entry.file_name.isEmpty()
 					? QFileInfo(entry.saved_path).fileName()
 					: entry.file_name);
-			item->setText(kSavedFileColSize, Ui::FormatSizeText(entry.file_size));
+			item->setText(kSavedFileColSize, ::Ui::FormatSizeText(entry.file_size));
 			item->setText(
 				kSavedFileColTime,
 				langDateTime(QDateTime::fromSecsSinceEpoch(entry.saved_at)));
@@ -486,7 +490,7 @@ private:
 		}
 		const auto &entry = _fileRows[row];
 		if (entry.saved_path.isEmpty()) {
-			Ui::Toast::Show(u"File path is not recorded"_q);
+			::Ui::Toast::Show(u"File path is not recorded"_q);
 			return;
 		}
 		QDesktopServices::openUrl(QUrl::fromLocalFile(entry.saved_path));
@@ -499,7 +503,7 @@ private:
 		const auto &entry = _fileRows[row];
 		const auto info = QFileInfo(entry.saved_path);
 		if (!info.exists()) {
-			Ui::Toast::Show(u"File is missing on disk"_q);
+			::Ui::Toast::Show(u"File is missing on disk"_q);
 			return;
 		}
 		QDesktopServices::openUrl(QUrl::fromLocalFile(info.absolutePath()));

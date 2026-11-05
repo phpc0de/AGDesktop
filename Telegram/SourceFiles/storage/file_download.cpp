@@ -73,7 +73,7 @@ void AyuFeedDownloadHash(
 		if (!SexCat::ShouldTrackDownloadHash()) {
 			return;
 		}
-		it = states.emplace(loader, AyuDownloadHashState()).first;
+		it = states.try_emplace(loader).first;
 	}
 	auto &state = it->second;
 	if (!state.sequential || offset != state.nextOffset) {
@@ -105,18 +105,21 @@ void AyuPublishDownloadHash(
 	if (i == end(states)) {
 		return;
 	}
-	const auto state = std::move(i->second);
+	auto &state = i->second;
+	const auto ok = state.sequential
+		&& state.hasher
+		&& !filename.isEmpty()
+		&& skippedBytes == 0
+		&& state.nextOffset == fullSize;
+	// result() copies the digest, so compute it before erasing the state
+	const auto sha = ok ? state.hasher->result() : QByteArray();
 	states.erase(i);
-	if (!state.sequential
-		|| !state.hasher
-		|| filename.isEmpty()
-		|| skippedBytes != 0
-		|| state.nextOffset != fullSize) {
+	if (!ok) {
 		return;
 	}
 	SexCat::NoteDownloadedSha(
 		QFileInfo(filename).absoluteFilePath(),
-		state.hasher->result());
+		sha);
 }
 
 class FromMemoryLoader final : public FileLoader {

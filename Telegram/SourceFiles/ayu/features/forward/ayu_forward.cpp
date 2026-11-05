@@ -617,7 +617,7 @@ static PhotoData *LookupMediaById(
 
 template <typename MediaData>
 void ReattachSendExistingMedia(
-		MessageToSend &&message,
+		Api::MessageToSend &&message,
 		not_null<MediaData*> mediaData,
 		FullMsgId originId,
 		Fn<MTPInputMedia()> inputMedia,
@@ -828,7 +828,7 @@ void ReattachSendExistingMedia(
 }
 
 void ReattachSendExistingDocument(
-		MessageToSend &&message,
+		Api::MessageToSend &&message,
 		not_null<DocumentData*> document,
 		FullMsgId originId,
 		const ForwardState *state,
@@ -881,7 +881,7 @@ void ReattachSendExistingDocument(
 }
 
 void ReattachSendExistingPhoto(
-		MessageToSend &&message,
+		Api::MessageToSend &&message,
 		not_null<PhotoData*> photo,
 		FullMsgId originId,
 		const ForwardState *state,
