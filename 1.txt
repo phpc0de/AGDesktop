@@ -369,3 +369,9 @@ data_chat_filters.cpp:477/451 直接覆盖本地 _tagsEnabled → 设置被吞�
 [P1×3✓] devtools body 8192 primes 截断；DownloadedDocumentIds 8192 淘汰；lists_window 源1000/作品500分页/checkpoint 1000 截断。
 [P2 27项待办] FindCtor QHash 索引、DecodeTlBody 提前收尾、Snapshot 拷贝、列表去抖、SQL GROUP BY、右键菜单 exists 扫盘、gif 每帧判定缓存、force 读提升、hashStates 加锁等——已全录报告，下一轮按需清。
 [累计 22 commits]
+
+================ 2025-11-03 278be50..HEAD 编译审计轮（audit ×4，0 改动） ================
+[结果] 4 域全过：forward 手搓 SendMedia 15 参序逐参对照 api.tl:2496+api_sending.cpp:334 先例✓；全部新调用点（ReplyToForMTP/FillMessagePostFlags/IsFloodError/handleFloodErrors/sendMessageFail 4参/FileOrigin(FullMsgId)/document().get()）读真头验证✓；devtools 递归函数序/常量可见性✓；IconButton 样式继承+图标 svg 实存+Recent(int,Filter) 重载实存 sexcat_database.h:55✓；top_bar.h 成员序与初始化表一致✓；sexcat 注册表 DocumentId=uint64 匹配✓；file_download 自由函数未触私有成员无需 friend✓；hasChatsFilterTags 全仓 5 调用点核对无漏改✓。
+[裁决1] mtp_tl_codec.cpp:291 ReadBytes 254 分支 (L+6)/4 被质疑与 PackBytes (L+3)/4 不一致——保留不改：读侧 254 marker 单独消费后剩 3字节长+payload，ceil((L+3)/4)=(L+6)/4 数学正确，且 round-4 实测对齐修复（写侧 PackBytes 是 replay 罕路，两态语义不同）。若 CI/实测再现错位再回访。
+[裁决2] ayu_forward.cpp:730 crl::guard→FnMut 组合无单文件先例——保留：unique_function 接受可移动可调用体，机制上可编译，CI 兜底。
+[最终闸门] 一切以 CI 编译为准。
