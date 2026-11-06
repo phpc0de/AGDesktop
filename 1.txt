@@ -421,3 +421,7 @@ data_chat_filters.cpp:477/451 直接覆盖本地 _tagsEnabled → 设置被吞�
 [包用途注释] mtp_ctor_notes.{cpp,h} 256 ctor 短注+12 字段注(全经 api.tl 验证),首行 // 用途:,行尾 random_id/access_hash/date 注,date 输出 UTC。
 [顺手] mtproto.tl 注释掉的 transport 信封 ctor(message/msg_container/rpc_result/gzip_packed)内置补齐→rpc_result 可结构化解;vector<T> 小写返型兼容;TlParser 启发块花括号跳过。
 [注册] CMakeLists mtp_ctor_notes 登记。[累计 35 commits → push+移 tag]
+
+================ 2025-11-04 用户报告偶发启动 FATAL（双实例竞态，1 commit） ================
+[真相] 第二实例 connectToServer 成功、show 已发，但响应等待超时后代码落到首实例启动流程→log.txt 被真实首实例锁着→"Could not move logging"FATAL。响应及时回来那次=正常退出（用户第三段日志实证）。
+[修] sandbox.cpp socketConnected(): show 后 5×1000ms 有界等待（原 socketReading 解析路径零改动）；响应未到→LOG+Quit 绝不落首实例；_secondInstance 置位后 socketError 等首实例入口全被挡（结构性不变式：曾连接→必不首实例）；连接失败才走原首实例路径语义不变。退出码经 Core::Quit→exit(0) 与上游一致。
