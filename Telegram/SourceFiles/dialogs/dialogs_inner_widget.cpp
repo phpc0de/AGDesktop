@@ -172,12 +172,12 @@ void FillChatGroupMarkMenu(
 			}
 			sub({
 				.text = u"Clear mark"_q,
-				.icon = &st::menuIconClear,
 				.handler = [=] {
 					AyuSettings::getInstance().setChatGroupMarkColor(
 						peer->id.value,
 						std::nullopt);
 				},
+				.icon = &st::menuIconClear,
 			});
 		},
 		.submenuSt = &st::foldersMenu,
