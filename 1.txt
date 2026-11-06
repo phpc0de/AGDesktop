@@ -433,3 +433,7 @@ data_chat_filters.cpp:477/451 直接覆盖本地 _tagsEnabled → 设置被吞�
 [Q81] 机制=下载管理删除按 GlobalMsgId 整组删(info_media_list_widget:1919→data_download_manager:561 收集该 msg 全部记录 path→QFile::remove),A/B 同源同 msgId→删 B 连坐 A;修=deleteFiles 只删被点行对应最新记录,兄弟保留+日志+detach 重挂列表;利用=同 sha 多记录存活证明内容寻址可靠,可做"有活体副本免确认"安全删除;待 sexcat 层 DropRecordById(下轮)。
 [未做如实] Q51/Q70/Q71/Q72/Q73 为全新功能下轮开工;QQ1 标签链路 v13 已实现待实测验证显示条件。
 [5 commits 累计 42 → push+移 tag]
+
+================ 2025-11-06 清账轮二收尾（21项全清，用户令全部修好才push，复审0问题） ================
+[本轮新增] Q73 下载历史窗口行右键 Jump to message(lng_context_to_msg,无源行不显示);QQ57 移出目录修复:SHCNE_DELETE 后台预算扫描(同名+同size,旧父目录+桌面同级+下载/桌面/文档,≤5000文件/深度2/2秒)命中即 RelinkMovedEntry(ADS/sidecar 迁移),未命中保留 missing+历史窗口 missing 行 Relocate... 目录选择框(QDirIterator 20000/深度4/10秒)手动重定位。
+[六 commits 累计 51 → push+移 tag] 21 项清账:Q4✓ QQ1✓ QQ2✓ QQ3✓(重绘+序列化v4) QQ4✓ QQ49✓ QQ50✓ QQ57✓(自动+手动重定位) QQ59✓ QQ60✓ Q52全✓(含retro-tag/改名/删标) Q51✓ Q70✓ Q71✓ Q72✓ Q73✓(母猪+下载历史双入口) Q80✓ Q81✓(接口+孤儿行清理) Q82✓ QQ7✓ QQ9✓。协议边界不变项:禁止复制与转发同源;webpage纯webDocument无时长/分辨率;旧标签记录 src_tag 空。
