@@ -21,7 +21,7 @@ namespace {
 
 constexpr auto kModernImageLocationTag = std::numeric_limits<qint32>::min();
 constexpr auto kVersionTag = uint64(0x77FF'FFFF'FFFF'FFFFULL);
-constexpr auto kVersion = 3;
+constexpr auto kVersion = 4;
 
 } // namespace
 
@@ -148,7 +148,8 @@ uint32 peerSize(not_null<PeerData*> peer) {
 			+ sizeof(qint32) // version
 			+ sizeof(qint32) // old forbidden
 			+ sizeof(quint32) // flags
-			+ stringSize(channel->inviteLink());
+			+ stringSize(channel->inviteLink())
+			+ sizeof(quint32); // high 32 bits of flags, added in version 4
 	}
 	return result;
 }
@@ -199,7 +200,8 @@ void writePeer(QDataStream &stream, not_null<PeerData*> peer) {
 			<< qint32(0) // legacy - version
 			<< qint32(0)
 			<< quint32(channel->flags())
-			<< channel->inviteLink();
+			<< channel->inviteLink()
+			<< quint32(quint64(channel->flags()) >> 32); // high 32 bits of flags
 	}
 }
 
@@ -219,6 +221,9 @@ PeerData *readPeer(
 	} else {
 		photoId = versionTag;
 	}
+	// WHY: the chat/channel branches declare a local `version`, so the
+	// record version must be captured before the peer-type branches.
+	const auto recordVersion = version;
 
 	const auto userpic = readImageLocation(streamAppVersion, stream);
 	auto userpicAccessHash = uint64(0);
@@ -380,7 +385,7 @@ PeerData *readPeer(
 		QString name, inviteLink;
 		quint64 access;
 		qint32 date, version, oldForbidden;
-		quint32 flags;
+		quint32 flags, highFlags = 0;
 		stream
 			>> name
 			>> access
@@ -389,6 +394,9 @@ PeerData *readPeer(
 			>> oldForbidden
 			>> flags
 			>> inviteLink;
+		if (recordVersion > 3) {
+			stream >> highFlags;
+		}
 
 		userpicAccessHash = access;
 
@@ -398,7 +406,8 @@ PeerData *readPeer(
 			channel->date = date;
 
 			if (streamAppVersion >= 2008007) {
-				channel->setFlags(ChannelDataFlags::from_raw(flags));
+				channel->setFlags(ChannelDataFlags::from_raw(
+					(quint64(highFlags) << 32) | flags));
 			} else {
 				using Saved = MTPDchannel::Flag;
 				using Flag = ChannelDataFlag;
