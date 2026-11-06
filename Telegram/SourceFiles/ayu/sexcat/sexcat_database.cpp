@@ -667,4 +667,129 @@ std::vector<TagSummary> Database::TagSummaries(int limit) {
 	}
 }
 
+bool Database::RenameTag(const QString &from, const QString &to) {
+	if (!_enabled || from.isEmpty() || to.isEmpty() || from == to) {
+		return false;
+	}
+	try {
+		std::lock_guard lock(storageMutex);
+		storage.begin_transaction();
+		storage.update_all(
+			set(c(&SavedFileRow::src_tag) = to.toStdString()),
+			where(column<SavedFileRow>(&SavedFileRow::src_tag)
+				== from.toStdString()));
+		const auto taken = !storage.get_all<SowTagRow>(
+			where(column<SowTagRow>(&SowTagRow::tag) == to.toStdString()),
+			sqlite_orm::limit(1)).empty();
+		if (taken) {
+			storage.remove_all<SowTagRow>(
+				where(column<SowTagRow>(&SowTagRow::tag)
+					== from.toStdString()));
+		} else {
+			storage.update_all(
+				set(c(&SowTagRow::tag) = to.toStdString()),
+				where(column<SowTagRow>(&SowTagRow::tag)
+					== from.toStdString()));
+		}
+		storage.commit();
+		return true;
+	} catch (const std::exception &ex) {
+		try {
+			storage.rollback();
+		} catch (...) {
+		}
+		LogError(u"Failed to rename tag: %1"_q.arg(QString::fromUtf8(ex.what())));
+		return false;
+	}
+}
+
+bool Database::DeleteTag(const QString &tag) {
+	if (!_enabled || tag.isEmpty()) {
+		return false;
+	}
+	try {
+		std::lock_guard lock(storageMutex);
+		storage.begin_transaction();
+		storage.update_all(
+			set(c(&SavedFileRow::src_tag) = std::string()),
+			where(column<SavedFileRow>(&SavedFileRow::src_tag)
+				== tag.toStdString()));
+		storage.remove_all<SowTagRow>(
+			where(column<SowTagRow>(&SowTagRow::tag) == tag.toStdString()));
+		storage.commit();
+		return true;
+	} catch (const std::exception &ex) {
+		try {
+			storage.rollback();
+		} catch (...) {
+		}
+		LogError(u"Failed to delete tag: %1"_q.arg(QString::fromUtf8(ex.what())));
+		return false;
+	}
+}
+
+int64 Database::DropRecordByPath(const QString &savedPath) {
+	if (!_enabled || savedPath.isEmpty()) {
+		return 0;
+	}
+	try {
+		std::lock_guard lock(storageMutex);
+		const auto matches = int64(storage.count<SavedFileRow>(
+			where(column<SavedFileRow>(&SavedFileRow::saved_path)
+				== savedPath.toStdString())));
+		if (matches > 0) {
+			storage.remove_all<SavedFileRow>(
+				where(column<SavedFileRow>(&SavedFileRow::saved_path)
+					== savedPath.toStdString()));
+		}
+		return matches;
+	} catch (const std::exception &ex) {
+		LogError(u"Failed to drop record by path: %1"_q.arg(QString::fromUtf8(ex.what())));
+		return 0;
+	}
+}
+
+bool Database::DropRecordById(int64 id) {
+	if (!_enabled || id <= 0) {
+		return false;
+	}
+	try {
+		std::lock_guard lock(storageMutex);
+		storage.remove_all<SavedFileRow>(
+			where(column<SavedFileRow>(&SavedFileRow::id) == id));
+		return true;
+	} catch (const std::exception &ex) {
+		LogError(u"Failed to drop record by id: %1"_q.arg(QString::fromUtf8(ex.what())));
+		return false;
+	}
+}
+
+int Database::RetagSource(PeerId peer, MsgId msg, const QString &tag) {
+	if (!_enabled || !peer || !msg || tag.isEmpty()) {
+		return 0;
+	}
+	try {
+		std::lock_guard lock(storageMutex);
+		const auto matches = storage.count<SavedFileRow>(
+			where(
+				column<SavedFileRow>(&SavedFileRow::src_peer_id)
+					== int64(peer.value)
+				and column<SavedFileRow>(&SavedFileRow::src_msg_id)
+					== msg.bare));
+		if (matches > 0) {
+			storage.update_all(
+				set(c(&SavedFileRow::src_tag) = tag.toStdString()),
+				where(
+					column<SavedFileRow>(&SavedFileRow::src_peer_id)
+						== int64(peer.value)
+					and column<SavedFileRow>(&SavedFileRow::src_msg_id)
+						== msg.bare));
+		}
+		return matches;
+	} catch (const std::exception &ex) {
+		LogError(u"Failed to retag source: %1"_q.arg(QString::fromUtf8(ex.what())));
+		return 0;
+	}
+}
+
 } // namespace SexCat

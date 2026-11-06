@@ -40,6 +40,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_layers.h"
 
 // [R:67494147] includes
+#include "ayu/sexcat/sexcat_database.h"
 #include "ayu/utils/ayu_log.h"
 
 
@@ -648,12 +649,14 @@ void DownloadManager::finishFilesDelete(DeleteFilesDescriptor &&descriptor) {
 		writePostponed(session);
 	}
 	crl::async([files = std::move(descriptor.files)]{
+		auto removedPaths = std::vector<QString>();
 		for (const auto &file : files) {
 			const auto folder = RichExportFolderToRemove(file.first);
-			if (!folder.isEmpty()) {
-				QDir(folder).removeRecursively();
-			} else {
-				QFile(file.first).remove();
+			const auto removed = folder.isEmpty()
+				? QFile(file.first).remove()
+				: QDir(folder).removeRecursively();
+			if (removed) {
+				removedPaths.push_back(file.first);
 			}
 			crl::on_main([descriptor = file.second] {
 				if (const auto session = SessionByUniqueId(
@@ -666,6 +669,15 @@ void DownloadManager::finishFilesDelete(DeleteFilesDescriptor &&descriptor) {
 					if (const auto item = session->data().message(itemId)) {
 						session->data().requestItemRepaint(item);
 					}
+				}
+			});
+		}
+		if (!removedPaths.empty()) {
+			// WHY: deleting a download file must not leave the sexcat
+			// library pointing at a path that no longer exists.
+			crl::on_main([paths = std::move(removedPaths)] {
+				for (const auto &path : paths) {
+					SexCat::Database::instance().DropRecordByPath(path);
 				}
 			});
 		}

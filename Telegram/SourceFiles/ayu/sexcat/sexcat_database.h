@@ -84,6 +84,12 @@ public:
 		int offset = 0);
 	[[nodiscard]] bool RecordTag(const QString &tag);
 	[[nodiscard]] std::vector<TagSummary> TagSummaries(int limit);
+	[[nodiscard]] bool RenameTag(const QString &from, const QString &to);
+	[[nodiscard]] bool DeleteTag(const QString &tag);
+	// Q81: drop one record by itself, siblings stay untouched.
+	[[nodiscard]] int64 DropRecordByPath(const QString &savedPath);
+	[[nodiscard]] bool DropRecordById(int64 id);
+	[[nodiscard]] int RetagSource(PeerId peer, MsgId msg, const QString &tag);
 
 	[[nodiscard]] bool Enabled() const;
 	[[nodiscard]] rpl::producer<Entry> newSaved() const;

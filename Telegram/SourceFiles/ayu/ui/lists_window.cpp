@@ -31,6 +31,9 @@
 #include <QFileInfo>
 #include <QHBoxLayout>
 #include <QHeaderView>
+#include <QInputDialog>
+#include <QLineEdit>
+#include <QMenu>
 #include <QStackedWidget>
 #include <QPushButton>
 #include <QTreeWidget>
@@ -47,10 +50,11 @@ constexpr auto kFilesPageSize = 500;
 constexpr auto kMaxCheckpointRows = 1000;
 
 constexpr auto kCheckpointColChat = 0;
-constexpr auto kCheckpointColTopic = 1;
-constexpr auto kCheckpointColMessage = 2;
-constexpr auto kCheckpointColTime = 3;
-constexpr auto kCheckpointColTotal = 4;
+constexpr auto kCheckpointColChatId = 1;
+constexpr auto kCheckpointColTopic = 2;
+constexpr auto kCheckpointColMessage = 3;
+constexpr auto kCheckpointColTime = 4;
+constexpr auto kCheckpointColTotal = 5;
 
 constexpr auto kSavedColSource = 0;
 constexpr auto kSavedColCount = 1;
@@ -91,6 +95,17 @@ constexpr auto kSavedFileColTotal = 5;
 	for (const auto session : OrderedSessions()) {
 		if (const auto peer = ResolveDialogPeer(session, dialogId)) {
 			return peer;
+		}
+	}
+	return nullptr;
+}
+
+// sexcat rows carry raw tdesktop PeerId bits, not Ayu dialog ids.
+[[nodiscard]] PeerData *ResolveRawPeer(int64 rawPeerId) {
+	const auto id = PeerId(uint64(rawPeerId));
+	for (const auto session : OrderedSessions()) {
+		if (session->data().peerLoaded(id)) {
+			return session->data().peer(id);
 		}
 	}
 	return nullptr;
@@ -155,6 +170,7 @@ public:
 		_tree->setColumnCount(kCheckpointColTotal);
 		_tree->setHeaderLabels({
 			u"Chat"_q,
+			u"Chat id"_q,
 			u"Topic"_q,
 			u"Message"_q,
 			u"Time"_q,
@@ -164,8 +180,12 @@ public:
 		_tree->setAllColumnsShowFocus(true);
 		_tree->setSelectionBehavior(QAbstractItemView::SelectRows);
 		_tree->setSelectionMode(QAbstractItemView::SingleSelection);
+		_tree->setContextMenuPolicy(Qt::CustomContextMenu);
 		auto *header = _tree->header();
 		header->setSectionResizeMode(kCheckpointColChat, QHeaderView::Stretch);
+		header->setSectionResizeMode(
+			kCheckpointColChatId,
+			QHeaderView::ResizeToContents);
 		header->setSectionResizeMode(kCheckpointColTopic, QHeaderView::ResizeToContents);
 		header->setSectionResizeMode(kCheckpointColMessage, QHeaderView::ResizeToContents);
 		header->setSectionResizeMode(kCheckpointColTime, QHeaderView::ResizeToContents);
@@ -180,6 +200,8 @@ public:
 		connect(_tree, &QTreeWidget::itemClicked, this, [=](
 				QTreeWidgetItem *item,
 				int) { jump(_tree->indexOfTopLevelItem(item)); });
+		connect(_tree, &QWidget::customContextMenuRequested, this, [=](
+				const QPoint &pos) { showContextMenu(pos); });
 
 		reload();
 	}
@@ -216,6 +238,13 @@ private:
 					kCheckpointColChat,
 					peer ? peer->name() : QString::number(checkpoint.dialogId));
 				item->setText(
+					kCheckpointColChatId,
+					peer
+						? u"%1 (%2)"_q.arg(
+							peer->name(),
+							QString::number(checkpoint.dialogId))
+						: QString::number(checkpoint.dialogId));
+				item->setText(
 					kCheckpointColTopic,
 					checkpoint.topicId
 						? QString::number(checkpoint.topicId)
@@ -246,6 +275,20 @@ private:
 			return;
 		}
 		JumpToPeerMessage(peer, entry.topicId, entry.messageId);
+	}
+
+	void showContextMenu(const QPoint &pos) {
+		auto *item = _tree->itemAt(pos);
+		if (!item) {
+			return;
+		}
+		const auto row = _tree->indexOfTopLevelItem(item);
+		auto menu = new QMenu(this);
+		menu->setAttribute(Qt::WA_DeleteOnClose);
+		menu->addAction(u"Jump to message"_q, [=] {
+			jump(row);
+		});
+		menu->popup(_tree->viewport()->mapToGlobal(pos));
 	}
 
 	QPushButton *_reload = nullptr;
@@ -284,8 +327,10 @@ public:
 
 		_stack = new QStackedWidget(this);
 		_sources = MakeSourceTree();
+		_sources->setContextMenuPolicy(Qt::CustomContextMenu);
 		_stack->addWidget(_sources);
 		_files = MakeFileTree();
+		_files->setContextMenuPolicy(Qt::CustomContextMenu);
 		_stack->addWidget(_files);
 		root->addWidget(_stack, 1);
 
@@ -304,6 +349,10 @@ public:
 		connect(_sources, &QTreeWidget::itemClicked, this, [=](
 				QTreeWidgetItem *item,
 				int) { openSource(_sources->indexOfTopLevelItem(item)); });
+		connect(_sources, &QWidget::customContextMenuRequested, this, [=](
+				const QPoint &pos) { showTagContextMenu(pos); });
+		connect(_files, &QWidget::customContextMenuRequested, this, [=](
+				const QPoint &pos) { showFileContextMenu(pos); });
 
 		reload();
 	}
@@ -420,6 +469,84 @@ private:
 		_back->setVisible(true);
 		setWindowTitle(u"Sow list — %1"_q.arg(_rows[row].tag));
 		_stack->setCurrentWidget(_files);
+	}
+
+	void showTagContextMenu(const QPoint &pos) {
+		auto *item = _sources->itemAt(pos);
+		if (!item) {
+			return;
+		}
+		const auto row = _sources->indexOfTopLevelItem(item);
+		if (row < 0 || row >= int(_rows.size())) {
+			return;
+		}
+		const auto tag = _rows[row].tag;
+		auto menu = new QMenu(this);
+		menu->setAttribute(Qt::WA_DeleteOnClose);
+		menu->addAction(u"Rename tag"_q, [=] {
+			renameTag(tag);
+		});
+		menu->addAction(u"Delete tag"_q, [=] {
+			deleteTag(tag);
+		});
+		menu->popup(_sources->viewport()->mapToGlobal(pos));
+	}
+
+	void renameTag(const QString &oldTag) {
+		const auto text = QInputDialog::getText(
+			this,
+			u"Rename tag"_q,
+			u"New tag name"_q,
+			QLineEdit::Normal,
+			oldTag);
+		if (text.isEmpty() || text == oldTag) {
+			return;
+		}
+		if (SexCat::Database::instance().RenameTag(oldTag, text)) {
+			reload();
+		} else {
+			::Ui::Toast::Show(u"Failed to rename tag"_q);
+		}
+	}
+
+	void deleteTag(const QString &tag) {
+		if (!SexCat::Database::instance().DeleteTag(tag)) {
+			::Ui::Toast::Show(u"Failed to delete tag"_q);
+			return;
+		}
+		::Ui::Toast::Show(u"Deleted tag #%1, files untouched"_q.arg(tag));
+		reload();
+	}
+
+	void showFileContextMenu(const QPoint &pos) {
+		auto *item = _files->itemAt(pos);
+		if (!item) {
+			return;
+		}
+		const auto row = _files->indexOfTopLevelItem(item);
+		auto menu = new QMenu(this);
+		menu->setAttribute(Qt::WA_DeleteOnClose);
+		menu->addAction(u"Jump to message"_q, [=] {
+			jumpToMessageSource(row);
+		});
+		menu->popup(_files->viewport()->mapToGlobal(pos));
+	}
+
+	void jumpToMessageSource(int row) {
+		if (row < 0 || row >= int(_fileRows.size())) {
+			return;
+		}
+		const auto &entry = _fileRows[row];
+		if (!entry.src_peer_id || !entry.src_msg_id) {
+			::Ui::Toast::Show(u"Source message is not recorded"_q);
+			return;
+		}
+		const auto peer = ResolveRawPeer(entry.src_peer_id);
+		if (!peer) {
+			::Ui::Toast::Show(u"Chat is not available in any active account"_q);
+			return;
+		}
+		JumpToPeerMessage(peer, 0, entry.src_msg_id);
 	}
 
 	void fillFiles() {

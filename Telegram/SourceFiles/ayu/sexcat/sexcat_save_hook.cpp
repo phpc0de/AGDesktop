@@ -13,6 +13,7 @@
 #include "ayu/utils/ayu_log.h"
 #include "ayu/utils/telegram_helpers.h"
 #include "base/unixtime.h"
+#include "base/unique_qptr.h"
 #include "core/application.h"
 #include "core/file_location.h"
 #include "data/data_document.h"
@@ -27,14 +28,19 @@
 #include "rpl/rpl.h"
 #include "storage/storage_account.h"
 #include "styles/style_menu_icons.h"
+#include "styles/style_widgets.h"
 #include "ui/text/text_entity.h"
 #include "ui/toast/toast.h"
+#include "ui/widgets/menu/menu_action.h"
+#include "ui/widgets/menu/menu_add_action_callback.h"
+#include "ui/widgets/menu/menu_add_action_callback_factory.h"
 #include "ui/widgets/popup_menu.h"
 #include "window/window_controller.h"
 #include "window/window_session_controller.h"
 
 #include <QFile>
 #include <QFileInfo>
+#include <QMenu>
 #include <QRegularExpression>
 #include <map>
 #include <optional>
@@ -102,8 +108,7 @@ std::map<QString, QByteArray> &DownloadedShaMap() {
 	return sha;
 }
 
-void ShowSavedToast() {
-	auto text = tr::lng_sexcat_saved_toast(tr::now);
+void ShowToastText(QString text) {
 	auto config = Ui::Toast::Config{
 		.text = TextWithEntities{ std::move(text) },
 		.duration = kSexCatToastDuration,
@@ -117,7 +122,12 @@ void ShowSavedToast() {
 	Ui::Toast::Show(std::move(config));
 }
 
+void ShowSavedToast() {
+	ShowToastText(tr::lng_sexcat_saved_toast(tr::now));
+}
+
 constexpr auto kMaxSowTagLength = 64;
+constexpr auto kMaxRetroTagChoices = 32;
 
 [[nodiscard]] QString ExtractHashtag(const QString &text) {
 	static const QRegularExpression pattern(u"#([A-Za-z0-9_]{1,64})"_q);
@@ -135,18 +145,7 @@ constexpr auto kMaxSowTagLength = 64;
 }
 
 void ShowSowTagToast(const QString &tag) {
-	auto text = u"Saved to sow list: #%1"_q.arg(tag);
-	auto config = Ui::Toast::Config{
-		.text = TextWithEntities{ std::move(text) },
-		.duration = kSexCatToastDuration,
-	};
-	if (const auto window = Core::App().activeWindow()) {
-		if (const auto controller = window->sessionController()) {
-			controller->showToast(std::move(config));
-			return;
-		}
-	}
-	Ui::Toast::Show(std::move(config));
+	ShowToastText(u"Saved to sow list: #%1"_q.arg(tag));
 }
 
 void SaveSowTag(const QString &raw) {
@@ -898,6 +897,59 @@ QString SourceTagForItem(HistoryItem *item) {
 	return {};
 }
 
+// Retro-tag: hang already downloaded records of this message on a tag.
+void ApplyRetroTag(
+		not_null<Main::Session*> session,
+		FullMsgId contextId,
+		const QString &tag) {
+	const auto item = session->data().message(contextId);
+	const auto count = (item && item->isRegular())
+		? Database::instance().RetagSource(
+			item->history()->peer->id,
+			item->id,
+			tag)
+		: 0;
+	if (!count) {
+		ShowToastText(u"No saved records for this message"_q);
+		return;
+	}
+	Database::instance().RecordTag(tag);
+	ShowSowTagToast(tag);
+}
+
+void AddRetroTagMenuActions(
+		not_null<Ui::PopupMenu*> menu,
+		HistoryItem *item) {
+	if (!item || !item->isRegular()) {
+		return;
+	}
+	const auto tags = Database::instance().TagSummaries(kMaxRetroTagChoices);
+	if (tags.empty()) {
+		return;
+	}
+	const auto session = &item->history()->session();
+	const auto contextId = item->fullId();
+	const auto anchor = menu->addAction(
+		base::make_unique_q<Ui::Menu::Action>(
+			menu->menu(),
+			menu->menu()->st(),
+			Ui::Menu::CreateAction(
+				menu->menu().get(),
+				u"Add to sow list"_q,
+				nullptr),
+			&st::menuIconDownload,
+			&st::menuIconDownload));
+	anchor->setMenu(new QMenu(menu->menu().get()));
+	const auto sub = menu->ensureSubmenu(anchor, st::popupMenuWithIcons);
+	for (const auto &summary : tags) {
+		const auto tag = summary.tag;
+		sub->addAction(
+			u"#%1"_q.arg(tag),
+			[=] { ApplyRetroTag(session, contextId, tag); },
+			&st::menuIconDownload);
+	}
+}
+
 void AddSowTagMenuActions(
 		not_null<Ui::PopupMenu*> menu,
 		HistoryItem *item,
@@ -917,6 +969,7 @@ void AddSowTagMenuActions(
 			[=] { SaveSowTag(tag); },
 			&st::menuIconDownload);
 	}
+	AddRetroTagMenuActions(menu, item);
 }
 
 } // namespace SexCat
