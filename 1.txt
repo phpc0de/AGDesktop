@@ -425,3 +425,11 @@ data_chat_filters.cpp:477/451 直接覆盖本地 _tagsEnabled → 设置被吞�
 ================ 2025-11-04 用户报告偶发启动 FATAL（双实例竞态，1 commit） ================
 [真相] 第二实例 connectToServer 成功、show 已发，但响应等待超时后代码落到首实例启动流程→log.txt 被真实首实例锁着→"Could not move logging"FATAL。响应及时回来那次=正常退出（用户第三段日志实证）。
 [修] sandbox.cpp socketConnected(): show 后 5×1000ms 有界等待（原 socketReading 解析路径零改动）；响应未到→LOG+Quit 绝不落首实例；_secondInstance 置位后 socketError 等首实例入口全被挡（结构性不变式：曾连接→必不首实例）；连接失败才走原首实例路径语义不变。退出码经 Core::Quit→exit(0) 与上游一致。
+
+================ 2025-11-06 大清账轮（用户强制：先读UI代码再动手；4 agents） ================
+[UI簇] QQ2 徽章白块=drawText("✓") 字体回退白块→改 st::ayuDownloadedBadgeCheck 图标;QQ3 受限着色根因=私聊用户未覆盖+上游 NoForwards 分支已死(is_noforwards 全改写进 AyuNoForwards)→加 UserPeer(橙)/UserSelf(蓝)两态,五态色表:封禁红/频道群禁转紫/对方禁转橙/我方开启蓝/遗留橙;QQ4 漏判=webpage 附件视频无 attribute 走 Document 视图+dimensions 空→setStatusSize 补时长(非song/voice)+Ready/Loaded 补分辨率P,VideoResolutionBadge 移入共享;Q4 右键显示文件夹入口本已存在(context_menu:508 有库记录即显示)——上轮删的是 peer 菜单调试项非此入口;限制:webpage 纯 webDocument 服务端不下发时长/分辨率;禁止复制与禁止转发同源 noforwards 无独立状态。
+[解码器] 真根因=可选 bool 吞词:flags.N?true/flags2.N?true 线上零占位却各吞一个 garbage word 当 marker→全错位(样例 self:true<marker 0x10> 铁证)→DecodeCtorBody 改零消费由位输出,<marker> 只在显式 Bool 分支词非 boolTrue/False 时显示;EscapeBytes 改 fromUtf8(修 message 中文乱码);位名表重跑 2520 ctors 逐字节一致=表无错;int 空值系级联。
+[母猪列表 Q52] saved_file 加 src_tag 列+新表 sow_tag;TagSummaries 标签→作品列表(数量/Folder/Open);右键 #hashtag 保存+选中文字保存(清洗64上限);Q52.3=记录链统一派生 tag(凡 caption 带 tag 的保存都关联);Q52.4=Q50 批量 batchTag 传给批内每个文件(支持);Q80=pending 行(sha空path空三元组,TTL 6h)下载开始即写,同源同位秒判重复,完成 ConsumePendingPosition 回填,取消 ForgetDoctrineSaveAs;限制:普通单文件直下无 (msg,attach) 上下文不写 pending 行;旧记录 src_tag 空不出现于标签列表。
+[Q81] 机制=下载管理删除按 GlobalMsgId 整组删(info_media_list_widget:1919→data_download_manager:561 收集该 msg 全部记录 path→QFile::remove),A/B 同源同 msgId→删 B 连坐 A;修=deleteFiles 只删被点行对应最新记录,兄弟保留+日志+detach 重挂列表;利用=同 sha 多记录存活证明内容寻址可靠,可做"有活体副本免确认"安全删除;待 sexcat 层 DropRecordById(下轮)。
+[未做如实] Q51/Q70/Q71/Q72/Q73 为全新功能下轮开工;QQ1 标签链路 v13 已实现待实测验证显示条件。
+[5 commits 累计 42 → push+移 tag]
