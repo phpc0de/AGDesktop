@@ -413,3 +413,11 @@ data_chat_filters.cpp:477/451 直接覆盖本地 _tagsEnabled → 设置被吞�
 [判决] 48×MSB4018 CL task failed + System.OutOfMemoryException(在 LogSarifOutput/System.Text.Json 解析 SARIF 时)——非代码错误，前 3 个 C 错已全消。重试脚本模式表缺 MSB4018，/m:1 兜底重试未触发。
 [修] release-win-amd64.yml 重试模式表加 'MSB4018'——/m:2 预编译 101 分钟缓存大部分 obj 后，/m:1 增量重试只重建崩掉的 TU，收敛路径不变。
 [累计 34 commits → push+移 tag]
+
+================ 2025-11-03 解码器 v13 增强（用户需求：ctor 未解值/字符串/包用途，1 commit） ================
+[错位根因×2 已修] ①gen 只认 flags.N? 不认 flags2.N?→user/userFull 级联错位：opt_re 编码(组<<8)|位重生成表,DecodeCtorBody/parseCtor 按组读写,输出加 // layer=229。②ReadBytes 254 型 (L+6)/4 多跳 1 word(L%4∈{0,2,3})→改 (L+3)/4：**推翻我此前"保留不改"裁决**——实测读码:254 长度在首 word 高 3 字节,reader.from++ 已消费整个 header word,载荷字对齐,(L+3)/4 才正确;旧值即历史长串错位源。255 型与 PackBytes 对称性复核✓。
+[未知 ctor 启发解析] UnknownCtorValue+HeuristicWalk 深度3:bool/vector/嵌套ctor/string(utf8引号否则hex)/long/double/int(含日期),媒体 ctor 或>10KB→// media omitted (N bytes),逐值 word 偏移。
+[错位检测+再同步] WireContradicts(预期标量遇 ctor/长度字节非法)→⚠字段错位提示+TryResync 256-word 窗找 ctor/vector 边界续解,未解析段标注。
+[包用途注释] mtp_ctor_notes.{cpp,h} 256 ctor 短注+12 字段注(全经 api.tl 验证),首行 // 用途:,行尾 random_id/access_hash/date 注,date 输出 UTC。
+[顺手] mtproto.tl 注释掉的 transport 信封 ctor(message/msg_container/rpc_result/gzip_packed)内置补齐→rpc_result 可结构化解;vector<T> 小写返型兼容;TlParser 启发块花括号跳过。
+[注册] CMakeLists mtp_ctor_notes 登记。[累计 35 commits → push+移 tag]
