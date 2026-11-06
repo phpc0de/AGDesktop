@@ -27,17 +27,19 @@ struct Entry {
 	int64 src_peer_id = 0; // PeerId bits packed like tdesktop PeerId::value
 	int64 src_msg_id = 0;
 	QString src_title;
+	QString src_tag;
 	int src_attach = 0;
 	int64 saved_at = 0;
 };
 
 struct Filter {
 	std::optional<int64> src_peer_id;
+	QString src_tag;
 	QString search;
 };
 
-struct SourceSummary {
-	int64 src_peer_id = 0;
+struct TagSummary {
+	QString tag;
 	int count = 0;
 	int64 total_size = 0;
 };
@@ -67,13 +69,21 @@ public:
 		MsgId msg,
 		int attach,
 		int64 fileSize);
+	// Q80: pending rows are written at download start and match the
+	// (peer, msg, attach) position before any sha exists.
+	[[nodiscard]] int64 RecordPendingPosition(const Entry &source);
+	[[nodiscard]] int64 ConsumePendingPosition(
+		const Entry &source,
+		const QString &savedPath);
+	void DropPendingPosition(const Entry &source);
 	[[nodiscard]] std::vector<Entry> LookupByPathPrefix(const QString &prefix);
 	[[nodiscard]] bool Relink(int64 id, const QString &newPath);
 	[[nodiscard]] std::vector<Entry> Recent(
 		int limit,
 		Filter filter = {},
 		int offset = 0);
-	[[nodiscard]] std::vector<SourceSummary> SourceSummaries(int limit);
+	[[nodiscard]] bool RecordTag(const QString &tag);
+	[[nodiscard]] std::vector<TagSummary> TagSummaries(int limit);
 
 	[[nodiscard]] bool Enabled() const;
 	[[nodiscard]] rpl::producer<Entry> newSaved() const;

@@ -24,6 +24,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/view/history_view_cursor_state.h"
 #include "history/view/history_view_transcribe_button.h"
 #include "history/view/media/history_view_media_common.h"
+#include "history/view/media/history_view_video_status.h"
 #include "ui/text/format_values.h"
 #include "ui/text/format_song_document_name.h"
 #include "ui/text/text_lottie_custom_emoji.h"
@@ -1664,9 +1665,13 @@ bool Document::uploading() const {
 }
 
 void Document::setStatusSize(int64 newSize, TimeId realDuration) const {
+	const auto videoish = _data->hasDuration()
+		&& !_data->isSong()
+		&& !_data->isVoiceMessage();
 	const auto duration = (_data->isSong()
 		|| _data->isVoiceMessage()
-		|| _transcribedRound)
+		|| _transcribedRound
+		|| videoish)
 		? _data->duration()
 		: -1;
 	File::setStatusSize(
@@ -1674,6 +1679,15 @@ void Document::setStatusSize(int64 newSize, TimeId realDuration) const {
 		_data->size,
 		(duration >= 0) ? duration / 1000 : -1,
 		realDuration);
+	if (videoish
+		&& (_statusSize == Ui::FileStatusSizeReady
+			|| _statusSize == Ui::FileStatusSizeLoaded)) {
+		const auto badge = VideoResolutionBadge(
+			_data->resolveOriginalVideoQuality());
+		if (!badge.isEmpty()) {
+			_statusText += u", "_q + badge;
+		}
+	}
 	if (auto thumbed = Get<HistoryDocumentThumbed>()) {
 		if (_statusSize == Ui::FileStatusSizeReady) {
 			thumbed->link = tr::lng_media_download(tr::now).toUpper();

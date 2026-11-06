@@ -9,9 +9,15 @@
 #include "data/data_types.h"
 
 #include <QByteArray>
+#include <QString>
 
 class DocumentData;
 class PhotoData;
+class HistoryItem;
+
+namespace Ui {
+class PopupMenu;
+} // namespace Ui
 
 namespace SexCat {
 
@@ -20,16 +26,19 @@ void RecordSaveAttempt(
 	const QString &savedPath,
 	not_null<DocumentData*> document,
 	FullMsgId contextId = {},
-	int attachIndex = 0);
+	int attachIndex = 0,
+	const QString &sourceTag = {});
 void RecordPhotoSaveAttempt(
 	const QString &savedPath,
 	not_null<PhotoData*> photo,
 	FullMsgId contextId = {},
-	int attachIndex = 0);
+	int attachIndex = 0,
+	const QString &sourceTag = {});
 
 void MarkDocumentSaveAs(
 	not_null<DocumentData*> document,
-	FullMsgId contextId);
+	FullMsgId contextId,
+	const QString &sourceTag = {});
 void NotifyDocumentSaved(
 	const QString &savedPath,
 	not_null<DocumentData*> document);
@@ -50,6 +59,16 @@ void NoteDownloadedSha(const QString &path, const QByteArray &sha256);
 
 // Installs the download-manager hook once; safe to call repeatedly.
 void EnsureDownloadListener();
+
+// First #hashtag of the item text (group caption included), or empty.
+[[nodiscard]] QString SourceTagForItem(HistoryItem *item);
+
+// Sow-list menu: save a #hashtag from the message or the selected text
+// as a tag name. Adds nothing when there is nothing to save.
+void AddSowTagMenuActions(
+	not_null<Ui::PopupMenu*> menu,
+	HistoryItem *item,
+	const QString &selectedText);
 
 } // namespace SexCat
 

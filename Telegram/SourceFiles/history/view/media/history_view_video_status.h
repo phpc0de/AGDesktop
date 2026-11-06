@@ -43,4 +43,7 @@ void PaintVideoTimestampMark(
 	crl::time position,
 	crl::time duration);
 
+// Empty when the short side is unknown.
+[[nodiscard]] QString VideoResolutionBadge(int shortSide);
+
 } // namespace HistoryView

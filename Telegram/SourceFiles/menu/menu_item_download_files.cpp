@@ -85,6 +85,27 @@ void AddAction(
 		: &st::menuIconDownload;
 	const auto shouldShowToast = documents.empty();
 
+	// Q52.4: every file of a batch download carries the same sow tag.
+	auto batchTag = QString();
+	for (const auto &[document, fullId] : documents) {
+		if (const auto item = controller->session().data().message(fullId)) {
+			batchTag = SexCat::SourceTagForItem(item);
+			if (!batchTag.isEmpty()) {
+				break;
+			}
+		}
+	}
+	if (batchTag.isEmpty()) {
+		for (const auto &[photo, fullId] : photos) {
+			if (const auto item = controller->session().data().message(fullId)) {
+				batchTag = SexCat::SourceTagForItem(item);
+				if (!batchTag.isEmpty()) {
+					break;
+				}
+			}
+		}
+	}
+
 	const auto weak = base::make_weak(controller);
 	const auto saveImages = [=](const QString &folderPath) {
 		const auto controller = weak.get();
@@ -181,7 +202,9 @@ void AddAction(
 					SexCat::RecordPhotoSaveAttempt(
 						lastPath,
 						photos[i].first,
-						photos[i].second);
+						photos[i].second,
+						0,
+						batchTag);
 				}
 			}
 			if (showToast) {
@@ -207,7 +230,7 @@ void AddAction(
 			if (!folderPath.isEmpty()) {
 				const auto name =
 					base::FileNameFromUserString(document->filename());
-				SexCat::MarkDocumentSaveAs(document, origin);
+				SexCat::MarkDocumentSaveAs(document, origin, batchTag);
 				document->save(origin, folderPath + name);
 			} else {
 				DocumentSaveClickHandler::SaveAndTrack(origin, document);

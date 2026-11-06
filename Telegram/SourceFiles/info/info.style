@@ -921,6 +921,12 @@ topBarTitleAyuBanned: FlatLabel(defaultFlatLabel) {
 topBarTitleAyuRestricted: FlatLabel(defaultFlatLabel) {
 	textFg: statisticsChartLinePurple;
 }
+topBarTitleAyuUserPeer: FlatLabel(defaultFlatLabel) {
+	textFg: statisticsChartLineOrange;
+}
+topBarTitleAyuUserSelf: FlatLabel(defaultFlatLabel) {
+	textFg: statisticsChartLineBlue;
+}
 topBarClearButton: RoundButton(defaultLightButton) {
 	width: -18px;
 }

@@ -118,6 +118,8 @@ enum class TopBarTitleTint {
 	Protected,
 	Banned,
 	AyuRestricted,
+	UserPeerNoForwards,
+	UserSelfNoForwards,
 };
 
 [[nodiscard]] TopBarTitleTint TopBarTitleTintOf(not_null<PeerData*> peer) {
@@ -136,6 +138,12 @@ enum class TopBarTitleTint {
 		} else if (chat->isAyuNoForwards()) {
 			return TopBarTitleTint::AyuRestricted;
 		}
+	} else if (const auto user = peer->asUser()) {
+		if (user->flags() & UserDataFlag::NoForwardsPeerEnabled) {
+			return TopBarTitleTint::UserPeerNoForwards;
+		} else if (user->flags() & UserDataFlag::NoForwardsMyEnabled) {
+			return TopBarTitleTint::UserSelfNoForwards;
+		}
 	}
 	return TopBarTitleTint::None;
 }
@@ -148,6 +156,10 @@ enum class TopBarTitleTint {
 		return st::topBarTitleAyuProtected.textFg;
 	case TopBarTitleTint::AyuRestricted:
 		return st::topBarTitleAyuRestricted.textFg;
+	case TopBarTitleTint::UserPeerNoForwards:
+		return st::topBarTitleAyuUserPeer.textFg;
+	case TopBarTitleTint::UserSelfNoForwards:
+		return st::topBarTitleAyuUserSelf.textFg;
 	}
 	return st::dialogsNameFg;
 }

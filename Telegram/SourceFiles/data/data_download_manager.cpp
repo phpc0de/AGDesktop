@@ -39,6 +39,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "apiwrap.h"
 #include "styles/style_layers.h"
 
+// [R:67494147] includes
+#include "ayu/utils/ayu_log.h"
+
+
 namespace Data {
 namespace {
 
@@ -555,35 +559,49 @@ void DownloadManager::deleteFiles(const std::vector<GlobalMsgId> &ids) {
 				cancel(data, j);
 			}
 
-			// Addressed by item, and one item may own several downloaded
-			// files, so every one of them goes. Removing just the first left
-			// the rest on disk while loadedRemoved already hid the row.
-			auto erased = false;
-			for (auto k = 0; k != int(data.downloaded.size());) {
+			// WHY: the row is one record, so only that record and its file
+			// go; sibling downloads of the same message stay with their
+			// files and are re-listed instead of being wiped with it.
+			auto victim = -1;
+			auto first = -1;
+			auto siblings = 0;
+			for (auto k = 0; k != int(data.downloaded.size()); ++k) {
 				if (ByItem(data.downloaded[k]) != item) {
-					++k;
 					continue;
 				}
-				const auto &entry = data.downloaded[k];
-				const auto document = entry.object->document;
-				descriptor.files.emplace(entry.path, DocumentDescriptor{
-					.sessionUniqueId = id.sessionUniqueId,
-					.documentId = document ? document->id : DocumentId(),
-					.itemId = id.itemId,
-				});
-				if (document) {
-					_generatedDocuments.remove(document);
+				if (first < 0) {
+					first = k;
 				}
-				data.downloaded.erase(begin(data.downloaded) + k);
-				erased = true;
+				victim = k;
+				++siblings;
 			}
-			if (erased) {
+			if (victim < 0) {
+				continue;
+			}
+			const auto &entry = data.downloaded[victim];
+			const auto document = entry.object->document;
+			descriptor.files.emplace(entry.path, DocumentDescriptor{
+				.sessionUniqueId = id.sessionUniqueId,
+				.documentId = document ? document->id : DocumentId(),
+				.itemId = id.itemId,
+			});
+			if (document) {
+				_generatedDocuments.remove(document);
+			}
+			data.downloaded.erase(begin(data.downloaded) + victim);
+			if (siblings > 1) {
+				Ayu::Log::Write(
+					u"download"_q,
+					u"kept %1 sibling download(s) of a deleted file"_q.arg(
+						siblings - 1));
+				_loadedRemoved.fire_copy(item);
+				_loadedAdded.fire_copy(&data.downloaded[first]);
+			} else {
 				_generated.remove(item);
 				_loaded.remove(item);
 				_loadedRemoved.fire_copy(item);
-
-				descriptor.sessions.emplace(session);
 			}
+			descriptor.sessions.emplace(session);
 		}
 	}
 	finishFilesDelete(std::move(descriptor));

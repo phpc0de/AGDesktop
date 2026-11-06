@@ -26,8 +26,10 @@
 #include "main/main_session.h"
 #include "rpl/rpl.h"
 #include "storage/storage_account.h"
+#include "styles/style_menu_icons.h"
 #include "ui/text/text_entity.h"
 #include "ui/toast/toast.h"
+#include "ui/widgets/popup_menu.h"
 #include "window/window_controller.h"
 #include "window/window_session_controller.h"
 
@@ -46,6 +48,7 @@ constexpr auto kSexCatToastDuration = crl::time(3000);
 
 struct PendingSaveAs {
 	FullMsgId contextId;
+	QString sourceTag;
 	crl::time when = 0;
 };
 
@@ -114,6 +117,51 @@ void ShowSavedToast() {
 	Ui::Toast::Show(std::move(config));
 }
 
+constexpr auto kMaxSowTagLength = 64;
+
+[[nodiscard]] QString ExtractHashtag(const QString &text) {
+	static const QRegularExpression pattern(u"#([A-Za-z0-9_]{1,64})"_q);
+	const auto match = pattern.match(text);
+	return match.hasMatch() ? match.captured(1) : QString();
+}
+
+[[nodiscard]] QString CleanSowTag(const QString &raw) {
+	auto text = raw;
+	while (!text.isEmpty() && text.at(0) == u'#') {
+		text.remove(0, 1);
+	}
+	text = CleanSaveNameText(text);
+	return text.left(kMaxSowTagLength);
+}
+
+void ShowSowTagToast(const QString &tag) {
+	auto text = u"Saved to sow list: #%1"_q.arg(tag);
+	auto config = Ui::Toast::Config{
+		.text = TextWithEntities{ std::move(text) },
+		.duration = kSexCatToastDuration,
+	};
+	if (const auto window = Core::App().activeWindow()) {
+		if (const auto controller = window->sessionController()) {
+			controller->showToast(std::move(config));
+			return;
+		}
+	}
+	Ui::Toast::Show(std::move(config));
+}
+
+void SaveSowTag(const QString &raw) {
+	const auto tag = CleanSowTag(raw);
+	if (tag.isEmpty()) {
+		return;
+	}
+	if (!Database::instance().Enabled()) {
+		LogFailure(u"database unavailable, sow tag not recorded: "_q + tag);
+		return;
+	}
+	Database::instance().RecordTag(tag);
+	ShowSowTagToast(tag);
+}
+
 [[nodiscard]] int ResolveAttachIndex(HistoryItem *item) {
 	if (!item) {
 		return 0;
@@ -132,30 +180,72 @@ void ShowSavedToast() {
 	return 0;
 }
 
+// Q52: a sow tag is an arbitrary string label, not a peer.
+struct SourceOrigin {
+	int64 peerId = 0;
+	int64 msgId = 0;
+	QString title;
+	QString tag;
+	int attach = 0;
+
+	[[nodiscard]] bool known() const {
+		return peerId != 0 && msgId != 0;
+	}
+};
+
+[[nodiscard]] SourceOrigin OriginFromItem(
+		HistoryItem *item,
+		QString tag,
+		int attachOverride = 0) {
+	auto origin = SourceOrigin{ .tag = std::move(tag) };
+	if (!item || !item->isRegular()) {
+		return origin;
+	}
+	if (const auto peer = item->history()->peer) {
+		origin.peerId = int64(peer->id.value);
+		origin.title = peer->name();
+	}
+	origin.msgId = int64(item->id.bare);
+	origin.attach = attachOverride ? attachOverride : ResolveAttachIndex(item);
+	if (origin.tag.isEmpty()) {
+		origin.tag = SourceTagForItem(item);
+	}
+	return origin;
+}
+
+[[nodiscard]] Entry SourceEntryForPending(
+		const SourceOrigin &origin,
+		int64 fileSize) {
+	return Entry{
+		.file_size = fileSize,
+		.src_peer_id = origin.peerId,
+		.src_msg_id = origin.msgId,
+		.src_title = origin.title,
+		.src_tag = origin.tag,
+		.src_attach = origin.attach,
+	};
+}
+
 constexpr auto kMaxDuplicatePathProbes = 3;
 constexpr auto kMaxPendingRehashRows = 256;
+constexpr auto kPendingPositionTtl = 6 * 60 * 60;
 
 void DedupeOrRecordHashed(
 		QString savedPath,
 		int64 fileSize,
-		int64 srcPeerId,
-		int64 srcMsgId,
-		QString srcTitle,
-		int srcAttach,
+		SourceOrigin origin,
 		QByteArray sha256,
+		int64 existingRowId,
 		bool announce) {
-	auto entry = Entry{
-		.sha256 = std::move(sha256),
-		.file_name = QFileInfo(savedPath).fileName(),
-		.saved_path = savedPath,
-		.file_size = fileSize,
-		.src_peer_id = srcPeerId,
-		.src_msg_id = srcMsgId,
-		.src_title = std::move(srcTitle),
-		.src_attach = srcAttach,
-		.saved_at = base::unixtime::now(),
-	};
-	const auto sha = entry.sha256;
+	const auto sha = sha256;
+	// Q80: a pending row written at download start becomes this record.
+	const auto pendingId = (existingRowId > 0)
+		? existingRowId
+		: (origin.known()
+			? Database::instance().ConsumePendingPosition(
+				SourceEntryForPending(origin, fileSize),
+				savedPath)
+			: 0);
 	// WHY: same-sha content must not grow the library, but a fresh
 	// copy still becomes the live carrier when every older one is gone.
 	const auto hits = Database::instance().LookupByHash(sha);
@@ -170,18 +260,41 @@ void DedupeOrRecordHashed(
 		}
 	}
 	if (live) {
+		if (pendingId > 0) {
+			Database::instance().DropUnhashedRecord(pendingId);
+		}
 		LogFailure(u"duplicate content, record skipped: "_q + savedPath);
 	} else if (!hits.empty()) {
 		Database::instance().Relink(hits.front().id, savedPath);
+		if (pendingId > 0) {
+			Database::instance().DropUnhashedRecord(pendingId);
+		}
 		LogFailure(u"duplicate content relinked to new copy: "_q + savedPath);
-	} else if (Database::instance().RecordSaved(std::move(entry)) <= 0) {
-		return;
+	} else if (pendingId > 0) {
+		Database::instance().UpdateRowSha(pendingId, sha);
+	} else {
+		auto entry = Entry{
+			.sha256 = sha,
+			.file_name = QFileInfo(savedPath).fileName(),
+			.saved_path = savedPath,
+			.file_size = fileSize,
+			.src_peer_id = origin.peerId,
+			.src_msg_id = origin.msgId,
+			.src_title = origin.title,
+			.src_tag = origin.tag,
+			.src_attach = origin.attach,
+			.saved_at = base::unixtime::now(),
+		};
+		if (Database::instance().RecordSaved(std::move(entry)) <= 0) {
+			return;
+		}
 	}
+	Database::instance().RecordTag(origin.tag);
 	HashStore::WriteAds(
 		savedPath,
 		sha,
-		PeerId(uint64(srcPeerId)),
-		MsgId(srcMsgId));
+		PeerId(uint64(origin.peerId)),
+		MsgId(origin.msgId));
 	if (announce) {
 		ShowSavedToast();
 	}
@@ -192,19 +305,17 @@ void DedupeOrRecordHashed(
 int64 PersistRecord(
 		const QString &savedPath,
 		int64 fileSize,
-		int64 srcPeerId,
-		int64 srcMsgId,
-		const QString &srcTitle,
-		int srcAttach,
+		const SourceOrigin &origin,
 		bool announce) {
 	auto entry = Entry{
 		.file_name = QFileInfo(savedPath).fileName(),
 		.saved_path = savedPath,
 		.file_size = fileSize,
-		.src_peer_id = srcPeerId,
-		.src_msg_id = srcMsgId,
-		.src_title = srcTitle,
-		.src_attach = srcAttach,
+		.src_peer_id = origin.peerId,
+		.src_msg_id = origin.msgId,
+		.src_title = origin.title,
+		.src_tag = origin.tag,
+		.src_attach = origin.attach,
 		.saved_at = base::unixtime::now(),
 	};
 	const auto id = Database::instance().RecordSaved(std::move(entry));
@@ -217,10 +328,7 @@ int64 PersistRecord(
 void FinishHashedRecord(
 		int64 rowId,
 		const QString &savedPath,
-		int64 srcPeerId,
-		int64 srcMsgId,
-		QString srcTitle,
-		int srcAttach,
+		SourceOrigin origin,
 		QByteArray sha256) {
 	if (rowId <= 0) {
 		return;
@@ -251,41 +359,39 @@ void FinishHashedRecord(
 		Database::instance().DropUnhashedRecord(rowId);
 		LogFailure(u"duplicate content relinked to new copy: "_q + savedPath);
 	} else if (Database::instance().UpdateRowSha(rowId, sha)) {
-		if (srcPeerId != 0 && srcMsgId != 0) {
+		if (origin.known()) {
 			auto source = Entry{
 				.sha256 = sha,
-				.src_peer_id = srcPeerId,
-				.src_msg_id = srcMsgId,
-				.src_title = std::move(srcTitle),
-				.src_attach = srcAttach,
+				.src_peer_id = origin.peerId,
+				.src_msg_id = origin.msgId,
+				.src_title = origin.title,
+				.src_tag = origin.tag,
+				.src_attach = origin.attach,
 			};
 			Database::instance().BackfillSourceByHash(sha, source);
 		}
 	}
+	Database::instance().RecordTag(origin.tag);
 	HashStore::WriteAds(
 		savedPath,
 		sha,
-		PeerId(uint64(srcPeerId)),
-		MsgId(srcMsgId));
+		PeerId(uint64(origin.peerId)),
+		MsgId(origin.msgId));
 }
 
 void ResolveHashAndPersist(
 		QString savedPath,
 		int64 fileSize,
-		int64 srcPeerId,
-		int64 srcMsgId,
-		QString srcTitle,
-		int srcAttach,
-		bool announce) {
+		SourceOrigin origin,
+		bool announce,
+		int64 existingRowId = 0) {
 	if (const auto sha = TakeDownloadedSha(savedPath)) {
 		DedupeOrRecordHashed(
 			std::move(savedPath),
 			fileSize,
-			srcPeerId,
-			srcMsgId,
-			std::move(srcTitle),
-			srcAttach,
+			std::move(origin),
 			std::move(*sha),
+			existingRowId,
 			announce);
 		return;
 	}
@@ -294,36 +400,34 @@ void ResolveHashAndPersist(
 			DedupeOrRecordHashed(
 				std::move(savedPath),
 				fileSize,
-				srcPeerId,
-				srcMsgId,
-				std::move(srcTitle),
-				srcAttach,
+				std::move(origin),
 				std::move(hit->sha256),
+				existingRowId,
 				announce);
 			return;
 		}
 	}
-	const auto rowId = PersistRecord(
-		savedPath,
-		fileSize,
-		srcPeerId,
-		srcMsgId,
-		srcTitle,
-		srcAttach,
-		announce);
+	// Q80: a pending download-start row carries this position already.
+	const auto pendingId = (existingRowId > 0)
+		? existingRowId
+		: (origin.known()
+			? Database::instance().ConsumePendingPosition(
+				SourceEntryForPending(origin, fileSize),
+				savedPath)
+			: 0);
+	const auto rowId = (pendingId > 0)
+		? pendingId
+		: PersistRecord(savedPath, fileSize, origin, announce);
 	if (rowId <= 0) {
 		return;
 	}
 	HashStore::HashFileAsync(
 		savedPath,
-		[=, path = savedPath, title = std::move(srcTitle)](QByteArray sha256) mutable {
+		[=, path = savedPath, origin = origin](QByteArray sha256) mutable {
 			FinishHashedRecord(
 				rowId,
 				path,
-				srcPeerId,
-				srcMsgId,
-				std::move(title),
-				srcAttach,
+				std::move(origin),
 				std::move(sha256));
 		});
 }
@@ -332,18 +436,17 @@ void ResolveHashAndPersist(
 		not_null<DocumentData*> document,
 		const QString &toFile) {
 	const auto info = QFileInfo(toFile);
-	if (document->size <= 0
-		|| !info.isFile()
-		|| info.size() != document->size) {
-		return std::nullopt;
-	}
-	const auto ads = HashStore::ReadAds(toFile);
-	if (auto hit = Database::instance().FindByPath(toFile, document->size)) {
-		if (hit->sha256.size() == 32
-			&& (!ads || ads->sha256 == hit->sha256)) {
-			return hit;
+	const auto fileMatches = (document->size > 0
+		&& info.isFile()
+		&& info.size() == document->size);
+	const auto ads = fileMatches ? HashStore::ReadAds(toFile) : std::nullopt;
+	if (fileMatches) {
+		if (auto hit = Database::instance().FindByPath(toFile, document->size)) {
+			if (hit->sha256.size() == 32
+				&& (!ads || ads->sha256 == hit->sha256)) {
+				return hit;
+			}
 		}
-		return std::nullopt;
 	}
 	PruneStalePending();
 	const auto i = PendingMap().find(document.get());
@@ -360,8 +463,23 @@ void ResolveHashAndPersist(
 	for (const auto &entry
 		: Database::instance().LookupBySource(peer->id, item->id)) {
 		if (entry.src_attach != attach
-			|| entry.file_size != document->size
-			|| entry.sha256.size() != 32) {
+			|| entry.file_size != document->size) {
+			continue;
+		}
+		// Q80: nothing yet at toFile — a recorded row for this
+		// (peer, msg, attach) position skips the download instantly.
+		if (!fileMatches) {
+			if (entry.saved_path.isEmpty()) {
+				// download-start marker, trusted only while fresh
+				return (base::unixtime::now() - entry.saved_at
+					< kPendingPositionTtl)
+					? std::optional<Entry>(entry)
+					: std::nullopt;
+			}
+			return QFileInfo::exists(entry.saved_path)
+				? std::optional<Entry>(entry)
+				: std::nullopt;
+		} else if (entry.sha256.size() != 32) {
 			continue;
 		}
 		return (ads && ads->sha256 == entry.sha256)
@@ -512,32 +630,27 @@ void HandleLoadedDownload(not_null<const Data::DownloadedId*> id) {
 		LogFailure(u"database unavailable, download not recorded: "_q + id->path);
 		return;
 	}
-	if (Database::instance().FindByPath(id->path, id->size)) {
-		return;
+	auto existingRowId = int64(0);
+	if (const auto hit = Database::instance().FindByPath(id->path, id->size)) {
+		if (hit->sha256.size() == 32) {
+			return;
+		}
+		// an unhashed row on this path is hashed in place, not duplicated
+		existingRowId = hit->id;
 	}
-	auto srcPeerId = int64(0);
-	auto srcMsgId = int64(0);
-	auto srcTitle = QString();
-	auto attachIndex = 0;
+	auto origin = SourceOrigin{};
 	if (const auto item = id->object ? id->object->item.get() : nullptr) {
 		// Restored downloads carry generated items, not a real source.
 		if (item->isRegular()) {
-			if (const auto peer = item->history()->peer) {
-				srcPeerId = int64(peer->id.value);
-				srcTitle = peer->name();
-			}
-			srcMsgId = int64(item->id.bare);
-			attachIndex = ResolveAttachIndex(item);
+			origin = OriginFromItem(item, QString());
 		}
 	}
 	ResolveHashAndPersist(
 		id->path,
 		id->size,
-		srcPeerId,
-		srcMsgId,
-		std::move(srcTitle),
-		attachIndex,
-		false);
+		std::move(origin),
+		false,
+		existingRowId);
 }
 
 } // namespace
@@ -552,11 +665,22 @@ bool ShouldSkipDuplicateDownload(
 		return false;
 	}
 	const auto hit = FindRecordedForDocument(document, toFile);
-	if (!hit) {
-		return false;
+	if (hit) {
+		LogFailure(u"skipping duplicate download, already in library: "_q + toFile);
+		return true;
 	}
-	LogFailure(u"skipping duplicate download, already in library: "_q + toFile);
-	return true;
+	// Q80: record the (peer, msg, attach) position at download start,
+	// so the next download of the same position dedups before any sha.
+	PruneStalePending();
+	if (const auto i = PendingMap().find(document.get()); i != end(PendingMap())) {
+		const auto item = document->owner().message(i->second.contextId);
+		if (item && item->isRegular()) {
+			const auto origin = OriginFromItem(item, i->second.sourceTag);
+			Database::instance().RecordPendingPosition(
+				SourceEntryForPending(origin, document->size));
+		}
+	}
+	return false;
 }
 
 QString RecordedDocumentPath(
@@ -605,7 +729,8 @@ void RecordSaveAttempt(
 		const QString &savedPath,
 		not_null<DocumentData*> document,
 		FullMsgId contextId,
-		int attachIndex) {
+		int attachIndex,
+		const QString &sourceTag) {
 	EnsureDownloadListener();
 	Ayu::SexCat::RememberDownloadedDocument(document);
 	if (!Enabled()) {
@@ -615,39 +740,24 @@ void RecordSaveAttempt(
 	if (savedPath.isEmpty() || !info.exists() || info.isDir()) {
 		return;
 	}
-	auto srcPeerId = int64(0);
-	auto srcMsgId = int64(0);
-	auto srcTitle = QString();
 	const auto item = contextId
 		? document->owner().message(contextId)
 		: nullptr;
 	const auto path = MaybeAugmentedSavePath(savedPath, document, item);
-	if (item) {
-		if (const auto peer = item->history()->peer) {
-			srcPeerId = int64(peer->id.value);
-			srcTitle = peer->name();
-		}
-		srcMsgId = int64(item->id.bare);
-	}
+	auto origin = OriginFromItem(item, sourceTag, attachIndex);
 	if (!Database::instance().Enabled()) {
 		LogFailure(u"database unavailable, save not recorded: "_q + path);
 		return;
 	}
-	ResolveHashAndPersist(
-		path,
-		info.size(),
-		srcPeerId,
-		srcMsgId,
-		std::move(srcTitle),
-		attachIndex ? attachIndex : ResolveAttachIndex(item),
-		true);
+	ResolveHashAndPersist(path, info.size(), std::move(origin), true);
 }
 
 void RecordPhotoSaveAttempt(
 		const QString &savedPath,
 		not_null<PhotoData*> photo,
 		FullMsgId contextId,
-		int attachIndex) {
+		int attachIndex,
+		const QString &sourceTag) {
 	EnsureDownloadListener();
 	if (!Enabled()) {
 		return;
@@ -656,42 +766,27 @@ void RecordPhotoSaveAttempt(
 	if (savedPath.isEmpty() || !info.exists() || info.isDir()) {
 		return;
 	}
-	auto srcPeerId = int64(0);
-	auto srcMsgId = int64(0);
-	auto srcTitle = QString();
 	const auto item = contextId
 		? photo->owner().message(contextId)
 		: nullptr;
-	if (item) {
-		if (const auto peer = item->history()->peer) {
-			srcPeerId = int64(peer->id.value);
-			srcTitle = peer->name();
-		}
-		srcMsgId = int64(item->id.bare);
-	}
+	auto origin = OriginFromItem(item, sourceTag, attachIndex);
 	if (!Database::instance().Enabled()) {
 		LogFailure(u"database unavailable, photo save not recorded: "_q + savedPath);
 		return;
 	}
-	ResolveHashAndPersist(
-		savedPath,
-		info.size(),
-		srcPeerId,
-		srcMsgId,
-		std::move(srcTitle),
-		attachIndex ? attachIndex : ResolveAttachIndex(item),
-		true);
+	ResolveHashAndPersist(savedPath, info.size(), std::move(origin), true);
 }
 
 void MarkDocumentSaveAs(
 		not_null<DocumentData*> document,
-		FullMsgId contextId) {
+		FullMsgId contextId,
+		const QString &sourceTag) {
 	PruneStalePending();
 	auto &map = PendingMap();
 	if (map.size() >= size_t(kPendingSaveAsMax)) {
 		map.clear();
 	}
-	map[document.get()] = PendingSaveAs{ contextId, crl::now() };
+	map[document.get()] = PendingSaveAs{ contextId, sourceTag, crl::now() };
 }
 
 void NotifyDocumentSaved(
@@ -703,14 +798,27 @@ void NotifyDocumentSaved(
 		return;
 	}
 	const auto contextId = i->second.contextId;
+	const auto sourceTag = i->second.sourceTag;
 	PendingMap().erase(i);
 	if (savedPath.isEmpty()) {
 		return;
 	}
-	RecordSaveAttempt(savedPath, document, contextId);
+	RecordSaveAttempt(savedPath, document, contextId, 0, sourceTag);
 }
 
 void ForgetDoctrineSaveAs(not_null<DocumentData*> document) {
+	// WHY: a cancelled download must not leave its download-start
+	// marker behind, or every later download of that position is
+	// deduped into nothing.
+	if (const auto i = PendingMap().find(document.get());
+		i != end(PendingMap())) {
+		const auto item = document->owner().message(i->second.contextId);
+		if (item && item->isRegular()) {
+			const auto origin = OriginFromItem(item, i->second.sourceTag);
+			Database::instance().DropPendingPosition(
+				SourceEntryForPending(origin, document->size));
+		}
+	}
 	PendingMap().erase(document.get());
 }
 
@@ -724,20 +832,28 @@ void RehashPendingRows() {
 	done = true;
 	for (const auto &entry
 		: Database::instance().LookupUnhashed(kMaxPendingRehashRows)) {
-		if (!QFileInfo(entry.saved_path).isFile()) {
+		const auto info = QFileInfo(entry.saved_path);
+		if (!info.isFile()) {
+			continue;
+		}
+		// WHY: a pending download row points at a file still being
+		// written; hashing it would pin a partial sha.
+		if (entry.file_size > 0 && info.size() != entry.file_size) {
 			continue;
 		}
 		HashStore::HashFileAsync(
 			entry.saved_path,
-			[=, path = entry.saved_path, title = entry.src_title](
-				QByteArray sha256) mutable {
+			[=, path = entry.saved_path, origin = SourceOrigin{
+				.peerId = entry.src_peer_id,
+				.msgId = entry.src_msg_id,
+				.title = entry.src_title,
+				.tag = entry.src_tag,
+				.attach = entry.src_attach,
+			}](QByteArray sha256) mutable {
 				FinishHashedRecord(
 					entry.id,
 					path,
-					entry.src_peer_id,
-					entry.src_msg_id,
-					std::move(title),
-					entry.src_attach,
+					std::move(origin),
 					std::move(sha256));
 			});
 	}
@@ -757,6 +873,50 @@ void EnsureDownloadListener() {
 	}, lifetime);
 	StartShellWatch();
 	RehashPendingRows();
+}
+
+QString SourceTagForItem(HistoryItem *item) {
+	if (!item || !item->isRegular()) {
+		return {};
+	}
+	if (const auto tag = ExtractHashtag(item->originalText().text);
+		!tag.isEmpty()) {
+		return tag;
+	}
+	if (const auto group = item->history()->owner().groups().find(item)) {
+		for (const auto &groupItem : group->items) {
+			if (&*groupItem == item) {
+				continue;
+			}
+			if (const auto tag
+				= ExtractHashtag(groupItem->originalText().text);
+				!tag.isEmpty()) {
+				return tag;
+			}
+		}
+	}
+	return {};
+}
+
+void AddSowTagMenuActions(
+		not_null<Ui::PopupMenu*> menu,
+		HistoryItem *item,
+		const QString &selectedText) {
+	if (!Enabled() || !Database::instance().Enabled()) {
+		return;
+	}
+	if (const auto selected = CleanSowTag(selectedText); !selected.isEmpty()) {
+		menu->addAction(
+			u"Save selected text to sow list"_q,
+			[=] { SaveSowTag(selectedText); },
+			&st::menuIconDownload);
+	}
+	if (const auto tag = SourceTagForItem(item); !tag.isEmpty()) {
+		menu->addAction(
+			u"Save #%1 to sow list"_q.arg(tag),
+			[=] { SaveSowTag(tag); },
+			&st::menuIconDownload);
+	}
 }
 
 } // namespace SexCat

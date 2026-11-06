@@ -106,9 +106,9 @@ msgDateImgPadding: point(8px, 2px);
 ayuDownloadedBadgeSize: 18px;
 ayuDownloadedBadgeRadius: 4px;
 ayuDownloadedBadgeSkip: 5px;
-ayuDownloadedBadgeFont: font(11px);
 ayuDownloadedBadgeBg: msgDateImgBg;
 ayuDownloadedBadgeFg: msgDateImgFg;
+ayuDownloadedBadgeCheck: icon {{ "mediaview/save_check", ayuDownloadedBadgeFg }};
 
 messageQuoteStyle: historyQuoteStyle;
 messageTextStyle: historyTextStyle;

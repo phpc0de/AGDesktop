@@ -14,6 +14,7 @@
 
 #include <QDir>
 
+#include <algorithm>
 #include <limits>
 #include <mutex>
 #include <utility>
@@ -33,8 +34,15 @@ struct SavedFileRow {
 	int64 src_peer_id = 0;
 	int64 src_msg_id = 0;
 	std::string src_title;
+	std::string src_tag;
 	int src_attach = 0;
 	int64 saved_at = 0;
+};
+
+struct SowTagRow {
+	int64 id = 0;
+	std::string tag;
+	int64 created_at = 0;
 };
 
 // WHY: schema objects are iterated in reverse, so an index must precede
@@ -51,6 +59,12 @@ auto storage = make_storage(
 	make_index(
 		"idx_saved_file_path",
 		column<SavedFileRow>(&SavedFileRow::saved_path)),
+	make_index(
+		"idx_saved_file_tag",
+		column<SavedFileRow>(&SavedFileRow::src_tag)),
+	make_index(
+		"idx_sow_tag_tag",
+		column<SowTagRow>(&SowTagRow::tag)),
 	make_table<SavedFileRow>(
 		"saved_file",
 		make_column("id", &SavedFileRow::id, primary_key().autoincrement()),
@@ -61,8 +75,15 @@ auto storage = make_storage(
 		make_column("src_peer_id", &SavedFileRow::src_peer_id),
 		make_column("src_msg_id", &SavedFileRow::src_msg_id),
 		make_column("src_title", &SavedFileRow::src_title),
+		make_column("src_tag", &SavedFileRow::src_tag, default_value(std::string())),
 		make_column("src_attach", &SavedFileRow::src_attach),
 		make_column("saved_at", &SavedFileRow::saved_at)
+	),
+	make_table<SowTagRow>(
+		"sow_tag",
+		make_column("id", &SowTagRow::id, primary_key().autoincrement()),
+		make_column("tag", &SowTagRow::tag),
+		make_column("created_at", &SowTagRow::created_at)
 	)
 );
 
@@ -84,6 +105,7 @@ Entry EntryFromRow(SavedFileRow row) {
 	entry.src_peer_id = row.src_peer_id;
 	entry.src_msg_id = row.src_msg_id;
 	entry.src_title = QString::fromStdString(row.src_title);
+	entry.src_tag = QString::fromStdString(row.src_tag);
 	entry.src_attach = row.src_attach;
 	entry.saved_at = row.saved_at;
 	return entry;
@@ -99,6 +121,7 @@ SavedFileRow RowFromEntry(const Entry &entry) {
 	row.src_peer_id = entry.src_peer_id;
 	row.src_msg_id = entry.src_msg_id;
 	row.src_title = entry.src_title.toStdString();
+	row.src_tag = entry.src_tag.toStdString();
 	row.src_attach = entry.src_attach;
 	row.saved_at = entry.saved_at;
 	return row;
@@ -113,6 +136,7 @@ void BackfillSourcelessRows(const QByteArray &sha256, const Entry &source) {
 				c(&SavedFileRow::src_peer_id) = source.src_peer_id,
 				c(&SavedFileRow::src_msg_id) = source.src_msg_id,
 				c(&SavedFileRow::src_title) = source.src_title.toStdString(),
+				c(&SavedFileRow::src_tag) = source.src_tag.toStdString(),
 				c(&SavedFileRow::src_attach) = source.src_attach),
 			where(
 				column<SavedFileRow>(&SavedFileRow::sha256) == blob
@@ -418,20 +442,32 @@ std::vector<Entry> Database::Recent(int limit, Filter filter, int offset) {
 	}
 	try {
 		std::lock_guard lock(storageMutex);
+		const auto hasTag = !filter.src_tag.isEmpty();
 		const auto hasPeer = filter.src_peer_id.has_value();
 		const auto peerLower = hasPeer ? *filter.src_peer_id : std::numeric_limits<int64>::min();
 		const auto peerUpper = hasPeer ? *filter.src_peer_id : std::numeric_limits<int64>::max();
 		const auto pattern = LikePattern(filter.search);
-		auto rows = storage.get_all<SavedFileRow>(
-			where(
-				column<SavedFileRow>(&SavedFileRow::src_peer_id) >= peerLower
-				and column<SavedFileRow>(&SavedFileRow::src_peer_id) <= peerUpper
-				and (like(column<SavedFileRow>(&SavedFileRow::file_name), pattern, "\\")
-					or like(column<SavedFileRow>(&SavedFileRow::src_title), pattern, "\\"))
-			),
-			order_by(column<SavedFileRow>(&SavedFileRow::id)).desc(),
-			sqlite_orm::limit(limit, sqlite_orm::offset(offset))
-		);
+		auto rows = hasTag
+			? storage.get_all<SavedFileRow>(
+				where(
+					column<SavedFileRow>(&SavedFileRow::src_tag)
+						== filter.src_tag.toStdString()
+					and (like(column<SavedFileRow>(&SavedFileRow::file_name), pattern, "\\")
+						or like(column<SavedFileRow>(&SavedFileRow::src_title), pattern, "\\"))
+				),
+				order_by(column<SavedFileRow>(&SavedFileRow::id)).desc(),
+				sqlite_orm::limit(limit, sqlite_orm::offset(offset))
+			)
+			: storage.get_all<SavedFileRow>(
+				where(
+					column<SavedFileRow>(&SavedFileRow::src_peer_id) >= peerLower
+					and column<SavedFileRow>(&SavedFileRow::src_peer_id) <= peerUpper
+					and (like(column<SavedFileRow>(&SavedFileRow::file_name), pattern, "\\")
+						or like(column<SavedFileRow>(&SavedFileRow::src_title), pattern, "\\"))
+				),
+				order_by(column<SavedFileRow>(&SavedFileRow::id)).desc(),
+				sqlite_orm::limit(limit, sqlite_orm::offset(offset))
+			);
 		auto result = std::vector<Entry>();
 		result.reserve(rows.size());
 		for (auto &row : rows) {
@@ -473,7 +509,115 @@ std::optional<Entry> Database::FindSavedSource(
 	}
 }
 
-std::vector<SourceSummary> Database::SourceSummaries(int limit) {
+int64 Database::RecordPendingPosition(const Entry &source) {
+	if (!_enabled || source.src_peer_id == 0 || source.src_msg_id == 0) {
+		return 0;
+	}
+	try {
+		std::lock_guard lock(storageMutex);
+		auto rows = storage.get_all<SavedFileRow>(
+			where(
+				column<SavedFileRow>(&SavedFileRow::src_peer_id) == source.src_peer_id
+				and column<SavedFileRow>(&SavedFileRow::src_msg_id) == source.src_msg_id
+				and column<SavedFileRow>(&SavedFileRow::src_attach) == source.src_attach
+				and column<SavedFileRow>(&SavedFileRow::file_size) == source.file_size
+			),
+			sqlite_orm::limit(1)
+		);
+		if (!rows.empty()) {
+			return rows.front().id;
+		}
+		auto row = RowFromEntry(source);
+		row.id = 0;
+		row.sha256 = std::vector<char>();
+		row.saved_path.clear();
+		if (row.saved_at == 0) {
+			row.saved_at = base::unixtime::now();
+		}
+		return storage.insert(row);
+	} catch (const std::exception &ex) {
+		LogError(u"Failed to record pending position: %1"_q.arg(QString::fromUtf8(ex.what())));
+		return 0;
+	}
+}
+
+void Database::DropPendingPosition(const Entry &source) {
+	if (!_enabled || source.src_peer_id == 0 || source.src_msg_id == 0) {
+		return;
+	}
+	try {
+		std::lock_guard lock(storageMutex);
+		storage.remove_all<SavedFileRow>(
+			where(
+				column<SavedFileRow>(&SavedFileRow::src_peer_id) == source.src_peer_id
+				and column<SavedFileRow>(&SavedFileRow::src_msg_id) == source.src_msg_id
+				and column<SavedFileRow>(&SavedFileRow::src_attach) == source.src_attach
+				and column<SavedFileRow>(&SavedFileRow::saved_path)
+					== std::string()));
+	} catch (const std::exception &ex) {
+		LogError(u"Failed to drop pending position: %1"_q.arg(QString::fromUtf8(ex.what())));
+	}
+}
+
+int64 Database::ConsumePendingPosition(
+		const Entry &source,
+		const QString &savedPath) {
+	if (!_enabled || source.src_peer_id == 0 || source.src_msg_id == 0) {
+		return 0;
+	}
+	try {
+		std::lock_guard lock(storageMutex);
+		const auto emptySha = std::vector<char>();
+		auto rows = storage.get_all<SavedFileRow>(
+			where(
+				column<SavedFileRow>(&SavedFileRow::src_peer_id) == source.src_peer_id
+				and column<SavedFileRow>(&SavedFileRow::src_msg_id) == source.src_msg_id
+				and column<SavedFileRow>(&SavedFileRow::src_attach) == source.src_attach
+				and column<SavedFileRow>(&SavedFileRow::sha256) == emptySha
+			),
+			order_by(column<SavedFileRow>(&SavedFileRow::id)).desc(),
+			sqlite_orm::limit(1)
+		);
+		if (rows.empty()) {
+			return 0;
+		}
+		const auto id = rows.front().id;
+		storage.update_all(
+			set(c(&SavedFileRow::saved_path) = savedPath.toStdString()),
+			where(column<SavedFileRow>(&SavedFileRow::id) == id));
+		return id;
+	} catch (const std::exception &ex) {
+		LogError(u"Failed to consume pending position: %1"_q.arg(QString::fromUtf8(ex.what())));
+		return 0;
+	}
+}
+
+bool Database::RecordTag(const QString &tag) {
+	if (!_enabled || tag.isEmpty()) {
+		return false;
+	}
+	try {
+		std::lock_guard lock(storageMutex);
+		const auto raw = tag.toStdString();
+		auto rows = storage.get_all<SowTagRow>(
+			where(column<SowTagRow>(&SowTagRow::tag) == raw),
+			sqlite_orm::limit(1));
+		if (!rows.empty()) {
+			return true;
+		}
+		storage.insert(SowTagRow{
+			.id = 0,
+			.tag = raw,
+			.created_at = base::unixtime::now(),
+		});
+		return true;
+	} catch (const std::exception &ex) {
+		LogError(u"Failed to record sow tag: %1"_q.arg(QString::fromUtf8(ex.what())));
+		return false;
+	}
+}
+
+std::vector<TagSummary> Database::TagSummaries(int limit) {
 	if (!_enabled || limit <= 0) {
 		return {};
 	}
@@ -481,24 +625,44 @@ std::vector<SourceSummary> Database::SourceSummaries(int limit) {
 		std::lock_guard lock(storageMutex);
 		auto rows = storage.select(
 			columns(
-				column<SavedFileRow>(&SavedFileRow::src_peer_id),
+				column<SavedFileRow>(&SavedFileRow::src_tag),
 				count(column<SavedFileRow>(&SavedFileRow::id)),
 				sum(column<SavedFileRow>(&SavedFileRow::file_size))),
-			group_by(column<SavedFileRow>(&SavedFileRow::src_peer_id)),
-			order_by(count(column<SavedFileRow>(&SavedFileRow::id))).desc(),
-			sqlite_orm::limit(limit));
-		auto result = std::vector<SourceSummary>();
+			where(column<SavedFileRow>(&SavedFileRow::src_tag) != std::string()),
+			group_by(column<SavedFileRow>(&SavedFileRow::src_tag)),
+			order_by(count(column<SavedFileRow>(&SavedFileRow::id))).desc());
+		auto result = std::vector<TagSummary>();
 		result.reserve(rows.size());
-		for (auto &[peerId, counted, totalSize] : rows) {
-			result.push_back(SourceSummary{
-				.src_peer_id = peerId,
+		for (auto &[tag, counted, totalSize] : rows) {
+			result.push_back(TagSummary{
+				.tag = QString::fromStdString(tag),
 				.count = counted,
 				.total_size = totalSize ? int64(*totalSize) : 0,
 			});
 		}
+		for (const auto &registered : storage.select(
+				column<SowTagRow>(&SowTagRow::tag))) {
+			const auto name = QString::fromStdString(registered);
+			const auto known = std::any_of(
+				result.begin(),
+				result.end(),
+				[&](const TagSummary &summary) { return summary.tag == name; });
+			if (!known) {
+				result.push_back(TagSummary{ .tag = name, .count = 0 });
+			}
+		}
+		std::stable_sort(
+			result.begin(),
+			result.end(),
+			[](const TagSummary &a, const TagSummary &b) {
+				return a.count > b.count;
+			});
+		if (int(result.size()) > limit) {
+			result.resize(limit);
+		}
 		return result;
 	} catch (const std::exception &ex) {
-		LogError(u"Failed to read source summaries: %1"_q.arg(QString::fromUtf8(ex.what())));
+		LogError(u"Failed to read sow tag summaries: %1"_q.arg(QString::fromUtf8(ex.what())));
 		return {};
 	}
 }

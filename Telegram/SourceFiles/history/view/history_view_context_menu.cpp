@@ -1885,6 +1885,14 @@ void FillContextMenuItems(
 			}
 		}, &st::menuIconTranslate);
 	}
+	SexCat::AddSowTagMenuActions(
+		result,
+		item,
+		(request.overSelection
+			&& request.selectedItems.empty()
+			&& !list->hasCopyRestrictionForSelected())
+			? list->getSelectedText().text
+			: QString());
 
 	AddTopMessageActions(result, request, list);
 	if (lnkPhoto && request.selectedItems.empty()) {

@@ -255,8 +255,7 @@ private:
 };
 
 struct SavedSourceRow {
-	int64 srcPeerId = 0;
-	QString name;
+	QString tag;
 	int count = 0;
 	int64 totalSize = 0;
 };
@@ -265,7 +264,7 @@ class SavedBySourceWindow final : public QWidget {
 public:
 	SavedBySourceWindow() {
 		setAttribute(Qt::WA_DeleteOnClose);
-		setWindowTitle(u"Saved files by source"_q);
+		setWindowTitle(u"Sow list"_q);
 		resize(
 			st::sexcatHistoryWindowSize.width(),
 			st::sexcatHistoryWindowSize.height());
@@ -328,7 +327,7 @@ private:
 		auto *tree = new QTreeWidget(this);
 		tree->setColumnCount(kSavedColTotal);
 		tree->setHeaderLabels({
-			u"Source"_q,
+			u"Tag"_q,
 			u"Files"_q,
 			u"Size"_q,
 		});
@@ -376,27 +375,26 @@ private:
 		_rows.reserve(kMaxSourceRows);
 		_sources->clear();
 		for (const auto &summary
-			: SexCat::Database::instance().SourceSummaries(kMaxSourceRows)) {
+			: SexCat::Database::instance().TagSummaries(kMaxSourceRows)) {
 			_rows.push_back(SavedSourceRow{
-				.srcPeerId = summary.src_peer_id,
-				.name = SourceName(summary.src_peer_id, QString()),
+				.tag = summary.tag,
 				.count = summary.count,
 				.totalSize = summary.total_size,
 			});
 		}
 		for (const auto &row : _rows) {
 			auto *item = new QTreeWidgetItem(_sources);
-			item->setText(kSavedColSource, row.name);
+			item->setText(kSavedColSource, row.tag);
 			item->setText(kSavedColCount, QString::number(row.count));
 			item->setText(kSavedColSize, ::Ui::FormatSizeText(row.totalSize));
 		}
 
-		const auto stillThere = _currentSource
+		const auto stillThere = !_currentTag.isEmpty()
 			&& std::any_of(
 				_rows.begin(),
 				_rows.end(),
 				[&](const SavedSourceRow &row) {
-					return row.srcPeerId == _currentSource;
+					return row.tag == _currentTag;
 				});
 		if (stillThere) {
 			fillFiles();
@@ -405,21 +403,11 @@ private:
 		}
 	}
 
-	[[nodiscard]] QString SourceName(int64 srcPeerId, const QString &fallback) {
-		const auto peerId = PeerId(uint64(srcPeerId));
-		for (const auto session : OrderedSessions()) {
-			if (session->data().peerLoaded(peerId)) {
-				return session->data().peer(peerId)->name();
-			}
-		}
-		return fallback.isEmpty() ? QString::number(srcPeerId) : fallback;
-	}
-
 	void showSources() {
-		_currentSource = 0;
+		_currentTag = QString();
 		_back->setVisible(false);
 		_loadMore->setVisible(false);
-		setWindowTitle(u"Saved files by source"_q);
+		setWindowTitle(u"Sow list"_q);
 		_stack->setCurrentWidget(_sources);
 	}
 
@@ -427,11 +415,10 @@ private:
 		if (row < 0 || row >= int(_rows.size())) {
 			return;
 		}
-		_currentSource = _rows[row].srcPeerId;
+		_currentTag = _rows[row].tag;
 		fillFiles();
 		_back->setVisible(true);
-		setWindowTitle(
-			u"Saved files by source — %1"_q.arg(_rows[row].name));
+		setWindowTitle(u"Sow list — %1"_q.arg(_rows[row].tag));
 		_stack->setCurrentWidget(_files);
 	}
 
@@ -443,7 +430,7 @@ private:
 
 	void appendFilesPage() {
 		const auto loaded = int(_fileRows.size());
-		const auto filter = SexCat::Filter{ .src_peer_id = _currentSource };
+		const auto filter = SexCat::Filter{ .src_tag = _currentTag };
 		const auto rows = SexCat::Database::instance().Recent(
 			kFilesPageSize,
 			filter,
@@ -517,7 +504,7 @@ private:
 	QTreeWidget *_files = nullptr;
 	std::vector<SavedSourceRow> _rows;
 	std::vector<SexCat::Entry> _fileRows;
-	int64 _currentSource = 0;
+	QString _currentTag;
 
 };
 
