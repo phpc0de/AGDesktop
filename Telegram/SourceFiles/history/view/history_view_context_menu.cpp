@@ -1902,7 +1902,7 @@ void FillContextMenuItems(
 		(request.overSelection
 			&& request.selectedItems.empty()
 			&& !list->hasCopyRestrictionForSelected())
-			? list->getSelectedText().text
+			? list->getSelectedText().expanded
 			: QString());
 
 	AddTopMessageActions(result, request, list);

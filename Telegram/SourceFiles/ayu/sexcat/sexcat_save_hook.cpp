@@ -135,6 +135,31 @@ constexpr auto kMaxRetroTagChoices = 32;
 	return match.hasMatch() ? match.captured(1) : QString();
 }
 
+[[nodiscard]] QString CleanSaveNameText(const QString &raw) {
+	static const auto illegal = u"\\/:*?\"<>|"_q;
+	auto cleaned = QString();
+	cleaned.reserve(raw.size());
+	for (const auto ch : raw) {
+		if (ch.category() == QChar::Other_Control || illegal.contains(ch)) {
+			cleaned += u' ';
+		} else {
+			cleaned += ch;
+		}
+	}
+	const auto isEdgeJunk = [](QChar ch) {
+		return ch == u' ' || ch == u'.';
+	};
+	auto start = 0;
+	auto end = cleaned.size();
+	while (start < end && isEdgeJunk(cleaned.at(start))) {
+		++start;
+	}
+	while (end > start && isEdgeJunk(cleaned.at(end - 1))) {
+		--end;
+	}
+	return cleaned.mid(start, end - start);
+}
+
 [[nodiscard]] QString CleanSowTag(const QString &raw) {
 	auto text = raw;
 	while (!text.isEmpty() && text.at(0) == u'#') {
@@ -516,31 +541,6 @@ constexpr auto kAugmentedNameTries = 100;
 		}
 	}
 	return false;
-}
-
-[[nodiscard]] QString CleanSaveNameText(const QString &raw) {
-	static const auto illegal = u"\\/:*?\"<>|"_q;
-	auto cleaned = QString();
-	cleaned.reserve(raw.size());
-	for (const auto ch : raw) {
-		if (ch.category() == QChar::Other_Control || illegal.contains(ch)) {
-			cleaned += u' ';
-		} else {
-			cleaned += ch;
-		}
-	}
-	const auto isEdgeJunk = [](QChar ch) {
-		return ch == u' ' || ch == u'.';
-	};
-	auto start = 0;
-	auto end = cleaned.size();
-	while (start < end && isEdgeJunk(cleaned.at(start))) {
-		++start;
-	}
-	while (end > start && isEdgeJunk(cleaned.at(end - 1))) {
-		--end;
-	}
-	return cleaned.mid(start, end - start);
 }
 
 [[nodiscard]] QString BuildAugmentedName(
