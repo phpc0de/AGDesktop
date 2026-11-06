@@ -51,6 +51,8 @@ base::options::toggle OptionDeadlockDetector({
 
 constexpr auto kCleanupIpcTimeout = 10 * crl::time(1000);
 constexpr auto kCleanupQuitTimeout = 30 * crl::time(1000);
+constexpr auto kShowResponseAttempts = 5;
+constexpr auto kShowResponseTimeoutMs = crl::time(1000);
 
 [[nodiscard]] QChar HexDigit(ushort value) {
 	value &= 0x000F;
@@ -424,6 +426,20 @@ void Sandbox::socketConnected() {
 
 	DEBUG_LOG(("Sandbox Info: writing commands %1").arg(commands));
 	_localSocket.write(commands.toLatin1());
+
+	// WHY: an unresponsive first instance must end this launch with a
+	// quit, never a fall-through to first-instance startup: that would
+	// crash on the locked log and tdata of the still-running instance.
+	for (auto attempt = 0; attempt != kShowResponseAttempts; ++attempt) {
+		if (Quitting()) {
+			return;
+		}
+		_localSocket.waitForReadyRead(kShowResponseTimeoutMs);
+	}
+	if (!Quitting()) {
+		LOG(("Show command response not received, activating anyway and quitting..."));
+		return Quit();
+	}
 }
 
 void Sandbox::socketWritten(qint64/* bytes*/) {
