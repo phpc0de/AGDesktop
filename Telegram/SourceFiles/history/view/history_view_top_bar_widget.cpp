@@ -1032,7 +1032,16 @@ void TopBarWidget::setActiveChat(
 				updateControlsGeometry();
 			}, _activeChatLifetime);
 
+			// WHY: the peer cache serializes chat/channel flags as 32-bit,
+			// so AyuNoForwards is lost on restart and restored only when a
+			// fresh constructor arrives; the tinted title must repaint then.
 			if (const auto channel = peer->asChannel()) {
+				Data::PeerFlagValue(
+					channel,
+					ChannelDataFlag::AyuNoForwards
+				) | rpl::on_next([=] {
+					update();
+				}, _activeChatLifetime);
 				if (channel->canEditStories()
 					&& !channel->owner().stories().albumIdsCountKnown(
 						channel->id,
@@ -1041,6 +1050,26 @@ void TopBarWidget::setActiveChat(
 						channel->id,
 						Data::kStoriesAlbumIdArchive);
 				}
+			} else if (const auto chat = peer->asChat()) {
+				Data::PeerFlagValue(
+					chat,
+					ChatDataFlag::AyuNoForwards
+				) | rpl::on_next([=] {
+					update();
+				}, _activeChatLifetime);
+			} else if (const auto user = peer->asUser()) {
+				Data::PeerFlagValue(
+					user,
+					UserDataFlag::NoForwardsPeerEnabled
+				) | rpl::on_next([=] {
+					update();
+				}, _activeChatLifetime);
+				Data::PeerFlagValue(
+					user,
+					UserDataFlag::NoForwardsMyEnabled
+				) | rpl::on_next([=] {
+					update();
+				}, _activeChatLifetime);
 			}
 		}
 

@@ -506,13 +506,24 @@ void AddDocumentActions(
 			isFaved ? &st::menuIconUnfave : &st::menuIconFave);
 	}
 	const auto recordedPath = SexCat::RecordedDocumentPath(document, contextId);
-	if (!document->filepath(true).isEmpty() || !recordedPath.isEmpty()) {
-		menu->addAction(
+	const auto hasPath = !recordedPath.isEmpty()
+		|| !document->filepath(true).isEmpty();
+	// WHY: a finished download can leave no openable path (streamed
+	// into media cache, or its library row deduped away); the downloaded
+	// badge uses the same registry, so mirror it instead of hiding.
+	const auto downloaded = hasPath
+		|| document->loadedInMediaCache()
+		|| Ayu::SexCat::IsDownloadedDocument(document);
+	if (downloaded) {
+		const auto action = menu->addAction(
 			(Platform::IsMac()
 				? tr::lng_context_show_in_finder(tr::now)
 				: tr::lng_context_show_in_folder(tr::now)),
 			[=] { ShowInFolder(document, recordedPath); },
 			&st::menuIconShowInFolder);
+		if (!hasPath) {
+			action->setEnabled(false);
+		}
 	}
 	if (document->hasAttachedStickers()) {
 		const auto controller = list->controller();
