@@ -159,6 +159,17 @@ dialogRowFilterTagSkip: 4px;
 dialogRowFilterTagStyle: TextStyle(defaultTextStyle) {
 	font: font(10px);
 }
+dialogsCheckpointMarkFont: font(10px);
+dialogsCheckpointMarkFg: dialogsTextFgService;
+dialogsCheckpointMarkSkip: 4px;
+dialogsGroupMarkSize: 10px;
+dialogsGroupMarkSkip: 2px;
+dialogsGroupMarkFg1: attentionButtonFg;
+dialogsGroupMarkFg2: dialogsDraftFg;
+dialogsGroupMarkFg3: boxTextFgGood;
+dialogsGroupMarkFg4: windowBgActive;
+dialogsGroupMarkFg5: windowActiveTextFg;
+dialogsGroupMarkFg6: dialogsTextFgService;
 dialogRowOpenBot: DialogRightButton {
 	button: RoundButton(defaultActiveButton) {
 		height: 20px;

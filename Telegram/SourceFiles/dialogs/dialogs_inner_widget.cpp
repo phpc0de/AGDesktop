@@ -134,6 +134,56 @@ constexpr auto kPreviewPostsLimit = 3;
 		| (static_cast<int64_t>(active) << 40);
 }
 
+[[nodiscard]] QString ChatGroupMarkLabel(uint8 index) {
+	static const auto labels = std::vector<QString>{
+		u"Red"_q,
+		u"Orange"_q,
+		u"Green"_q,
+		u"Blue"_q,
+		u"Indigo"_q,
+		u"Gray"_q,
+	};
+	return (index < labels.size()) ? labels[index] : QString();
+}
+
+void FillChatGroupMarkMenu(
+		const Window::PeerMenuCallback &addAction,
+		not_null<PeerData*> peer) {
+	const auto &settings = AyuSettings::getInstance();
+	const auto current = settings.chatGroupMarkColor(peer->id.value);
+	addAction(Ui::Menu::MenuCallback::Args{
+		.text = u"Set group mark"_q,
+		.handler = nullptr,
+		.icon = &st::menuIconChangeColors,
+		.fillSubmenu = [=](not_null<Ui::PopupMenu*> menu) {
+			const auto sub = Ui::Menu::CreateAddActionCallback(menu);
+			for (auto index = uint8(0);
+				index != kChatGroupMarkColorCount;
+				++index) {
+				sub({
+					.text = ChatGroupMarkLabel(index)
+						+ ((current && (*current == index)) ? u" \u2713"_q : QString()),
+					.handler = [=] {
+						AyuSettings::getInstance().setChatGroupMarkColor(
+							peer->id.value,
+							index);
+					},
+				});
+			}
+			sub({
+				.text = u"Clear mark"_q,
+				.icon = &st::menuIconClear,
+				.handler = [=] {
+					AyuSettings::getInstance().setChatGroupMarkColor(
+						peer->id.value,
+						std::nullopt);
+				},
+			});
+		},
+		.submenuSt = &st::foldersMenu,
+	});
+}
+
 [[nodiscard]] int FixedOnTopDialogsCount(not_null<Dialogs::IndexedList*> list) {
 	auto result = 0;
 	for (const auto &row : *list) {
@@ -1027,7 +1077,6 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 	auto dialogsClip = r;
 	const auto ms = crl::now();
 	const auto childListShown = _childListShown.current();
-	const auto folderTagsForce = AyuSettings::getInstance().folderTagsForce();
 	auto context = Ui::PaintContext{
 		.st = _st,
 		.topicJumpCache = _topicJumpCache.get(),
@@ -1123,9 +1172,7 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 		auto chatsFilterTags = std::vector<QImage*>();
 		if (context.narrow) {
 			context.chatsFilterTags = nullptr;
-		} else if (row->entry()->hasChatsFilterTags(
-				context.filter,
-				folderTagsForce)) {
+		} else if (row->entry()->hasChatsFilterTags(context.filter)) {
 			const auto a = active;
 			context.st = (forum || monoforum)
 				? &st::taggedForumDialogRow
@@ -1136,17 +1183,9 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 				- context.st->nameLeft;
 			auto more = uint8(0);
 			const auto &list = session().data().chatsFilters().list();
-			const auto force = folderTagsForce;
 			for (const auto &filter : list) {
 				if (!row->entry()->inChatList(filter.id())
-					|| (!force && filter.id() == context.filter)) {
-					continue;
-				}
-				if (!force
-					&& active
-					&& (filter.flags() & Data::ChatFilter::Flag::NoRead)
-					&& !filter.contains(history, true)) {
-					// Hack for History::fakeUnreadWhileOpened().
+					|| (filter.id() == context.filter)) {
 					continue;
 				}
 				if (const auto tag = cacheChatsFilterTag(filter, 0, a)) {
@@ -4093,6 +4132,9 @@ void InnerWidget::contextMenuEvent(QContextMenuEvent *e) {
 				.filterId = _filterId,
 			},
 			addAction);
+		if (const auto history = row.key.history()) {
+			FillChatGroupMarkMenu(addAction, history->peer);
+		}
 	}
 	QObject::connect(_menu.get(), &QObject::destroyed, [=] {
 		if (_menuRow.key) {

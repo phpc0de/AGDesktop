@@ -52,7 +52,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_window.h"
 
 // AyuGram includes
+#include "ayu/data/messages_storage.h"
 #include "ayu/features/filters/filters_controller.h"
+#include "base/flat_map.h"
 #include "styles/style_ayu_icons.h"
 
 
@@ -109,6 +111,46 @@ void PaintRowTopRight(
 		rectForName.left() + rectForName.width() + st::dialogsDateSkip,
 		rectForName.top() + st::semiboldFont->height - st::normalFont->descent,
 		text);
+}
+
+constexpr auto kCheckpointMarkTtl = crl::time(10 * 1000);
+
+struct CheckpointMark {
+	QString text;
+	int width = 0;
+};
+
+// WHY: the checkpoint lookup is a DB query, so it is cached per-peer and
+// refreshed at most once per TTL while the list paints.
+CheckpointMark ResolveCheckpointMark(not_null<History*> history, crl::time now) {
+	struct CacheEntry {
+		crl::time at = 0;
+		ID checkpointId = 0;
+	};
+	using CacheKey = std::pair<uint64, uint64>;
+	static base::flat_map<CacheKey, CacheEntry> cache;
+	if (cache.size() > 1024) {
+		cache.clear();
+	}
+	const auto key = CacheKey{
+		uint64(history->session().userId().bare & PeerId::kChatTypeMask),
+		uint64(history->peer->id.value) };
+	auto &entry = cache[key];
+	if (!entry.at || (now - entry.at) >= kCheckpointMarkTtl) {
+		entry.at = now;
+		entry.checkpointId = 0;
+		if (const auto checkpoint
+			= AyuMessages::getLatestCheckpoint(history->peer)) {
+			entry.checkpointId = checkpoint->messageId;
+		}
+	}
+	auto result = CheckpointMark();
+	if (entry.checkpointId) {
+		result.text = u"\u23F1%1/%2"_q.arg(history->maxMsgId().bare).arg(
+			entry.checkpointId);
+		result.width = st::dialogsCheckpointMarkFont->width(result.text);
+	}
+	return result;
 }
 
 int PaintRightButtonImpl(QPainter &p, const PaintContext &context) {
@@ -996,6 +1038,43 @@ void PaintRow(
 			const auto muteTop = rectForName.top()
 				+ (st::semiboldFont->height - muteIcon.height()) / 2;
 			muteIcon.paint(p, muteLeft, muteTop, context.width);
+		}
+		if (from->isBroadcast() && history && history->maxMsgId() > 0) {
+			const auto mark = ResolveCheckpointMark(history, context.now);
+			if (!mark.text.isEmpty()) {
+				const auto nameW = std::min(
+					rowName.maxWidth(),
+					rectForName.width());
+				const auto muteTaken = drawMuteIcon
+					? (ThreeStateIcon(
+						st::dialogsMuteIcon,
+						context.active,
+						context.selected).width()
+						+ st::dialogsMuteIconSkip)
+					: 0;
+				const auto left = rectForName.left()
+					+ nameW
+					+ badgeWidth
+					+ muteTaken
+					+ st::dialogsCheckpointMarkSkip;
+				const auto right = rectForName.left()
+					+ rectForName.width()
+					+ badgeWidth
+					+ muteTaken;
+				if (left + mark.width <= right) {
+					p.setFont(st::dialogsCheckpointMarkFont);
+					p.setPen(context.active
+						? st::dialogsTextFgActive
+						: context.selected
+						? st::dialogsTextFgOver
+						: st::dialogsCheckpointMarkFg);
+					p.drawText(
+						left,
+						rectForName.top() + st::semiboldFont->height
+							- st::normalFont->descent,
+						mark.text);
+				}
+			}
 		}
 	} else if (hiddenSenderInfo) {
 		p.setPen(context.active

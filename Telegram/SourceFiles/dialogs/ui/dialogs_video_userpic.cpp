@@ -18,7 +18,27 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/painter.h"
 #include "styles/style_dialogs.h"
 
+// [R:67494147] includes
+#include "ayu/ayu_settings.h"
+
+
 namespace Dialogs::Ui {
+
+namespace {
+
+const style::color &ChatGroupMarkColor(uint8 index) {
+	switch (index) {
+	case 0: return st::dialogsGroupMarkFg1;
+	case 1: return st::dialogsGroupMarkFg2;
+	case 2: return st::dialogsGroupMarkFg3;
+	case 3: return st::dialogsGroupMarkFg4;
+	case 4: return st::dialogsGroupMarkFg5;
+	case 5: return st::dialogsGroupMarkFg6;
+	}
+	return st::dialogsGroupMarkFg1;
+}
+
+} // namespace
 
 VideoUserpic::VideoUserpic(not_null<PeerData*> peer, Fn<void()> repaint)
 : _peer(peer)
@@ -150,6 +170,19 @@ void PaintUserpic(
 			context.width,
 			context.st->photoSize,
 			context.paused);
+		if (const auto mark
+			= AyuSettings::getInstance().chatGroupMarkColor(peer->id.value)) {
+			const auto size = st::dialogsGroupMarkSize;
+			const auto left = context.st->padding.left()
+				+ context.st->photoSize
+				+ st::dialogsGroupMarkSkip;
+			const auto top = context.st->padding.top()
+				+ (context.st->photoSize - size) / 2;
+			p.setPen(Qt::NoPen);
+			p.setBrush(ChatGroupMarkColor(*mark));
+			auto hq = PainterHighQualityEnabler(p);
+			p.drawEllipse(left, top, size, size);
+		}
 	} else {
 		entry->paintUserpic(p, view, context);
 	}

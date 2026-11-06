@@ -182,9 +182,7 @@ public:
 		return _chatListPeerBadge;
 	}
 
-	[[nodiscard]] bool hasChatsFilterTags(
-		FilterId exclude,
-		std::optional<bool> force = std::nullopt) const;
+	[[nodiscard]] bool hasChatsFilterTags(FilterId exclude = 0) const;
 protected:
 	void notifyUnreadStateChange(const UnreadState &wasState);
 	inline auto unreadStateChangeNotifier(bool required);

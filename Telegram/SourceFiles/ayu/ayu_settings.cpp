@@ -479,6 +479,28 @@ void AyuSettings::removeShadowBan(int64 id) {
 	}
 }
 
+std::optional<uint8> AyuSettings::chatGroupMarkColor(uint64 peerId) const {
+	const auto it = _chatGroupMarks.find(peerId);
+	if (it == end(_chatGroupMarks)) {
+		return std::nullopt;
+	}
+	return it->second;
+}
+
+void AyuSettings::setChatGroupMarkColor(
+		uint64 peerId,
+		std::optional<uint8> colorIndex) {
+	if (colorIndex) {
+		if (*colorIndex >= kChatGroupMarkColorCount) {
+			return;
+		}
+		_chatGroupMarks[peerId] = *colorIndex;
+	} else if (_chatGroupMarks.erase(peerId) == 0) {
+		return;
+	}
+	save();
+}
+
 void AyuSettings::validate() {
 	AyuSettings defaults;
 	auto modified = false;
@@ -1105,6 +1127,11 @@ void to_json(nlohmann::json &j, const AyuSettings &s) {
 		ghostAccounts[std::to_string(key)] = *value;
 	}
 
+	auto chatGroupMarks = nlohmann::json::object();
+	for (const auto &[key, value] : s._chatGroupMarks) {
+		chatGroupMarks[std::to_string(key)] = int(value);
+	}
+
 	j = nlohmann::json{
 		{"ghostModeSettings", ghostAccounts},
 		{"useGlobalGhostMode", s._useGlobalGhostMode.current()},
@@ -1113,6 +1140,7 @@ void to_json(nlohmann::json &j, const AyuSettings &s) {
 		{"saveMessagesHistory", s._saveMessagesHistory.current()},
 		{"saveForBots", s._saveForBots.current()},
 		{"shadowBanIds", s._shadowBanIds},
+		{"chatGroupMarks", chatGroupMarks},
 		{"filtersEnabled", s._filtersEnabled.current()},
 		{"filtersEnabledInChats", s._filtersEnabledInChats.current()},
 		{"folderTagsForce", s._folderTagsForce.current()},
@@ -1222,6 +1250,18 @@ void from_json(const nlohmann::json &j, AyuSettings &s) {
 	s._saveMessagesHistory = j.value("saveMessagesHistory", defaults._saveMessagesHistory.current());
 	s._saveForBots = j.value("saveForBots", defaults._saveForBots.current());
 	s._shadowBanIds = j.value("shadowBanIds", defaults._shadowBanIds);
+	if (j.contains("chatGroupMarks") && j["chatGroupMarks"].is_object()) {
+		s._chatGroupMarks.clear();
+		for (const auto &[key, value] : j["chatGroupMarks"].items()) {
+			if (!value.is_number_integer()) {
+				continue;
+			}
+			const auto color = value.get<int>();
+			if (color >= 0 && color < kChatGroupMarkColorCount) {
+				s._chatGroupMarks[std::stoull(key)] = uint8(color);
+			}
+		}
+	}
 	s._filtersEnabled = j.value("filtersEnabled", defaults._filtersEnabled.current());
 	s._filtersEnabledInChats = j.value("filtersEnabledInChats", defaults._filtersEnabledInChats.current());
 	s._folderTagsForce = j.value("folderTagsForce", defaults._folderTagsForce.current());

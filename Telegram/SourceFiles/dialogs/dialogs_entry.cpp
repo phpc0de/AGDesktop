@@ -31,7 +31,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "ayu/utils/telegram_helpers.h"
-#include "ayu/ayu_settings.h"
 #include "ui/chat/chat_style.h"
 
 
@@ -538,21 +537,13 @@ void Entry::updateChatListEntryHeight() {
 	session().changes().entryUpdated(this, Data::EntryUpdate::Flag::Height);
 }
 
-bool Entry::hasChatsFilterTags(
-		FilterId exclude,
-		std::optional<bool> force) const {
-	const auto forced = force
-		? *force
-		: AyuSettings::getInstance().folderTagsForce();
-	if (!owner().chatsFilters().tagsEnabled() && !forced) {
+// WHY: tag chips are synthesized locally, so neither the server premium
+// tagsEnabled flag nor an extra toggle may gate the row rendering path.
+bool Entry::hasChatsFilterTags(FilterId exclude) const {
+	if (exclude
+		&& _tagColors.size() == 1
+		&& _tagColors.begin()->first == exclude) {
 		return false;
-	}
-	if (exclude && !forced) {
-		if (_tagColors.size() == 1) {
-			if (_tagColors.begin()->first == exclude) {
-				return false;
-			}
-		}
 	}
 	return !_tagColors.empty();
 }

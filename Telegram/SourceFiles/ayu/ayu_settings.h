@@ -51,6 +51,9 @@ enum class SendWithoutSoundOption {
 	Always = 2,
 };
 
+// Chat group mark (DIY): enumerated colors, one index per dialogs row dot.
+inline constexpr uint8 kChatGroupMarkColorCount = 6;
+
 NLOHMANN_JSON_SERIALIZE_ENUM(PeerIdDisplay, {
 	{PeerIdDisplay::Hidden, 0},
 	{PeerIdDisplay::TelegramApi, 1},
@@ -264,6 +267,9 @@ public:
 	void removeShadowBan(int64 id);
 	[[nodiscard]] bool isShadowBanned(const int64 id) const { return _shadowBanIds.contains(id); }
 	[[nodiscard]] const std::unordered_set<int64> &shadowBanIds() const { return _shadowBanIds; }
+
+	[[nodiscard]] std::optional<uint8> chatGroupMarkColor(uint64 peerId) const;
+	void setChatGroupMarkColor(uint64 peerId, std::optional<uint8> colorIndex);
 
 	void validate();
 
@@ -645,6 +651,7 @@ private:
 	rpl::variable<bool> _saveMessagesHistory = true;
 	rpl::variable<bool> _saveForBots = false;
 	std::unordered_set<int64> _shadowBanIds;
+	std::map<uint64, uint8> _chatGroupMarks;
 	rpl::variable<bool> _filtersEnabled = false;
 	rpl::variable<bool> _filtersEnabledInChats = false;
 	rpl::variable<bool> _folderTagsForce = false;
