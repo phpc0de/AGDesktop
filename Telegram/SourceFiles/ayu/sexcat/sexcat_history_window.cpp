@@ -10,6 +10,7 @@
 #include "ayu/sexcat/sexcat_folder_scan.h"
 #include "ayu/sexcat/sexcat_hash_store.h"
 #include "ayu/sexcat/sexcat_save_hook.h"
+#include "ayu/sexcat/sexcat_shell_watch.h"
 #include "ayu/ui/toasts.h"
 #include "base/unixtime.h"
 #include "core/application.h"
@@ -45,6 +46,8 @@
 #include <QSignalBlocker>
 #include <QTreeWidget>
 #include <QVBoxLayout>
+
+#include <optional>
 
 namespace SexCat {
 namespace {
@@ -448,6 +451,10 @@ private:
 		if (!row) {
 			return;
 		}
+		if (row->lost) {
+			relocateByDirectory(id);
+			return;
+		}
 		const auto oldDir = QFileInfo(row->savedPath).absolutePath();
 		const auto file = QFileDialog::getOpenFileName(
 			this,
@@ -507,6 +514,69 @@ private:
 		row->hashMismatch = false;
 		reload();
 		Ui::Toast::Show(tr::lng_sexcat_verify_ok(tr::now));
+	}
+
+	void relocateByDirectory(uint64 id) {
+		const auto row = findRow(id);
+		if (!row || row->verifying) {
+			return;
+		}
+		const auto oldDir = QFileInfo(row->savedPath).absolutePath();
+		const auto dir = QFileDialog::getExistingDirectory(
+			this,
+			tr::lng_sexcat_relocate(tr::now),
+			QFileInfo::exists(oldDir) ? oldDir : QString());
+		if (dir.isEmpty()) {
+			return;
+		}
+		row->verifying = true;
+		refreshRow(id);
+		const auto name = row->fileName;
+		const auto size = row->fileSize;
+		crl::async([dir, name, size, weak = QPointer<HistoryWindow>(this), id] {
+			auto found = SexCat::LocateByNameSize(dir, name, size);
+			crl::on_main([weak, id, found = std::move(found)] {
+				if (weak) {
+					weak->finishDirectoryRelocation(id, std::move(found));
+				}
+			});
+		});
+	}
+
+	void finishDirectoryRelocation(uint64 id, std::optional<QString> found) {
+		const auto row = findRow(id);
+		if (!row) {
+			return;
+		}
+		row->verifying = false;
+		if (!found) {
+			refreshRow(id);
+			Ui::Toast::Show(u"File not found in the selected folder"_q);
+			return;
+		}
+		if (*found == row->savedPath) {
+			row->lost = false;
+			refreshRow(id);
+			return;
+		}
+		SexCat::RelinkMovedEntry(
+			SexCat::Entry{
+				.id = int64(row->id),
+				.sha256 = row->sha256,
+				.file_name = row->fileName,
+				.saved_path = row->savedPath,
+				.file_size = row->fileSize,
+				.src_peer_id = int64(row->srcPeerId.value),
+				.src_msg_id = row->srcMsgId.bare,
+				.src_title = row->srcTitle,
+				.src_attach = row->srcAttach,
+				.saved_at = TimeId(row->savedAt),
+			},
+			*found);
+		row->savedPath = *found;
+		row->lost = false;
+		refreshRow(id);
+		Ui::Toast::Show(u"Relocated: "_q + *found);
 	}
 
 	void openFolder(uint64 id) {
@@ -576,6 +646,11 @@ private:
 		menu->addAction(tr::lng_sexcat_open_folder(tr::now), [=] {
 			openFolder(id);
 		});
+		if (row->srcPeerId != PeerId(0) && row->srcMsgId != MsgId(0)) {
+			menu->addAction(tr::lng_context_to_msg(tr::now), [=] {
+				jumpToSource(id);
+			});
+		}
 		menu->addAction(tr::lng_sexcat_relocate(tr::now), [=] {
 			relocateRow(id);
 		});

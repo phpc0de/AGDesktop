@@ -14,12 +14,19 @@
 
 #include <QtWidgets/QWidget>
 
+#include <QtCore/QStandardPaths>
 #include <QDir>
+#include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
 
+#include <crl/crl.h>
+
 #include <array>
 #include <exception>
+#include <optional>
+#include <set>
+#include <vector>
 
 #ifdef Q_OS_WIN
 #include <windows.h>
@@ -29,11 +36,215 @@
 namespace SexCat {
 namespace {
 
-#ifdef Q_OS_WIN
-
 void LogFailure(const QString &message) {
 	Ayu::Log::Write(u"sexcat"_q, message);
 }
+
+constexpr auto kRelocateFiles = 5000;
+constexpr auto kRelocateDepth = 2;
+constexpr auto kRelocateMs = crl::time(2000);
+constexpr auto kManualRelocateFiles = 20000;
+constexpr auto kManualRelocateDepth = 4;
+constexpr auto kManualRelocateMs = crl::time(10'000);
+
+struct RelocateBudget {
+	int filesLeft = 0;
+	int depthLeft = 0;
+	crl::time deadline = 0;
+};
+
+[[nodiscard]] QString DriveRoot(const QString &path) {
+	const auto absolute = QFileInfo(path).absoluteFilePath();
+	const auto index = absolute.indexOf('/');
+	return (index > 0) ? absolute.left(index + 1) : QString();
+}
+
+[[nodiscard]] bool SameDrive(const QString &path, const QString &drive) {
+	return !drive.isEmpty()
+		&& DriveRoot(path).compare(drive, Qt::CaseInsensitive) == 0;
+}
+
+void ScanForMatch(
+		const QString &root,
+		const QString &name,
+		int64 size,
+		RelocateBudget &budget,
+		QString &found) {
+	if (!found.isEmpty()
+		|| budget.filesLeft <= 0
+		|| budget.depthLeft <= 0
+		|| crl::now() >= budget.deadline) {
+		return;
+	}
+	auto files = QDirIterator(root, QDir::Files | QDir::NoDotAndDotDot);
+	while (files.hasNext()) {
+		const auto path = files.next();
+		--budget.filesLeft;
+		const auto info = QFileInfo(path);
+		if (info.fileName().compare(name, Qt::CaseInsensitive) == 0
+			&& info.size() == size) {
+			found = path;
+			return;
+		}
+		if (budget.filesLeft <= 0 || crl::now() >= budget.deadline) {
+			return;
+		}
+	}
+	auto folders = QDirIterator(
+		root,
+		QDir::Dirs | QDir::NoDotAndDotDot | QDir::NoSymLinks);
+	while (folders.hasNext()) {
+		const auto path = folders.next();
+		--budget.depthLeft;
+		ScanForMatch(path, name, size, budget, found);
+		++budget.depthLeft;
+		if (!found.isEmpty()
+			|| budget.filesLeft <= 0
+			|| crl::now() >= budget.deadline) {
+			return;
+		}
+	}
+}
+
+// Every call runs on the main thread, so the set needs no mutex.
+std::set<int64> &RelocateInFlight() {
+	static std::set<int64> result;
+	return result;
+}
+
+void AppendCandidate(
+		std::vector<QString> &roots,
+		const QString &drive,
+		const QString &path) {
+	const auto absolute = QFileInfo(path).absoluteFilePath();
+	if (absolute.isEmpty()
+		|| !SameDrive(absolute, drive)
+		|| !QFileInfo(absolute).isDir()) {
+		return;
+	}
+	for (const auto &root : roots) {
+		if (root.compare(absolute, Qt::CaseInsensitive) == 0) {
+			return;
+		}
+	}
+	roots.push_back(absolute);
+}
+
+std::vector<QString> RelocateCandidates(const QString &oldPath) {
+	auto roots = std::vector<QString>();
+	const auto drive = DriveRoot(oldPath);
+	const auto oldDir = QFileInfo(oldPath).absolutePath();
+	AppendCandidate(roots, drive, QFileInfo(oldDir).absolutePath());
+	const auto desktop = QStandardPaths::writableLocation(
+		QStandardPaths::DesktopLocation);
+	if (!desktop.isEmpty()) {
+		const auto profile = QFileInfo(desktop).absolutePath();
+		for (const auto &info
+			: QDir(profile).entryInfoList(
+				QDir::Dirs | QDir::NoDotAndDotDot | QDir::NoSymLinks)) {
+			AppendCandidate(roots, drive, info.absoluteFilePath());
+		}
+		AppendCandidate(roots, drive, desktop);
+	}
+	AppendCandidate(
+		roots,
+		drive,
+		QStandardPaths::writableLocation(QStandardPaths::DownloadLocation));
+	AppendCandidate(
+		roots,
+		drive,
+		QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation));
+	return roots;
+}
+
+} // namespace
+
+void RelinkMovedEntry(const Entry &entry, const QString &newPath) {
+	if (newPath.isEmpty() || !Database::instance().Relink(entry.id, newPath)) {
+		return;
+	}
+	if (entry.sha256.size() == 32) {
+		const auto peer = PeerId(uint64(entry.src_peer_id));
+		const auto msg = MsgId(entry.src_msg_id);
+		if (!HashStore::WriteAds(newPath, entry.sha256, peer, msg)) {
+			HashStore::TrySidecar(newPath, entry.sha256, peer, msg);
+		}
+	}
+	if (QFileInfo::exists(entry.saved_path + u".sexcat.json"_q)) {
+		QFile::remove(newPath + u".sexcat.json"_q);
+		QFile::rename(
+			entry.saved_path + u".sexcat.json"_q,
+			newPath + u".sexcat.json"_q);
+	}
+	LogFailure(
+		u"shell watch relocated %1 -> %2"_q.arg(entry.saved_path, newPath));
+}
+
+// Searches common move destinations and relinks the entry when found.
+void TryAutoRelocate(const Entry &entry) {
+	if (entry.id <= 0
+		|| entry.file_size <= 0
+		|| entry.file_name.isEmpty()
+		|| entry.saved_path.isEmpty()) {
+		return;
+	}
+	if (!RelocateInFlight().insert(entry.id).second) {
+		return;
+	}
+	crl::async([entry] {
+		auto found = QString();
+		auto budget = RelocateBudget{
+			.filesLeft = kRelocateFiles,
+			.depthLeft = kRelocateDepth,
+			.deadline = crl::now() + kRelocateMs,
+		};
+		for (const auto &root : RelocateCandidates(entry.saved_path)) {
+			ScanForMatch(
+				root,
+				entry.file_name,
+				entry.file_size,
+				budget,
+				found);
+			if (!found.isEmpty()) {
+				break;
+			}
+		}
+		crl::on_main([entry, found] {
+			RelocateInFlight().erase(entry.id);
+			if (!found.isEmpty()) {
+				RelinkMovedEntry(entry, found);
+			} else {
+				LogFailure(
+					u"relocate search found nothing, row stays missing: %1"_q
+					.arg(entry.saved_path));
+			}
+		});
+	});
+}
+
+std::optional<QString> LocateByNameSize(
+		const QString &root,
+		const QString &fileName,
+		int64 fileSize) {
+	if (root.isEmpty() || fileName.isEmpty() || fileSize <= 0) {
+		return std::nullopt;
+	}
+	auto found = QString();
+	auto budget = RelocateBudget{
+		.filesLeft = kManualRelocateFiles,
+		.depthLeft = kManualRelocateDepth,
+		.deadline = crl::now() + kManualRelocateMs,
+	};
+	ScanForMatch(root, fileName, fileSize, budget, found);
+	if (found.isEmpty()) {
+		return std::nullopt;
+	}
+	return found;
+}
+
+namespace {
+
+#ifdef Q_OS_WIN
 
 constexpr auto kShellChangeMessage = WM_APP + 0x0351;
 
@@ -119,6 +330,19 @@ void HandleUpdate(const QString &path) {
 	}
 }
 
+void HandleDeleted(const QString &path) {
+	if (path.isEmpty() || QFileInfo::exists(path)) {
+		return;
+	}
+	const auto entry = Database::instance().LookupByPath(path);
+	if (!entry) {
+		return;
+	}
+	// WHY: a move out of the watched tree arrives as a bare delete, so
+	// likely destinations are searched before the row is left missing.
+	TryAutoRelocate(*entry);
+}
+
 void ProcessChangeEvent(
 		LONG event,
 		const QString &oldPath,
@@ -135,6 +359,10 @@ void ProcessChangeEvent(
 	} else if (event == SHCNE_UPDATEITEM) {
 		if (!path.isEmpty()) {
 			HandleUpdate(path);
+		}
+	} else if (event == SHCNE_DELETE) {
+		if (!path.isEmpty()) {
+			HandleDeleted(path);
 		}
 	}
 }
@@ -181,7 +409,7 @@ protected:
 			if (event == SHCNE_RENAMEITEM || event == SHCNE_RENAMEFOLDER) {
 				oldPath = read(pidls ? pidls[0] : nullptr);
 				newPath = read(pidls ? pidls[1] : nullptr);
-			} else if (event == SHCNE_UPDATEITEM) {
+			} else if (event == SHCNE_UPDATEITEM || event == SHCNE_DELETE) {
 				path = read(pidls ? pidls[0] : nullptr);
 			}
 			SHChangeNotification_Unlock(lock);
@@ -211,7 +439,8 @@ void RegisterShellWatch() {
 	const auto registered = SHChangeNotifyRegister(
 		reinterpret_cast<HWND>(window->winId()),
 		SHCNRF_NewDelivery | SHCNRF_InterruptLevel | SHCNRF_ShellLevel,
-		SHCNE_RENAMEITEM | SHCNE_RENAMEFOLDER | SHCNE_UPDATEITEM,
+		SHCNE_RENAMEITEM | SHCNE_RENAMEFOLDER | SHCNE_UPDATEITEM
+			| SHCNE_DELETE,
 		kShellChangeMessage,
 		1,
 		&entry);
