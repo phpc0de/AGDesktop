@@ -137,8 +137,7 @@ constexpr Scheme::CtorDesc kEnvelopeCtors[] = {
 [[nodiscard]] QString EscapeBytes(const QByteArray &bytes) {
 	auto result = QString();
 	result.reserve(bytes.size() + 2);
-	for (const auto byte : bytes) {
-		const auto code = uchar(byte);
+	const auto escapeAscii = [&](uchar code) {
 		switch (code) {
 		case '\\': result += u"\\\\"_q; break;
 		case '"': result += u"\\\""_q; break;
@@ -153,19 +152,57 @@ constexpr Scheme::CtorDesc kEnvelopeCtors[] = {
 			}
 			break;
 		}
+	};
+	// WHY: strings are UTF-8 on the wire; mapping single bytes to QChars
+	// renders mojibake, so valid runs surface as real characters and only
+	// invalid bytes fall back to \xNN.
+	const auto text = QString::fromUtf8(bytes);
+	if (text.toUtf8() == bytes) {
+		auto plain = QString();
+		const auto flush = [&] {
+			if (!plain.isEmpty()) {
+				result += plain;
+				plain.clear();
+			}
+		};
+		for (const auto &ch : text) {
+			if (ch.unicode() >= 0x80) {
+				plain += ch;
+			} else {
+				flush();
+				escapeAscii(uchar(ch.unicode()));
+			}
+		}
+		flush();
+	} else {
+		for (const auto byte : bytes) {
+			const auto code = uchar(byte);
+			if (code >= 0x80) {
+				result += u"\\x%1"_q.arg(code, 2, 16, QChar(u'0'));
+			} else {
+				escapeAscii(code);
+			}
+		}
 	}
 	return result;
 }
 
 [[nodiscard]] QByteArray UnescapeBytes(const QString &text) {
 	auto result = QByteArray();
-	result.reserve(text.size());
+	auto plain = QString();
+	const auto flush = [&] {
+		if (!plain.isEmpty()) {
+			result += plain.toUtf8();
+			plain.clear();
+		}
+	};
 	for (auto i = 0; i != text.size(); ++i) {
 		const auto ch = text[i];
 		if (ch != QChar(u'\\') || i + 1 >= text.size()) {
-			result += char(ch.unicode());
+			plain += ch;
 			continue;
 		}
+		flush();
 		const auto next = text[++i];
 		switch (next.unicode()) {
 		case '\\': result += '\\'; break;
@@ -186,6 +223,7 @@ constexpr Scheme::CtorDesc kEnvelopeCtors[] = {
 		default: result += char(next.unicode()); break;
 		}
 	}
+	flush();
 	return result;
 }
 
@@ -612,20 +650,9 @@ void PackBytes(const QByteArray &bytes, QVector<mtpPrime> &out) {
 				continue;
 			}
 			if (type == u"true"_q) {
-				// WHY: a set flags.N?true field still carries its boolTrue
-				// word on the wire; not consuming it shifts every later
-				// field by one prime and garbles the rest of the ctor.
-				if (!reader.remaining(1)) {
-					reader.from = reader.end;
-					out += pad + u"  // <buffer end>\n"_q;
-					return out;
-				}
-				const auto marker = uint32_t(*reader.from++);
-				auto line = pad + u"  %1: %2\n"_q.arg(name).arg(
-					marker == mtpc_boolTrue
-						? u"true"_q
-						: u"true <marker 0x%1>"_q.arg(
-							marker, 8, 16, QChar(u'0')));
+				// WHY: flags.N?true is virtual — the bit alone carries it,
+				// so consuming a word here shifts every later field.
+				auto line = pad + u"  %1: true\n"_q.arg(name);
 				attachNote(line, name);
 				out += line;
 				continue;
@@ -1088,9 +1115,12 @@ void PackBytes(const QByteArray &bytes, QVector<mtpPrime> &out) {
 		}
 		if (expect == u"Bool"_q) {
 			const auto value = uint32_t(*reader.from++);
-			return Counted(reader, pad + u"%1%2\n"_q
-				.arg(prefix)
-				.arg(value == mtpc_boolTrue ? u"true"_q : u"false"_q));
+			const auto text = (value == mtpc_boolTrue)
+				? u"true"_q
+				: (value == mtpc_boolFalse)
+				? u"false"_q
+				: u"false <marker 0x%1>"_q.arg(value, 8, 16, QChar(u'0'));
+			return Counted(reader, pad + u"%1%2\n"_q.arg(prefix).arg(text));
 		}
 		if (expect == u"true"_q) {
 			return Counted(reader, pad + u"%1true\n"_q.arg(prefix));
