@@ -18,9 +18,11 @@ SCHEMES = [
 OUT = os.path.join(ROOT, 'Telegram/SourceFiles/ayu/debug/mtp_scheme_table.h')
 
 ctor_re = re.compile(
-    r'^([a-zA-Z_][\w.]*)#([0-9a-fA-F]{1,8})\s+(.*?)\s*=\s*([\w.]+);$')
+    r'^([a-zA-Z_][\w.]*)#([0-9a-fA-F]{1,8})\s+(.*?)\s*=\s*([\w.]+(?:<[^;]+>)?);$')
 field_re = re.compile(r'^([\w#]+):(.+)$')
-opt_re = re.compile(r'^flags\.(\d+)\?(.+)$')
+# flags2+ groups exist (user#..., channel#...): encode their bit as
+# (group << 8) | N so decoders can address the right "#" field.
+opt_re = re.compile(r'^(flags\d*)\.(\d+)\?(.+)$')
 
 ctors = {}
 order = []
@@ -47,8 +49,10 @@ for path in SCHEMES:
                 bit = 0xFFFF
                 om = opt_re.match(ftype)
                 if om:
-                    bit = int(om.group(1))
-                    ftype = om.group(2)
+                    grp = om.group(1)
+                    grpnum = int(grp[5:]) if len(grp) > 5 else 0
+                    bit = (grpnum << 8) | int(om.group(2))
+                    ftype = om.group(3)
                 ftype = ftype.replace('%', '')
                 fields.append((fname, ftype, bit))
         ctors[key] = (name, parent, fields)

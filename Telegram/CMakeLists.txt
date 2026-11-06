@@ -120,6 +120,8 @@ set(ayugram_files
         ayu/ayu_lang.h
         ayu/ayu_infra.cpp
         ayu/ayu_infra.h
+        ayu/debug/mtp_ctor_notes.cpp
+        ayu/debug/mtp_ctor_notes.h
         ayu/debug/mtp_devtools.cpp
         ayu/debug/mtp_devtools.h
         ayu/debug/mtp_tl_codec.cpp

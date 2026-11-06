@@ -624,18 +624,18 @@ inline constexpr FieldDesc kFields121[] = {
 	{"premium", "true", 28},
 	{"attach_menu_enabled", "true", 29},
 	{"flags2", "#", 65535},
-	{"bot_can_edit", "flags2.1?true", 65535},
-	{"close_friend", "flags2.2?true", 65535},
-	{"stories_hidden", "flags2.3?true", 65535},
-	{"stories_unavailable", "flags2.4?true", 65535},
-	{"contact_require_premium", "flags2.10?true", 65535},
-	{"bot_business", "flags2.11?true", 65535},
-	{"bot_has_main_app", "flags2.13?true", 65535},
-	{"bot_forum_view", "flags2.16?true", 65535},
-	{"bot_forum_can_manage_topics", "flags2.17?true", 65535},
-	{"bot_can_manage_bots", "flags2.18?true", 65535},
-	{"bot_guestchat", "flags2.19?true", 65535},
-	{"bot_guard", "flags2.20?true", 65535},
+	{"bot_can_edit", "true", 513},
+	{"close_friend", "true", 514},
+	{"stories_hidden", "true", 515},
+	{"stories_unavailable", "true", 516},
+	{"contact_require_premium", "true", 522},
+	{"bot_business", "true", 523},
+	{"bot_has_main_app", "true", 525},
+	{"bot_forum_view", "true", 528},
+	{"bot_forum_can_manage_topics", "true", 529},
+	{"bot_can_manage_bots", "true", 530},
+	{"bot_guestchat", "true", 531},
+	{"bot_guard", "true", 532},
 	{"id", "long", 65535},
 	{"access_hash", "long", 0},
 	{"first_name", "string", 1},
@@ -649,14 +649,14 @@ inline constexpr FieldDesc kFields121[] = {
 	{"bot_inline_placeholder", "string", 19},
 	{"lang_code", "string", 22},
 	{"emoji_status", "EmojiStatus", 30},
-	{"usernames", "flags2.0?Vector<Username>", 65535},
-	{"stories_max_id", "flags2.5?RecentStory", 65535},
-	{"color", "flags2.8?PeerColor", 65535},
-	{"profile_color", "flags2.9?PeerColor", 65535},
-	{"bot_active_users", "flags2.12?int", 65535},
-	{"bot_verification_icon", "flags2.14?long", 65535},
-	{"send_paid_messages_stars", "flags2.15?long", 65535},
-	{"linked_community_id", "flags2.21?long", 65535},
+	{"usernames", "Vector<Username>", 512},
+	{"stories_max_id", "RecentStory", 517},
+	{"color", "PeerColor", 520},
+	{"profile_color", "PeerColor", 521},
+	{"bot_active_users", "int", 524},
+	{"bot_verification_icon", "long", 526},
+	{"send_paid_messages_stars", "long", 527},
+	{"linked_community_id", "long", 533},
 };
 
 inline constexpr FieldDesc kFields123[] = {
@@ -742,14 +742,14 @@ inline constexpr FieldDesc kFields133[] = {
 	{"join_request", "true", 29},
 	{"forum", "true", 30},
 	{"flags2", "#", 65535},
-	{"stories_hidden", "flags2.1?true", 65535},
-	{"stories_hidden_min", "flags2.2?true", 65535},
-	{"stories_unavailable", "flags2.3?true", 65535},
-	{"signature_profiles", "flags2.12?true", 65535},
-	{"autotranslation", "flags2.15?true", 65535},
-	{"broadcast_messages_allowed", "flags2.16?true", 65535},
-	{"monoforum", "flags2.17?true", 65535},
-	{"forum_tabs", "flags2.19?true", 65535},
+	{"stories_hidden", "true", 513},
+	{"stories_hidden_min", "true", 514},
+	{"stories_unavailable", "true", 515},
+	{"signature_profiles", "true", 524},
+	{"autotranslation", "true", 527},
+	{"broadcast_messages_allowed", "true", 528},
+	{"monoforum", "true", 529},
+	{"forum_tabs", "true", 531},
 	{"id", "long", 65535},
 	{"access_hash", "long", 13},
 	{"title", "string", 65535},
@@ -761,17 +761,17 @@ inline constexpr FieldDesc kFields133[] = {
 	{"banned_rights", "ChatBannedRights", 15},
 	{"default_banned_rights", "ChatBannedRights", 18},
 	{"participants_count", "int", 17},
-	{"usernames", "flags2.0?Vector<Username>", 65535},
-	{"stories_max_id", "flags2.4?RecentStory", 65535},
-	{"color", "flags2.7?PeerColor", 65535},
-	{"profile_color", "flags2.8?PeerColor", 65535},
-	{"emoji_status", "flags2.9?EmojiStatus", 65535},
-	{"level", "flags2.10?int", 65535},
-	{"subscription_until_date", "flags2.11?int", 65535},
-	{"bot_verification_icon", "flags2.13?long", 65535},
-	{"send_paid_messages_stars", "flags2.14?long", 65535},
-	{"linked_monoforum_id", "flags2.18?long", 65535},
-	{"linked_community_id", "flags2.20?long", 65535},
+	{"usernames", "Vector<Username>", 512},
+	{"stories_max_id", "RecentStory", 516},
+	{"color", "PeerColor", 519},
+	{"profile_color", "PeerColor", 520},
+	{"emoji_status", "EmojiStatus", 521},
+	{"level", "int", 522},
+	{"subscription_until_date", "int", 523},
+	{"bot_verification_icon", "long", 525},
+	{"send_paid_messages_stars", "long", 526},
+	{"linked_monoforum_id", "long", 530},
+	{"linked_community_id", "long", 532},
 };
 
 inline constexpr FieldDesc kFields134[] = {
@@ -798,7 +798,7 @@ inline constexpr FieldDesc kFields136[] = {
 	{"left", "true", 2},
 	{"min", "true", 12},
 	{"flags2", "#", 65535},
-	{"collapsed_in_dialogs", "flags2.20?true", 65535},
+	{"collapsed_in_dialogs", "true", 532},
 	{"id", "long", 65535},
 	{"access_hash", "long", 13},
 	{"title", "string", 65535},
@@ -844,20 +844,20 @@ inline constexpr FieldDesc kFields138[] = {
 	{"can_view_stats", "true", 20},
 	{"blocked", "true", 22},
 	{"flags2", "#", 65535},
-	{"can_delete_channel", "flags2.0?true", 65535},
-	{"antispam", "flags2.1?true", 65535},
-	{"participants_hidden", "flags2.2?true", 65535},
-	{"translations_disabled", "flags2.3?true", 65535},
-	{"stories_pinned_available", "flags2.5?true", 65535},
-	{"view_forum_as_messages", "flags2.6?true", 65535},
-	{"restricted_sponsored", "flags2.11?true", 65535},
-	{"can_view_revenue", "flags2.12?true", 65535},
-	{"paid_media_allowed", "flags2.14?true", 65535},
-	{"can_view_stars_revenue", "flags2.15?true", 65535},
-	{"paid_reactions_available", "flags2.16?true", 65535},
-	{"stargifts_available", "flags2.19?true", 65535},
-	{"paid_messages_available", "flags2.20?true", 65535},
-	{"has_welcome_messages", "flags2.24?true", 65535},
+	{"can_delete_channel", "true", 512},
+	{"antispam", "true", 513},
+	{"participants_hidden", "true", 514},
+	{"translations_disabled", "true", 515},
+	{"stories_pinned_available", "true", 517},
+	{"view_forum_as_messages", "true", 518},
+	{"restricted_sponsored", "true", 523},
+	{"can_view_revenue", "true", 524},
+	{"paid_media_allowed", "true", 526},
+	{"can_view_stars_revenue", "true", 527},
+	{"paid_reactions_available", "true", 528},
+	{"stargifts_available", "true", 531},
+	{"paid_messages_available", "true", 532},
+	{"has_welcome_messages", "true", 536},
 	{"id", "long", 65535},
 	{"about", "string", 65535},
 	{"participants_count", "int", 0},
@@ -893,17 +893,17 @@ inline constexpr FieldDesc kFields138[] = {
 	{"recent_requesters", "Vector<long>", 28},
 	{"default_send_as", "Peer", 29},
 	{"available_reactions", "ChatReactions", 30},
-	{"reactions_limit", "flags2.13?int", 65535},
-	{"stories", "flags2.4?PeerStories", 65535},
-	{"wallpaper", "flags2.7?WallPaper", 65535},
-	{"boosts_applied", "flags2.8?int", 65535},
-	{"boosts_unrestrict", "flags2.9?int", 65535},
-	{"emojiset", "flags2.10?StickerSet", 65535},
-	{"bot_verification", "flags2.17?BotVerification", 65535},
-	{"stargifts_count", "flags2.18?int", 65535},
-	{"send_paid_messages_stars", "flags2.21?long", 65535},
-	{"main_tab", "flags2.22?ProfileTab", 65535},
-	{"guard_bot_id", "flags2.23?long", 65535},
+	{"reactions_limit", "int", 525},
+	{"stories", "PeerStories", 516},
+	{"wallpaper", "WallPaper", 519},
+	{"boosts_applied", "int", 520},
+	{"boosts_unrestrict", "int", 521},
+	{"emojiset", "StickerSet", 522},
+	{"bot_verification", "BotVerification", 529},
+	{"stargifts_count", "int", 530},
+	{"send_paid_messages_stars", "long", 533},
+	{"main_tab", "ProfileTab", 534},
+	{"guard_bot_id", "long", 535},
 };
 
 inline constexpr FieldDesc kFields139[] = {
@@ -979,20 +979,20 @@ inline constexpr FieldDesc kFields148[] = {
 	{"noforwards", "true", 26},
 	{"invert_media", "true", 27},
 	{"flags2", "#", 65535},
-	{"offline", "flags2.1?true", 65535},
-	{"video_processing_pending", "flags2.4?true", 65535},
-	{"paid_suggested_post_stars", "flags2.8?true", 65535},
-	{"paid_suggested_post_ton", "flags2.9?true", 65535},
+	{"offline", "true", 513},
+	{"video_processing_pending", "true", 516},
+	{"paid_suggested_post_stars", "true", 520},
+	{"paid_suggested_post_ton", "true", 521},
 	{"id", "int", 65535},
 	{"from_id", "Peer", 8},
 	{"from_boosts_applied", "int", 29},
-	{"from_rank", "flags2.12?string", 65535},
+	{"from_rank", "string", 524},
 	{"peer_id", "Peer", 65535},
 	{"saved_peer_id", "Peer", 28},
 	{"fwd_from", "MessageFwdHeader", 2},
 	{"via_bot_id", "long", 11},
-	{"via_business_bot_id", "flags2.0?long", 65535},
-	{"guestchat_via_from", "flags2.19?Peer", 65535},
+	{"via_business_bot_id", "long", 512},
+	{"guestchat_via_from", "Peer", 531},
 	{"reply_to", "MessageReplyHeader", 3},
 	{"date", "int", 65535},
 	{"message", "string", 65535},
@@ -1009,14 +1009,14 @@ inline constexpr FieldDesc kFields148[] = {
 	{"restriction_reason", "Vector<RestrictionReason>", 22},
 	{"ttl_period", "int", 25},
 	{"quick_reply_shortcut_id", "int", 30},
-	{"effect", "flags2.2?long", 65535},
-	{"factcheck", "flags2.3?FactCheck", 65535},
-	{"report_delivery_until_date", "flags2.5?int", 65535},
-	{"paid_message_stars", "flags2.6?long", 65535},
-	{"suggested_post", "flags2.7?SuggestedPost", 65535},
-	{"schedule_repeat_period", "flags2.10?int", 65535},
-	{"summary_from_language", "flags2.11?string", 65535},
-	{"rich_message", "flags2.13?RichMessage", 65535},
+	{"effect", "long", 514},
+	{"factcheck", "FactCheck", 515},
+	{"report_delivery_until_date", "int", 517},
+	{"paid_message_stars", "long", 518},
+	{"suggested_post", "SuggestedPost", 519},
+	{"schedule_repeat_period", "int", 522},
+	{"summary_from_language", "string", 523},
+	{"rich_message", "RichMessage", 525},
 };
 
 inline constexpr FieldDesc kFields149[] = {
@@ -1835,13 +1835,13 @@ inline constexpr FieldDesc kFields278[] = {
 	{"contact_require_premium", "true", 29},
 	{"read_dates_private", "true", 30},
 	{"flags2", "#", 65535},
-	{"sponsored_enabled", "flags2.7?true", 65535},
-	{"can_view_revenue", "flags2.9?true", 65535},
-	{"bot_can_manage_emoji_status", "flags2.10?true", 65535},
-	{"display_gifts_button", "flags2.16?true", 65535},
-	{"noforwards_my_enabled", "flags2.23?true", 65535},
-	{"noforwards_peer_enabled", "flags2.24?true", 65535},
-	{"unofficial_security_risk", "flags2.26?true", 65535},
+	{"sponsored_enabled", "true", 519},
+	{"can_view_revenue", "true", 521},
+	{"bot_can_manage_emoji_status", "true", 522},
+	{"display_gifts_button", "true", 528},
+	{"noforwards_my_enabled", "true", 535},
+	{"noforwards_peer_enabled", "true", 536},
+	{"unofficial_security_risk", "true", 538},
 	{"id", "long", 65535},
 	{"about", "string", 1},
 	{"settings", "PeerSettings", 65535},
@@ -1860,26 +1860,26 @@ inline constexpr FieldDesc kFields278[] = {
 	{"bot_broadcast_admin_rights", "ChatAdminRights", 18},
 	{"wallpaper", "WallPaper", 24},
 	{"stories", "PeerStories", 25},
-	{"business_work_hours", "flags2.0?BusinessWorkHours", 65535},
-	{"business_location", "flags2.1?BusinessLocation", 65535},
-	{"business_greeting_message", "flags2.2?BusinessGreetingMessage", 65535},
-	{"business_away_message", "flags2.3?BusinessAwayMessage", 65535},
-	{"business_intro", "flags2.4?BusinessIntro", 65535},
-	{"birthday", "flags2.5?Birthday", 65535},
-	{"personal_channel_id", "flags2.6?long", 65535},
-	{"personal_channel_message", "flags2.6?int", 65535},
-	{"stargifts_count", "flags2.8?int", 65535},
-	{"starref_program", "flags2.11?StarRefProgram", 65535},
-	{"bot_verification", "flags2.12?BotVerification", 65535},
-	{"send_paid_messages_stars", "flags2.14?long", 65535},
-	{"disallowed_gifts", "flags2.15?DisallowedGiftsSettings", 65535},
-	{"stars_rating", "flags2.17?StarsRating", 65535},
-	{"stars_my_pending_rating", "flags2.18?StarsRating", 65535},
-	{"stars_my_pending_rating_date", "flags2.18?int", 65535},
-	{"main_tab", "flags2.20?ProfileTab", 65535},
-	{"saved_music", "flags2.21?Document", 65535},
-	{"note", "flags2.22?TextWithEntities", 65535},
-	{"bot_manager_id", "flags2.25?long", 65535},
+	{"business_work_hours", "BusinessWorkHours", 512},
+	{"business_location", "BusinessLocation", 513},
+	{"business_greeting_message", "BusinessGreetingMessage", 514},
+	{"business_away_message", "BusinessAwayMessage", 515},
+	{"business_intro", "BusinessIntro", 516},
+	{"birthday", "Birthday", 517},
+	{"personal_channel_id", "long", 518},
+	{"personal_channel_message", "int", 518},
+	{"stargifts_count", "int", 520},
+	{"starref_program", "StarRefProgram", 523},
+	{"bot_verification", "BotVerification", 524},
+	{"send_paid_messages_stars", "long", 526},
+	{"disallowed_gifts", "DisallowedGiftsSettings", 527},
+	{"stars_rating", "StarsRating", 529},
+	{"stars_my_pending_rating", "StarsRating", 530},
+	{"stars_my_pending_rating_date", "int", 530},
+	{"main_tab", "ProfileTab", 532},
+	{"saved_music", "Document", 533},
+	{"note", "TextWithEntities", 534},
+	{"bot_manager_id", "long", 537},
 };
 
 inline constexpr FieldDesc kFields279[] = {
@@ -10154,22 +10154,26 @@ inline constexpr FieldDesc kFields1775[] = {
 	{"hash", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields1777[] = {
-	{"value", "InputSecureValue", 65535},
-	{"secure_secret_id", "long", 65535},
-};
-
 inline constexpr FieldDesc kFields1778[] = {
 	{"types", "Vector<SecureValueType>", 65535},
 };
 
 inline constexpr FieldDesc kFields1779[] = {
+	{"value", "InputSecureValue", 65535},
+	{"secure_secret_id", "long", 65535},
+};
+
+inline constexpr FieldDesc kFields1780[] = {
+	{"types", "Vector<SecureValueType>", 65535},
+};
+
+inline constexpr FieldDesc kFields1781[] = {
 	{"bot_id", "long", 65535},
 	{"scope", "string", 65535},
 	{"public_key", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields1780[] = {
+inline constexpr FieldDesc kFields1782[] = {
 	{"bot_id", "long", 65535},
 	{"scope", "string", 65535},
 	{"public_key", "string", 65535},
@@ -10177,28 +10181,28 @@ inline constexpr FieldDesc kFields1780[] = {
 	{"credentials", "SecureCredentialsEncrypted", 65535},
 };
 
-inline constexpr FieldDesc kFields1781[] = {
+inline constexpr FieldDesc kFields1783[] = {
 	{"phone_number", "string", 65535},
 	{"settings", "CodeSettings", 65535},
 };
 
-inline constexpr FieldDesc kFields1782[] = {
+inline constexpr FieldDesc kFields1784[] = {
 	{"phone_number", "string", 65535},
 	{"phone_code_hash", "string", 65535},
 	{"phone_code", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields1783[] = {
+inline constexpr FieldDesc kFields1785[] = {
 	{"purpose", "EmailVerifyPurpose", 65535},
 	{"email", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields1784[] = {
+inline constexpr FieldDesc kFields1786[] = {
 	{"purpose", "EmailVerifyPurpose", 65535},
 	{"verification", "EmailVerification", 65535},
 };
 
-inline constexpr FieldDesc kFields1785[] = {
+inline constexpr FieldDesc kFields1787[] = {
 	{"flags", "#", 65535},
 	{"contacts", "true", 0},
 	{"message_users", "true", 1},
@@ -10209,31 +10213,31 @@ inline constexpr FieldDesc kFields1785[] = {
 	{"file_max_size", "long", 5},
 };
 
-inline constexpr FieldDesc kFields1786[] = {
+inline constexpr FieldDesc kFields1788[] = {
 	{"flags", "#", 65535},
 	{"success", "true", 0},
 };
 
-inline constexpr FieldDesc kFields1787[] = {
+inline constexpr FieldDesc kFields1789[] = {
 	{"code", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields1791[] = {
+inline constexpr FieldDesc kFields1793[] = {
 	{"silent", "Bool", 65535},
 };
 
-inline constexpr FieldDesc kFields1792[] = {
+inline constexpr FieldDesc kFields1794[] = {
 	{"flags", "#", 65535},
 	{"compare_sound", "true", 1},
 	{"compare_stories", "true", 2},
 	{"peer", "InputNotifyPeer", 0},
 };
 
-inline constexpr FieldDesc kFields1793[] = {
+inline constexpr FieldDesc kFields1795[] = {
 	{"wallpaper", "InputWallPaper", 65535},
 };
 
-inline constexpr FieldDesc kFields1794[] = {
+inline constexpr FieldDesc kFields1796[] = {
 	{"flags", "#", 65535},
 	{"for_chat", "true", 0},
 	{"file", "InputFile", 65535},
@@ -10241,25 +10245,25 @@ inline constexpr FieldDesc kFields1794[] = {
 	{"settings", "WallPaperSettings", 65535},
 };
 
-inline constexpr FieldDesc kFields1795[] = {
+inline constexpr FieldDesc kFields1797[] = {
 	{"wallpaper", "InputWallPaper", 65535},
 	{"unsave", "Bool", 65535},
 	{"settings", "WallPaperSettings", 65535},
 };
 
-inline constexpr FieldDesc kFields1796[] = {
+inline constexpr FieldDesc kFields1798[] = {
 	{"wallpaper", "InputWallPaper", 65535},
 	{"settings", "WallPaperSettings", 65535},
 };
 
-inline constexpr FieldDesc kFields1799[] = {
+inline constexpr FieldDesc kFields1801[] = {
 	{"flags", "#", 65535},
 	{"low", "true", 0},
 	{"high", "true", 1},
 	{"settings", "AutoDownloadSettings", 65535},
 };
 
-inline constexpr FieldDesc kFields1800[] = {
+inline constexpr FieldDesc kFields1802[] = {
 	{"flags", "#", 65535},
 	{"file", "InputFile", 65535},
 	{"thumb", "InputFile", 0},
@@ -10267,7 +10271,7 @@ inline constexpr FieldDesc kFields1800[] = {
 	{"mime_type", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields1801[] = {
+inline constexpr FieldDesc kFields1803[] = {
 	{"flags", "#", 65535},
 	{"slug", "string", 65535},
 	{"title", "string", 65535},
@@ -10275,7 +10279,7 @@ inline constexpr FieldDesc kFields1801[] = {
 	{"settings", "Vector<InputThemeSettings>", 3},
 };
 
-inline constexpr FieldDesc kFields1802[] = {
+inline constexpr FieldDesc kFields1804[] = {
 	{"flags", "#", 65535},
 	{"format", "string", 65535},
 	{"theme", "InputTheme", 65535},
@@ -10285,12 +10289,12 @@ inline constexpr FieldDesc kFields1802[] = {
 	{"settings", "Vector<InputThemeSettings>", 3},
 };
 
-inline constexpr FieldDesc kFields1803[] = {
+inline constexpr FieldDesc kFields1805[] = {
 	{"theme", "InputTheme", 65535},
 	{"unsave", "Bool", 65535},
 };
 
-inline constexpr FieldDesc kFields1804[] = {
+inline constexpr FieldDesc kFields1806[] = {
 	{"flags", "#", 65535},
 	{"dark", "true", 0},
 	{"theme", "InputTheme", 1},
@@ -10298,46 +10302,34 @@ inline constexpr FieldDesc kFields1804[] = {
 	{"base_theme", "BaseTheme", 3},
 };
 
-inline constexpr FieldDesc kFields1805[] = {
+inline constexpr FieldDesc kFields1807[] = {
 	{"format", "string", 65535},
 	{"theme", "InputTheme", 65535},
 };
 
-inline constexpr FieldDesc kFields1806[] = {
+inline constexpr FieldDesc kFields1808[] = {
 	{"format", "string", 65535},
 	{"hash", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields1807[] = {
+inline constexpr FieldDesc kFields1809[] = {
 	{"flags", "#", 65535},
 	{"sensitive_enabled", "true", 0},
 };
 
-inline constexpr FieldDesc kFields1810[] = {
+inline constexpr FieldDesc kFields1811[] = {
+	{"wallpapers", "Vector<InputWallPaper>", 65535},
+};
+
+inline constexpr FieldDesc kFields1813[] = {
 	{"settings", "GlobalPrivacySettings", 65535},
 };
 
-inline constexpr FieldDesc kFields1811[] = {
+inline constexpr FieldDesc kFields1814[] = {
 	{"peer", "InputPeer", 65535},
 	{"photo_id", "InputPhoto", 65535},
 	{"reason", "ReportReason", 65535},
 	{"message", "string", 65535},
-};
-
-inline constexpr FieldDesc kFields1814[] = {
-	{"hash", "long", 65535},
-};
-
-inline constexpr FieldDesc kFields1815[] = {
-	{"authorization_ttl_days", "int", 65535},
-};
-
-inline constexpr FieldDesc kFields1816[] = {
-	{"flags", "#", 65535},
-	{"confirmed", "true", 3},
-	{"hash", "long", 65535},
-	{"encrypted_requests_disabled", "Bool", 0},
-	{"call_requests_disabled", "Bool", 1},
 };
 
 inline constexpr FieldDesc kFields1817[] = {
@@ -10345,46 +10337,62 @@ inline constexpr FieldDesc kFields1817[] = {
 };
 
 inline constexpr FieldDesc kFields1818[] = {
+	{"authorization_ttl_days", "int", 65535},
+};
+
+inline constexpr FieldDesc kFields1819[] = {
+	{"flags", "#", 65535},
+	{"confirmed", "true", 3},
+	{"hash", "long", 65535},
+	{"encrypted_requests_disabled", "Bool", 0},
+	{"call_requests_disabled", "Bool", 1},
+};
+
+inline constexpr FieldDesc kFields1820[] = {
+	{"hash", "long", 65535},
+};
+
+inline constexpr FieldDesc kFields1821[] = {
 	{"id", "InputDocument", 65535},
 	{"unsave", "Bool", 65535},
 };
 
-inline constexpr FieldDesc kFields1819[] = {
+inline constexpr FieldDesc kFields1822[] = {
 	{"file", "InputFile", 65535},
 	{"file_name", "string", 65535},
 	{"mime_type", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields1820[] = {
+inline constexpr FieldDesc kFields1823[] = {
 	{"emoji_status", "EmojiStatus", 65535},
 };
 
-inline constexpr FieldDesc kFields1821[] = {
-	{"hash", "long", 65535},
-};
-
-inline constexpr FieldDesc kFields1822[] = {
-	{"hash", "long", 65535},
-};
-
 inline constexpr FieldDesc kFields1824[] = {
-	{"order", "Vector<string>", 65535},
+	{"hash", "long", 65535},
 };
 
 inline constexpr FieldDesc kFields1825[] = {
-	{"username", "string", 65535},
-	{"active", "Bool", 65535},
-};
-
-inline constexpr FieldDesc kFields1826[] = {
 	{"hash", "long", 65535},
 };
 
 inline constexpr FieldDesc kFields1827[] = {
-	{"hash", "long", 65535},
+	{"order", "Vector<string>", 65535},
+};
+
+inline constexpr FieldDesc kFields1828[] = {
+	{"username", "string", 65535},
+	{"active", "Bool", 65535},
 };
 
 inline constexpr FieldDesc kFields1829[] = {
+	{"hash", "long", 65535},
+};
+
+inline constexpr FieldDesc kFields1830[] = {
+	{"hash", "long", 65535},
+};
+
+inline constexpr FieldDesc kFields1832[] = {
 	{"flags", "#", 65535},
 	{"users", "true", 0},
 	{"chats", "true", 1},
@@ -10393,50 +10401,50 @@ inline constexpr FieldDesc kFields1829[] = {
 	{"settings", "AutoSaveSettings", 65535},
 };
 
-inline constexpr FieldDesc kFields1831[] = {
+inline constexpr FieldDesc kFields1834[] = {
 	{"codes", "Vector<string>", 65535},
 };
 
-inline constexpr FieldDesc kFields1832[] = {
+inline constexpr FieldDesc kFields1835[] = {
 	{"flags", "#", 65535},
 	{"for_profile", "true", 1},
 	{"color", "PeerColor", 2},
 };
 
-inline constexpr FieldDesc kFields1833[] = {
-	{"hash", "long", 65535},
-};
-
-inline constexpr FieldDesc kFields1834[] = {
-	{"hash", "long", 65535},
-};
-
-inline constexpr FieldDesc kFields1835[] = {
-	{"hash", "long", 65535},
-};
-
 inline constexpr FieldDesc kFields1836[] = {
+	{"hash", "long", 65535},
+};
+
+inline constexpr FieldDesc kFields1837[] = {
+	{"hash", "long", 65535},
+};
+
+inline constexpr FieldDesc kFields1838[] = {
+	{"hash", "long", 65535},
+};
+
+inline constexpr FieldDesc kFields1839[] = {
 	{"flags", "#", 65535},
 	{"business_work_hours", "BusinessWorkHours", 0},
 };
 
-inline constexpr FieldDesc kFields1837[] = {
+inline constexpr FieldDesc kFields1840[] = {
 	{"flags", "#", 65535},
 	{"geo_point", "InputGeoPoint", 1},
 	{"address", "string", 0},
 };
 
-inline constexpr FieldDesc kFields1838[] = {
+inline constexpr FieldDesc kFields1841[] = {
 	{"flags", "#", 65535},
 	{"message", "InputBusinessGreetingMessage", 0},
 };
 
-inline constexpr FieldDesc kFields1839[] = {
+inline constexpr FieldDesc kFields1842[] = {
 	{"flags", "#", 65535},
 	{"message", "InputBusinessAwayMessage", 0},
 };
 
-inline constexpr FieldDesc kFields1840[] = {
+inline constexpr FieldDesc kFields1843[] = {
 	{"flags", "#", 65535},
 	{"deleted", "true", 1},
 	{"rights", "BusinessBotRights", 0},
@@ -10444,69 +10452,69 @@ inline constexpr FieldDesc kFields1840[] = {
 	{"recipients", "InputBusinessBotRecipients", 65535},
 };
 
-inline constexpr FieldDesc kFields1842[] = {
-	{"connection_id", "string", 65535},
-};
-
-inline constexpr FieldDesc kFields1843[] = {
-	{"flags", "#", 65535},
-	{"intro", "InputBusinessIntro", 0},
-};
-
-inline constexpr FieldDesc kFields1844[] = {
-	{"peer", "InputPeer", 65535},
-	{"paused", "Bool", 65535},
-};
-
 inline constexpr FieldDesc kFields1845[] = {
-	{"peer", "InputPeer", 65535},
+	{"connection_id", "string", 65535},
 };
 
 inline constexpr FieldDesc kFields1846[] = {
 	{"flags", "#", 65535},
-	{"birthday", "Birthday", 0},
+	{"intro", "InputBusinessIntro", 0},
 };
 
 inline constexpr FieldDesc kFields1847[] = {
-	{"link", "InputBusinessChatLink", 65535},
+	{"peer", "InputPeer", 65535},
+	{"paused", "Bool", 65535},
 };
 
 inline constexpr FieldDesc kFields1848[] = {
-	{"slug", "string", 65535},
-	{"link", "InputBusinessChatLink", 65535},
+	{"peer", "InputPeer", 65535},
 };
 
 inline constexpr FieldDesc kFields1849[] = {
-	{"slug", "string", 65535},
+	{"flags", "#", 65535},
+	{"birthday", "Birthday", 0},
+};
+
+inline constexpr FieldDesc kFields1850[] = {
+	{"link", "InputBusinessChatLink", 65535},
 };
 
 inline constexpr FieldDesc kFields1851[] = {
 	{"slug", "string", 65535},
+	{"link", "InputBusinessChatLink", 65535},
 };
 
 inline constexpr FieldDesc kFields1852[] = {
-	{"channel", "InputChannel", 65535},
+	{"slug", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields1853[] = {
-	{"enabled", "Bool", 65535},
+inline constexpr FieldDesc kFields1854[] = {
+	{"slug", "string", 65535},
 };
 
 inline constexpr FieldDesc kFields1855[] = {
-	{"settings", "ReactionsNotifySettings", 65535},
+	{"channel", "InputChannel", 65535},
 };
 
 inline constexpr FieldDesc kFields1856[] = {
+	{"enabled", "Bool", 65535},
+};
+
+inline constexpr FieldDesc kFields1858[] = {
+	{"settings", "ReactionsNotifySettings", 65535},
+};
+
+inline constexpr FieldDesc kFields1859[] = {
 	{"hash", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields1857[] = {
+inline constexpr FieldDesc kFields1860[] = {
 	{"flags", "#", 65535},
 	{"parent_peer", "InputPeer", 0},
 	{"user_id", "InputUser", 65535},
 };
 
-inline constexpr FieldDesc kFields1858[] = {
+inline constexpr FieldDesc kFields1861[] = {
 	{"flags", "#", 65535},
 	{"refund_charged", "true", 0},
 	{"require_payment", "true", 2},
@@ -10514,118 +10522,130 @@ inline constexpr FieldDesc kFields1858[] = {
 	{"user_id", "InputUser", 65535},
 };
 
-inline constexpr FieldDesc kFields1859[] = {
+inline constexpr FieldDesc kFields1862[] = {
 	{"tab", "ProfileTab", 65535},
 };
 
-inline constexpr FieldDesc kFields1860[] = {
+inline constexpr FieldDesc kFields1863[] = {
 	{"flags", "#", 65535},
 	{"unsave", "true", 0},
 	{"id", "InputDocument", 65535},
 	{"after_id", "InputDocument", 1},
 };
 
-inline constexpr FieldDesc kFields1861[] = {
+inline constexpr FieldDesc kFields1864[] = {
 	{"hash", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields1862[] = {
+inline constexpr FieldDesc kFields1865[] = {
 	{"offset", "string", 65535},
 	{"limit", "int", 65535},
 	{"hash", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields1864[] = {
+inline constexpr FieldDesc kFields1867[] = {
 	{"credential", "InputPasskeyCredential", 65535},
 };
 
-inline constexpr FieldDesc kFields1866[] = {
+inline constexpr FieldDesc kFields1869[] = {
 	{"id", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields1867[] = {
+inline constexpr FieldDesc kFields1870[] = {
 	{"bot_id", "InputUser", 65535},
 };
 
-inline constexpr FieldDesc kFields1868[] = {
+inline constexpr FieldDesc kFields1871[] = {
 	{"hash", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields1869[] = {
+inline constexpr FieldDesc kFields1872[] = {
 	{"flags", "#", 65535},
 	{"open_external_browser", "true", 0},
 	{"display_close_button", "true", 1},
 };
 
-inline constexpr FieldDesc kFields1870[] = {
+inline constexpr FieldDesc kFields1873[] = {
 	{"flags", "#", 65535},
 	{"delete", "true", 1},
 	{"open_external_browser", "Bool", 0},
 	{"url", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields1872[] = {
-	{"id", "InputUser", 65535},
-};
-
-inline constexpr FieldDesc kFields1873[] = {
-	{"id", "InputUser", 65535},
-	{"errors", "Vector<SecureValueError>", 65535},
-};
-
-inline constexpr FieldDesc kFields1874[] = {
-	{"id", "InputUser", 65535},
-	{"offset", "int", 65535},
-	{"limit", "int", 65535},
-	{"hash", "long", 65535},
-};
-
 inline constexpr FieldDesc kFields1875[] = {
-	{"id", "InputUser", 65535},
-	{"documents", "Vector<InputDocument>", 65535},
+	{"id", "Vector<InputUser>", 65535},
 };
 
 inline constexpr FieldDesc kFields1876[] = {
 	{"id", "InputUser", 65535},
-	{"birthday", "Birthday", 65535},
 };
 
 inline constexpr FieldDesc kFields1877[] = {
-	{"hash", "long", 65535},
+	{"id", "InputUser", 65535},
+	{"errors", "Vector<SecureValueError>", 65535},
 };
 
 inline constexpr FieldDesc kFields1878[] = {
-	{"contacts", "Vector<InputContact>", 65535},
-};
-
-inline constexpr FieldDesc kFields1879[] = {
 	{"id", "Vector<InputUser>", 65535},
 };
 
+inline constexpr FieldDesc kFields1879[] = {
+	{"id", "InputUser", 65535},
+	{"offset", "int", 65535},
+	{"limit", "int", 65535},
+	{"hash", "long", 65535},
+};
+
 inline constexpr FieldDesc kFields1880[] = {
-	{"phones", "Vector<string>", 65535},
+	{"id", "InputUser", 65535},
+	{"documents", "Vector<InputDocument>", 65535},
 };
 
 inline constexpr FieldDesc kFields1881[] = {
-	{"flags", "#", 65535},
-	{"my_stories_from", "true", 0},
-	{"id", "InputPeer", 65535},
+	{"id", "InputUser", 65535},
+	{"birthday", "Birthday", 65535},
 };
 
 inline constexpr FieldDesc kFields1882[] = {
+	{"hash", "long", 65535},
+};
+
+inline constexpr FieldDesc kFields1884[] = {
+	{"hash", "long", 65535},
+};
+
+inline constexpr FieldDesc kFields1885[] = {
+	{"contacts", "Vector<InputContact>", 65535},
+};
+
+inline constexpr FieldDesc kFields1886[] = {
+	{"id", "Vector<InputUser>", 65535},
+};
+
+inline constexpr FieldDesc kFields1887[] = {
+	{"phones", "Vector<string>", 65535},
+};
+
+inline constexpr FieldDesc kFields1888[] = {
 	{"flags", "#", 65535},
 	{"my_stories_from", "true", 0},
 	{"id", "InputPeer", 65535},
 };
 
-inline constexpr FieldDesc kFields1883[] = {
+inline constexpr FieldDesc kFields1889[] = {
+	{"flags", "#", 65535},
+	{"my_stories_from", "true", 0},
+	{"id", "InputPeer", 65535},
+};
+
+inline constexpr FieldDesc kFields1890[] = {
 	{"flags", "#", 65535},
 	{"my_stories_from", "true", 0},
 	{"offset", "int", 65535},
 	{"limit", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields1884[] = {
+inline constexpr FieldDesc kFields1891[] = {
 	{"flags", "#", 65535},
 	{"broadcasts", "true", 0},
 	{"bots", "true", 1},
@@ -10633,13 +10653,13 @@ inline constexpr FieldDesc kFields1884[] = {
 	{"limit", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields1885[] = {
+inline constexpr FieldDesc kFields1892[] = {
 	{"flags", "#", 65535},
 	{"username", "string", 65535},
 	{"referer", "string", 0},
 };
 
-inline constexpr FieldDesc kFields1886[] = {
+inline constexpr FieldDesc kFields1893[] = {
 	{"flags", "#", 65535},
 	{"correspondents", "true", 0},
 	{"bots_pm", "true", 1},
@@ -10656,16 +10676,16 @@ inline constexpr FieldDesc kFields1886[] = {
 	{"hash", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields1887[] = {
+inline constexpr FieldDesc kFields1894[] = {
 	{"category", "TopPeerCategory", 65535},
 	{"peer", "InputPeer", 65535},
 };
 
-inline constexpr FieldDesc kFields1889[] = {
+inline constexpr FieldDesc kFields1897[] = {
 	{"enabled", "Bool", 65535},
 };
 
-inline constexpr FieldDesc kFields1890[] = {
+inline constexpr FieldDesc kFields1898[] = {
 	{"flags", "#", 65535},
 	{"add_phone_privacy_exception", "true", 0},
 	{"id", "InputUser", 65535},
@@ -10675,18 +10695,18 @@ inline constexpr FieldDesc kFields1890[] = {
 	{"note", "TextWithEntities", 1},
 };
 
-inline constexpr FieldDesc kFields1891[] = {
+inline constexpr FieldDesc kFields1899[] = {
 	{"id", "InputUser", 65535},
 };
 
-inline constexpr FieldDesc kFields1892[] = {
+inline constexpr FieldDesc kFields1900[] = {
 	{"flags", "#", 65535},
 	{"background", "true", 1},
 	{"geo_point", "InputGeoPoint", 65535},
 	{"self_expires", "int", 0},
 };
 
-inline constexpr FieldDesc kFields1893[] = {
+inline constexpr FieldDesc kFields1901[] = {
 	{"flags", "#", 65535},
 	{"delete_message", "true", 0},
 	{"delete_history", "true", 1},
@@ -10694,39 +10714,39 @@ inline constexpr FieldDesc kFields1893[] = {
 	{"msg_id", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields1894[] = {
+inline constexpr FieldDesc kFields1902[] = {
 	{"phone", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields1896[] = {
+inline constexpr FieldDesc kFields1904[] = {
 	{"token", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields1897[] = {
+inline constexpr FieldDesc kFields1905[] = {
 	{"id", "Vector<long>", 65535},
 };
 
-inline constexpr FieldDesc kFields1898[] = {
+inline constexpr FieldDesc kFields1906[] = {
 	{"flags", "#", 65535},
 	{"my_stories_from", "true", 0},
 	{"id", "Vector<InputPeer>", 65535},
 	{"limit", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields1900[] = {
+inline constexpr FieldDesc kFields1908[] = {
 	{"q", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields1901[] = {
+inline constexpr FieldDesc kFields1909[] = {
 	{"id", "InputUser", 65535},
 	{"note", "TextWithEntities", 65535},
 };
 
-inline constexpr FieldDesc kFields1902[] = {
+inline constexpr FieldDesc kFields1910[] = {
 	{"id", "Vector<InputMessage>", 65535},
 };
 
-inline constexpr FieldDesc kFields1903[] = {
+inline constexpr FieldDesc kFields1911[] = {
 	{"flags", "#", 65535},
 	{"exclude_pinned", "true", 0},
 	{"folder_id", "int", 1},
@@ -10737,7 +10757,7 @@ inline constexpr FieldDesc kFields1903[] = {
 	{"hash", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields1904[] = {
+inline constexpr FieldDesc kFields1912[] = {
 	{"peer", "InputPeer", 65535},
 	{"offset_id", "int", 65535},
 	{"offset_date", "int", 65535},
@@ -10748,7 +10768,7 @@ inline constexpr FieldDesc kFields1904[] = {
 	{"hash", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields1905[] = {
+inline constexpr FieldDesc kFields1913[] = {
 	{"flags", "#", 65535},
 	{"peer", "InputPeer", 65535},
 	{"q", "string", 65535},
@@ -10767,12 +10787,12 @@ inline constexpr FieldDesc kFields1905[] = {
 	{"hash", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields1906[] = {
+inline constexpr FieldDesc kFields1914[] = {
 	{"peer", "InputPeer", 65535},
 	{"max_id", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields1907[] = {
+inline constexpr FieldDesc kFields1915[] = {
 	{"flags", "#", 65535},
 	{"just_clear", "true", 0},
 	{"revoke", "true", 1},
@@ -10782,20 +10802,24 @@ inline constexpr FieldDesc kFields1907[] = {
 	{"max_date", "int", 3},
 };
 
-inline constexpr FieldDesc kFields1908[] = {
+inline constexpr FieldDesc kFields1916[] = {
 	{"flags", "#", 65535},
 	{"revoke", "true", 0},
 	{"id", "Vector<int>", 65535},
 };
 
-inline constexpr FieldDesc kFields1909[] = {
+inline constexpr FieldDesc kFields1917[] = {
+	{"max_id", "int", 65535},
+};
+
+inline constexpr FieldDesc kFields1918[] = {
 	{"flags", "#", 65535},
 	{"peer", "InputPeer", 65535},
 	{"top_msg_id", "int", 0},
 	{"action", "SendMessageAction", 65535},
 };
 
-inline constexpr FieldDesc kFields1910[] = {
+inline constexpr FieldDesc kFields1919[] = {
 	{"flags", "#", 65535},
 	{"no_webpage", "true", 1},
 	{"silent", "true", 5},
@@ -10821,7 +10845,7 @@ inline constexpr FieldDesc kFields1910[] = {
 	{"rich_message", "InputRichMessage", 23},
 };
 
-inline constexpr FieldDesc kFields1911[] = {
+inline constexpr FieldDesc kFields1920[] = {
 	{"flags", "#", 65535},
 	{"silent", "true", 5},
 	{"background", "true", 6},
@@ -10846,7 +10870,7 @@ inline constexpr FieldDesc kFields1911[] = {
 	{"suggested_post", "SuggestedPost", 22},
 };
 
-inline constexpr FieldDesc kFields1912[] = {
+inline constexpr FieldDesc kFields1921[] = {
 	{"flags", "#", 65535},
 	{"silent", "true", 5},
 	{"background", "true", 6},
@@ -10872,93 +10896,93 @@ inline constexpr FieldDesc kFields1912[] = {
 	{"suggested_post", "SuggestedPost", 23},
 };
 
-inline constexpr FieldDesc kFields1913[] = {
+inline constexpr FieldDesc kFields1922[] = {
 	{"peer", "InputPeer", 65535},
 };
 
-inline constexpr FieldDesc kFields1914[] = {
+inline constexpr FieldDesc kFields1923[] = {
 	{"peer", "InputPeer", 65535},
 };
 
-inline constexpr FieldDesc kFields1915[] = {
+inline constexpr FieldDesc kFields1924[] = {
 	{"peer", "InputPeer", 65535},
 	{"id", "Vector<int>", 65535},
 	{"option", "bytes", 65535},
 	{"message", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields1916[] = {
+inline constexpr FieldDesc kFields1925[] = {
 	{"id", "Vector<long>", 65535},
 };
 
-inline constexpr FieldDesc kFields1917[] = {
+inline constexpr FieldDesc kFields1926[] = {
 	{"chat_id", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields1918[] = {
+inline constexpr FieldDesc kFields1927[] = {
 	{"chat_id", "long", 65535},
 	{"title", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields1919[] = {
+inline constexpr FieldDesc kFields1928[] = {
 	{"chat_id", "long", 65535},
 	{"photo", "InputChatPhoto", 65535},
 };
 
-inline constexpr FieldDesc kFields1920[] = {
+inline constexpr FieldDesc kFields1929[] = {
 	{"chat_id", "long", 65535},
 	{"user_id", "InputUser", 65535},
 	{"fwd_limit", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields1921[] = {
+inline constexpr FieldDesc kFields1930[] = {
 	{"flags", "#", 65535},
 	{"revoke_history", "true", 0},
 	{"chat_id", "long", 65535},
 	{"user_id", "InputUser", 65535},
 };
 
-inline constexpr FieldDesc kFields1922[] = {
+inline constexpr FieldDesc kFields1931[] = {
 	{"flags", "#", 65535},
 	{"users", "Vector<InputUser>", 65535},
 	{"title", "string", 65535},
 	{"ttl_period", "int", 0},
 };
 
-inline constexpr FieldDesc kFields1923[] = {
+inline constexpr FieldDesc kFields1932[] = {
 	{"version", "int", 65535},
 	{"random_length", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields1924[] = {
+inline constexpr FieldDesc kFields1933[] = {
 	{"user_id", "InputUser", 65535},
 	{"random_id", "int", 65535},
 	{"g_a", "bytes", 65535},
 };
 
-inline constexpr FieldDesc kFields1925[] = {
+inline constexpr FieldDesc kFields1934[] = {
 	{"peer", "InputEncryptedChat", 65535},
 	{"g_b", "bytes", 65535},
 	{"key_fingerprint", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields1926[] = {
+inline constexpr FieldDesc kFields1935[] = {
 	{"flags", "#", 65535},
 	{"delete_history", "true", 0},
 	{"chat_id", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields1927[] = {
+inline constexpr FieldDesc kFields1936[] = {
 	{"peer", "InputEncryptedChat", 65535},
 	{"typing", "Bool", 65535},
 };
 
-inline constexpr FieldDesc kFields1928[] = {
+inline constexpr FieldDesc kFields1937[] = {
 	{"peer", "InputEncryptedChat", 65535},
 	{"max_date", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields1929[] = {
+inline constexpr FieldDesc kFields1938[] = {
 	{"flags", "#", 65535},
 	{"silent", "true", 0},
 	{"peer", "InputEncryptedChat", 65535},
@@ -10966,7 +10990,7 @@ inline constexpr FieldDesc kFields1929[] = {
 	{"data", "bytes", 65535},
 };
 
-inline constexpr FieldDesc kFields1930[] = {
+inline constexpr FieldDesc kFields1939[] = {
 	{"flags", "#", 65535},
 	{"silent", "true", 0},
 	{"peer", "InputEncryptedChat", 65535},
@@ -10975,36 +10999,40 @@ inline constexpr FieldDesc kFields1930[] = {
 	{"file", "InputEncryptedFile", 65535},
 };
 
-inline constexpr FieldDesc kFields1931[] = {
+inline constexpr FieldDesc kFields1940[] = {
 	{"peer", "InputEncryptedChat", 65535},
 	{"random_id", "long", 65535},
 	{"data", "bytes", 65535},
 };
 
-inline constexpr FieldDesc kFields1932[] = {
+inline constexpr FieldDesc kFields1941[] = {
+	{"max_qts", "int", 65535},
+};
+
+inline constexpr FieldDesc kFields1942[] = {
 	{"peer", "InputEncryptedChat", 65535},
 };
 
-inline constexpr FieldDesc kFields1933[] = {
+inline constexpr FieldDesc kFields1943[] = {
 	{"id", "Vector<int>", 65535},
 };
 
-inline constexpr FieldDesc kFields1934[] = {
+inline constexpr FieldDesc kFields1944[] = {
 	{"emoticon", "string", 65535},
 	{"hash", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields1935[] = {
+inline constexpr FieldDesc kFields1945[] = {
 	{"hash", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields1936[] = {
+inline constexpr FieldDesc kFields1946[] = {
 	{"flags", "#", 65535},
 	{"message", "string", 65535},
 	{"entities", "Vector<MessageEntity>", 3},
 };
 
-inline constexpr FieldDesc kFields1937[] = {
+inline constexpr FieldDesc kFields1947[] = {
 	{"flags", "#", 65535},
 	{"legacy_revoke_permanent", "true", 2},
 	{"request_needed", "true", 3},
@@ -11015,52 +11043,52 @@ inline constexpr FieldDesc kFields1937[] = {
 	{"subscription_pricing", "StarsSubscriptionPricing", 5},
 };
 
-inline constexpr FieldDesc kFields1938[] = {
+inline constexpr FieldDesc kFields1948[] = {
 	{"hash", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields1939[] = {
+inline constexpr FieldDesc kFields1949[] = {
 	{"hash", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields1940[] = {
+inline constexpr FieldDesc kFields1950[] = {
 	{"stickerset", "InputStickerSet", 65535},
 	{"hash", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields1941[] = {
+inline constexpr FieldDesc kFields1951[] = {
 	{"stickerset", "InputStickerSet", 65535},
 	{"archived", "Bool", 65535},
 };
 
-inline constexpr FieldDesc kFields1942[] = {
+inline constexpr FieldDesc kFields1952[] = {
 	{"stickerset", "InputStickerSet", 65535},
 };
 
-inline constexpr FieldDesc kFields1943[] = {
+inline constexpr FieldDesc kFields1953[] = {
 	{"bot", "InputUser", 65535},
 	{"peer", "InputPeer", 65535},
 	{"random_id", "long", 65535},
 	{"start_param", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields1944[] = {
+inline constexpr FieldDesc kFields1954[] = {
 	{"peer", "InputPeer", 65535},
 	{"id", "Vector<int>", 65535},
 	{"increment", "Bool", 65535},
 };
 
-inline constexpr FieldDesc kFields1945[] = {
+inline constexpr FieldDesc kFields1955[] = {
 	{"chat_id", "long", 65535},
 	{"user_id", "InputUser", 65535},
 	{"is_admin", "Bool", 65535},
 };
 
-inline constexpr FieldDesc kFields1946[] = {
+inline constexpr FieldDesc kFields1956[] = {
 	{"chat_id", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields1947[] = {
+inline constexpr FieldDesc kFields1957[] = {
 	{"flags", "#", 65535},
 	{"broadcasts_only", "true", 1},
 	{"groups_only", "true", 2},
@@ -11077,29 +11105,29 @@ inline constexpr FieldDesc kFields1947[] = {
 	{"limit", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields1948[] = {
+inline constexpr FieldDesc kFields1958[] = {
 	{"flags", "#", 65535},
 	{"masks", "true", 0},
 	{"emojis", "true", 1},
 	{"order", "Vector<long>", 65535},
 };
 
-inline constexpr FieldDesc kFields1949[] = {
+inline constexpr FieldDesc kFields1959[] = {
 	{"sha256", "bytes", 65535},
 	{"size", "long", 65535},
 	{"mime_type", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields1950[] = {
+inline constexpr FieldDesc kFields1960[] = {
 	{"hash", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields1951[] = {
+inline constexpr FieldDesc kFields1961[] = {
 	{"id", "InputDocument", 65535},
 	{"unsave", "Bool", 65535},
 };
 
-inline constexpr FieldDesc kFields1952[] = {
+inline constexpr FieldDesc kFields1962[] = {
 	{"flags", "#", 65535},
 	{"bot", "InputUser", 65535},
 	{"peer", "InputPeer", 65535},
@@ -11108,7 +11136,7 @@ inline constexpr FieldDesc kFields1952[] = {
 	{"offset", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields1953[] = {
+inline constexpr FieldDesc kFields1963[] = {
 	{"flags", "#", 65535},
 	{"gallery", "true", 0},
 	{"private", "true", 1},
@@ -11120,7 +11148,7 @@ inline constexpr FieldDesc kFields1953[] = {
 	{"switch_webview", "InlineBotWebView", 4},
 };
 
-inline constexpr FieldDesc kFields1954[] = {
+inline constexpr FieldDesc kFields1964[] = {
 	{"flags", "#", 65535},
 	{"silent", "true", 5},
 	{"background", "true", 6},
@@ -11137,12 +11165,12 @@ inline constexpr FieldDesc kFields1954[] = {
 	{"allow_paid_stars", "long", 21},
 };
 
-inline constexpr FieldDesc kFields1955[] = {
+inline constexpr FieldDesc kFields1965[] = {
 	{"peer", "InputPeer", 65535},
 	{"id", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields1956[] = {
+inline constexpr FieldDesc kFields1966[] = {
 	{"flags", "#", 65535},
 	{"no_webpage", "true", 1},
 	{"invert_media", "true", 16},
@@ -11158,7 +11186,7 @@ inline constexpr FieldDesc kFields1956[] = {
 	{"rich_message", "InputRichMessage", 23},
 };
 
-inline constexpr FieldDesc kFields1957[] = {
+inline constexpr FieldDesc kFields1967[] = {
 	{"flags", "#", 65535},
 	{"no_webpage", "true", 1},
 	{"invert_media", "true", 16},
@@ -11170,7 +11198,7 @@ inline constexpr FieldDesc kFields1957[] = {
 	{"rich_message", "InputRichMessage", 23},
 };
 
-inline constexpr FieldDesc kFields1958[] = {
+inline constexpr FieldDesc kFields1968[] = {
 	{"flags", "#", 65535},
 	{"game", "true", 1},
 	{"peer", "InputPeer", 65535},
@@ -11179,7 +11207,7 @@ inline constexpr FieldDesc kFields1958[] = {
 	{"password", "InputCheckPasswordSRP", 2},
 };
 
-inline constexpr FieldDesc kFields1959[] = {
+inline constexpr FieldDesc kFields1969[] = {
 	{"flags", "#", 65535},
 	{"alert", "true", 1},
 	{"query_id", "long", 65535},
@@ -11188,11 +11216,11 @@ inline constexpr FieldDesc kFields1959[] = {
 	{"cache_time", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields1960[] = {
+inline constexpr FieldDesc kFields1970[] = {
 	{"peers", "Vector<InputDialogPeer>", 65535},
 };
 
-inline constexpr FieldDesc kFields1961[] = {
+inline constexpr FieldDesc kFields1971[] = {
 	{"flags", "#", 65535},
 	{"no_webpage", "true", 1},
 	{"invert_media", "true", 6},
@@ -11206,33 +11234,33 @@ inline constexpr FieldDesc kFields1961[] = {
 	{"rich_message", "InputRichMessage", 9},
 };
 
-inline constexpr FieldDesc kFields1963[] = {
+inline constexpr FieldDesc kFields1973[] = {
 	{"hash", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields1964[] = {
+inline constexpr FieldDesc kFields1974[] = {
 	{"id", "Vector<long>", 65535},
 };
 
-inline constexpr FieldDesc kFields1965[] = {
+inline constexpr FieldDesc kFields1975[] = {
 	{"flags", "#", 65535},
 	{"attached", "true", 0},
 	{"hash", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields1966[] = {
+inline constexpr FieldDesc kFields1976[] = {
 	{"flags", "#", 65535},
 	{"attached", "true", 0},
 	{"id", "InputDocument", 65535},
 	{"unsave", "Bool", 65535},
 };
 
-inline constexpr FieldDesc kFields1967[] = {
+inline constexpr FieldDesc kFields1977[] = {
 	{"flags", "#", 65535},
 	{"attached", "true", 0},
 };
 
-inline constexpr FieldDesc kFields1968[] = {
+inline constexpr FieldDesc kFields1978[] = {
 	{"flags", "#", 65535},
 	{"masks", "true", 0},
 	{"emojis", "true", 1},
@@ -11240,11 +11268,15 @@ inline constexpr FieldDesc kFields1968[] = {
 	{"limit", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields1969[] = {
+inline constexpr FieldDesc kFields1979[] = {
 	{"hash", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields1970[] = {
+inline constexpr FieldDesc kFields1980[] = {
+	{"media", "InputStickeredMedia", 65535},
+};
+
+inline constexpr FieldDesc kFields1981[] = {
 	{"flags", "#", 65535},
 	{"edit_message", "true", 0},
 	{"force", "true", 1},
@@ -11254,7 +11286,7 @@ inline constexpr FieldDesc kFields1970[] = {
 	{"score", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields1971[] = {
+inline constexpr FieldDesc kFields1982[] = {
 	{"flags", "#", 65535},
 	{"edit_message", "true", 0},
 	{"force", "true", 1},
@@ -11263,82 +11295,82 @@ inline constexpr FieldDesc kFields1971[] = {
 	{"score", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields1972[] = {
+inline constexpr FieldDesc kFields1983[] = {
 	{"peer", "InputPeer", 65535},
 	{"id", "int", 65535},
 	{"user_id", "InputUser", 65535},
 };
 
-inline constexpr FieldDesc kFields1973[] = {
+inline constexpr FieldDesc kFields1984[] = {
 	{"id", "InputBotInlineMessageID", 65535},
 	{"user_id", "InputUser", 65535},
 };
 
-inline constexpr FieldDesc kFields1974[] = {
+inline constexpr FieldDesc kFields1985[] = {
 	{"user_id", "InputUser", 65535},
 	{"max_id", "long", 65535},
 	{"limit", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields1975[] = {
+inline constexpr FieldDesc kFields1986[] = {
 	{"url", "string", 65535},
 	{"hash", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields1976[] = {
+inline constexpr FieldDesc kFields1987[] = {
 	{"flags", "#", 65535},
 	{"pinned", "true", 0},
 	{"peer", "InputDialogPeer", 65535},
 };
 
-inline constexpr FieldDesc kFields1977[] = {
+inline constexpr FieldDesc kFields1988[] = {
 	{"flags", "#", 65535},
 	{"force", "true", 0},
 	{"folder_id", "int", 65535},
 	{"order", "Vector<InputDialogPeer>", 65535},
 };
 
-inline constexpr FieldDesc kFields1978[] = {
+inline constexpr FieldDesc kFields1989[] = {
 	{"folder_id", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields1979[] = {
+inline constexpr FieldDesc kFields1990[] = {
 	{"flags", "#", 65535},
 	{"query_id", "long", 65535},
 	{"error", "string", 0},
 	{"shipping_options", "Vector<ShippingOption>", 1},
 };
 
-inline constexpr FieldDesc kFields1980[] = {
+inline constexpr FieldDesc kFields1991[] = {
 	{"flags", "#", 65535},
 	{"success", "true", 1},
 	{"query_id", "long", 65535},
 	{"error", "string", 0},
 };
 
-inline constexpr FieldDesc kFields1981[] = {
+inline constexpr FieldDesc kFields1992[] = {
 	{"flags", "#", 65535},
 	{"business_connection_id", "string", 0},
 	{"peer", "InputPeer", 65535},
 	{"media", "InputMedia", 65535},
 };
 
-inline constexpr FieldDesc kFields1982[] = {
+inline constexpr FieldDesc kFields1993[] = {
 	{"peer", "InputPeer", 65535},
 	{"reply_to", "InputReplyTo", 65535},
 	{"random_id", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields1983[] = {
+inline constexpr FieldDesc kFields1994[] = {
 	{"hash", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields1984[] = {
+inline constexpr FieldDesc kFields1995[] = {
 	{"id", "InputDocument", 65535},
 	{"unfave", "Bool", 65535},
 };
 
-inline constexpr FieldDesc kFields1985[] = {
+inline constexpr FieldDesc kFields1996[] = {
 	{"flags", "#", 65535},
 	{"peer", "InputPeer", 65535},
 	{"top_msg_id", "int", 0},
@@ -11349,19 +11381,19 @@ inline constexpr FieldDesc kFields1985[] = {
 	{"min_id", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields1986[] = {
+inline constexpr FieldDesc kFields1997[] = {
 	{"flags", "#", 65535},
 	{"peer", "InputPeer", 65535},
 	{"top_msg_id", "int", 0},
 };
 
-inline constexpr FieldDesc kFields1987[] = {
+inline constexpr FieldDesc kFields1998[] = {
 	{"peer", "InputPeer", 65535},
 	{"limit", "int", 65535},
 	{"hash", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields1988[] = {
+inline constexpr FieldDesc kFields1999[] = {
 	{"flags", "#", 65535},
 	{"silent", "true", 5},
 	{"background", "true", 6},
@@ -11380,26 +11412,31 @@ inline constexpr FieldDesc kFields1988[] = {
 	{"allow_paid_stars", "long", 21},
 };
 
-inline constexpr FieldDesc kFields1989[] = {
+inline constexpr FieldDesc kFields2000[] = {
 	{"peer", "InputEncryptedChat", 65535},
 	{"file", "InputEncryptedFile", 65535},
 };
 
-inline constexpr FieldDesc kFields1990[] = {
+inline constexpr FieldDesc kFields2001[] = {
 	{"flags", "#", 65535},
 	{"exclude_featured", "true", 0},
 	{"q", "string", 65535},
 	{"hash", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields1991[] = {
+inline constexpr FieldDesc kFields2003[] = {
 	{"flags", "#", 65535},
 	{"unread", "true", 0},
 	{"parent_peer", "InputPeer", 1},
 	{"peer", "InputDialogPeer", 65535},
 };
 
-inline constexpr FieldDesc kFields1993[] = {
+inline constexpr FieldDesc kFields2004[] = {
+	{"flags", "#", 65535},
+	{"parent_peer", "InputPeer", 0},
+};
+
+inline constexpr FieldDesc kFields2006[] = {
 	{"flags", "#", 65535},
 	{"silent", "true", 0},
 	{"unpin", "true", 1},
@@ -11408,46 +11445,58 @@ inline constexpr FieldDesc kFields1993[] = {
 	{"id", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields1994[] = {
+inline constexpr FieldDesc kFields2007[] = {
 	{"peer", "InputPeer", 65535},
 	{"msg_id", "int", 65535},
 	{"options", "Vector<bytes>", 65535},
 };
 
-inline constexpr FieldDesc kFields1995[] = {
+inline constexpr FieldDesc kFields2008[] = {
 	{"peer", "InputPeer", 65535},
 	{"msg_id", "int", 65535},
 	{"poll_hash", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields1996[] = {
+inline constexpr FieldDesc kFields2009[] = {
 	{"peer", "InputPeer", 65535},
 };
 
-inline constexpr FieldDesc kFields1997[] = {
+inline constexpr FieldDesc kFields2010[] = {
 	{"peer", "InputPeer", 65535},
 	{"about", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields1998[] = {
+inline constexpr FieldDesc kFields2011[] = {
 	{"peer", "InputPeer", 65535},
 	{"banned_rights", "ChatBannedRights", 65535},
 };
 
-inline constexpr FieldDesc kFields1999[] = {
+inline constexpr FieldDesc kFields2012[] = {
 	{"lang_code", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2000[] = {
+inline constexpr FieldDesc kFields2013[] = {
 	{"lang_code", "string", 65535},
 	{"from_version", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2001[] = {
+inline constexpr FieldDesc kFields2014[] = {
+	{"lang_codes", "Vector<string>", 65535},
+};
+
+inline constexpr FieldDesc kFields2015[] = {
 	{"lang_code", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2002[] = {
+inline constexpr FieldDesc kFields2016[] = {
+	{"flags", "#", 65535},
+	{"peer", "InputPeer", 65535},
+	{"saved_peer_id", "InputPeer", 2},
+	{"top_msg_id", "int", 0},
+	{"filters", "Vector<MessagesFilter>", 65535},
+};
+
+inline constexpr FieldDesc kFields2017[] = {
 	{"flags", "#", 65535},
 	{"peer", "InputPeer", 1},
 	{"msg_id", "int", 1},
@@ -11456,7 +11505,7 @@ inline constexpr FieldDesc kFields2002[] = {
 	{"in_app_origin", "string", 3},
 };
 
-inline constexpr FieldDesc kFields2003[] = {
+inline constexpr FieldDesc kFields2018[] = {
 	{"flags", "#", 65535},
 	{"write_allowed", "true", 0},
 	{"share_phone_number", "true", 3},
@@ -11467,31 +11516,31 @@ inline constexpr FieldDesc kFields2003[] = {
 	{"match_code", "string", 4},
 };
 
-inline constexpr FieldDesc kFields2004[] = {
+inline constexpr FieldDesc kFields2019[] = {
 	{"peer", "InputPeer", 65535},
 };
 
-inline constexpr FieldDesc kFields2005[] = {
+inline constexpr FieldDesc kFields2020[] = {
 	{"peer", "InputPeer", 65535},
 	{"hash", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields2006[] = {
+inline constexpr FieldDesc kFields2021[] = {
 	{"peer", "InputPeer", 65535},
 	{"id", "Vector<int>", 65535},
 };
 
-inline constexpr FieldDesc kFields2007[] = {
+inline constexpr FieldDesc kFields2022[] = {
 	{"peer", "InputPeer", 65535},
 	{"id", "Vector<int>", 65535},
 };
 
-inline constexpr FieldDesc kFields2008[] = {
+inline constexpr FieldDesc kFields2023[] = {
 	{"peer", "InputPeer", 65535},
 	{"id", "Vector<int>", 65535},
 };
 
-inline constexpr FieldDesc kFields2009[] = {
+inline constexpr FieldDesc kFields2024[] = {
 	{"flags", "#", 65535},
 	{"peer", "InputPeer", 65535},
 	{"id", "int", 65535},
@@ -11500,7 +11549,7 @@ inline constexpr FieldDesc kFields2009[] = {
 	{"limit", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2010[] = {
+inline constexpr FieldDesc kFields2025[] = {
 	{"flags", "#", 65535},
 	{"uninstall", "true", 0},
 	{"archive", "true", 1},
@@ -11508,23 +11557,23 @@ inline constexpr FieldDesc kFields2010[] = {
 	{"stickersets", "Vector<InputStickerSet>", 65535},
 };
 
-inline constexpr FieldDesc kFields2012[] = {
+inline constexpr FieldDesc kFields2028[] = {
 	{"flags", "#", 65535},
 	{"id", "int", 65535},
 	{"filter", "DialogFilter", 0},
 };
 
-inline constexpr FieldDesc kFields2013[] = {
+inline constexpr FieldDesc kFields2029[] = {
 	{"order", "Vector<int>", 65535},
 };
 
-inline constexpr FieldDesc kFields2014[] = {
+inline constexpr FieldDesc kFields2030[] = {
 	{"offset", "int", 65535},
 	{"limit", "int", 65535},
 	{"hash", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields2015[] = {
+inline constexpr FieldDesc kFields2031[] = {
 	{"peer", "InputPeer", 65535},
 	{"msg_id", "int", 65535},
 	{"offset_id", "int", 65535},
@@ -11536,56 +11585,56 @@ inline constexpr FieldDesc kFields2015[] = {
 	{"hash", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields2016[] = {
+inline constexpr FieldDesc kFields2032[] = {
 	{"peer", "InputPeer", 65535},
 	{"msg_id", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2017[] = {
+inline constexpr FieldDesc kFields2033[] = {
 	{"peer", "InputPeer", 65535},
 	{"msg_id", "int", 65535},
 	{"read_max_id", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2018[] = {
+inline constexpr FieldDesc kFields2034[] = {
 	{"flags", "#", 65535},
 	{"peer", "InputPeer", 65535},
 	{"top_msg_id", "int", 0},
 	{"saved_peer_id", "InputPeer", 1},
 };
 
-inline constexpr FieldDesc kFields2019[] = {
+inline constexpr FieldDesc kFields2035[] = {
 	{"chat_id", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields2020[] = {
+inline constexpr FieldDesc kFields2036[] = {
 	{"flags", "#", 65535},
 	{"revoke", "true", 0},
 };
 
-inline constexpr FieldDesc kFields2021[] = {
+inline constexpr FieldDesc kFields2037[] = {
 	{"import_head", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2022[] = {
+inline constexpr FieldDesc kFields2038[] = {
 	{"peer", "InputPeer", 65535},
 	{"file", "InputFile", 65535},
 	{"media_count", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2023[] = {
+inline constexpr FieldDesc kFields2039[] = {
 	{"peer", "InputPeer", 65535},
 	{"import_id", "long", 65535},
 	{"file_name", "string", 65535},
 	{"media", "InputMedia", 65535},
 };
 
-inline constexpr FieldDesc kFields2024[] = {
+inline constexpr FieldDesc kFields2040[] = {
 	{"peer", "InputPeer", 65535},
 	{"import_id", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields2025[] = {
+inline constexpr FieldDesc kFields2041[] = {
 	{"flags", "#", 65535},
 	{"revoked", "true", 3},
 	{"peer", "InputPeer", 65535},
@@ -11595,12 +11644,12 @@ inline constexpr FieldDesc kFields2025[] = {
 	{"limit", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2026[] = {
+inline constexpr FieldDesc kFields2042[] = {
 	{"peer", "InputPeer", 65535},
 	{"link", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2027[] = {
+inline constexpr FieldDesc kFields2043[] = {
 	{"flags", "#", 65535},
 	{"revoked", "true", 2},
 	{"peer", "InputPeer", 65535},
@@ -11611,21 +11660,21 @@ inline constexpr FieldDesc kFields2027[] = {
 	{"title", "string", 4},
 };
 
-inline constexpr FieldDesc kFields2028[] = {
+inline constexpr FieldDesc kFields2044[] = {
 	{"peer", "InputPeer", 65535},
 	{"admin_id", "InputUser", 65535},
 };
 
-inline constexpr FieldDesc kFields2029[] = {
+inline constexpr FieldDesc kFields2045[] = {
 	{"peer", "InputPeer", 65535},
 	{"link", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2030[] = {
+inline constexpr FieldDesc kFields2046[] = {
 	{"peer", "InputPeer", 65535},
 };
 
-inline constexpr FieldDesc kFields2031[] = {
+inline constexpr FieldDesc kFields2047[] = {
 	{"flags", "#", 65535},
 	{"requested", "true", 0},
 	{"subscription_expired", "true", 3},
@@ -11637,21 +11686,26 @@ inline constexpr FieldDesc kFields2031[] = {
 	{"limit", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2032[] = {
+inline constexpr FieldDesc kFields2048[] = {
 	{"peer", "InputPeer", 65535},
 	{"period", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2033[] = {
+inline constexpr FieldDesc kFields2049[] = {
 	{"peer", "InputPeer", 65535},
 };
 
-inline constexpr FieldDesc kFields2034[] = {
+inline constexpr FieldDesc kFields2050[] = {
 	{"peer", "InputPeer", 65535},
 	{"theme", "InputChatTheme", 65535},
 };
 
-inline constexpr FieldDesc kFields2035[] = {
+inline constexpr FieldDesc kFields2051[] = {
+	{"peer", "InputPeer", 65535},
+	{"msg_id", "int", 65535},
+};
+
+inline constexpr FieldDesc kFields2052[] = {
 	{"flags", "#", 65535},
 	{"peer", "InputPeer", 65535},
 	{"saved_peer_id", "InputPeer", 2},
@@ -11660,7 +11714,7 @@ inline constexpr FieldDesc kFields2035[] = {
 	{"offset_date", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2036[] = {
+inline constexpr FieldDesc kFields2053[] = {
 	{"flags", "#", 65535},
 	{"peer", "InputPeer", 65535},
 	{"saved_peer_id", "InputPeer", 2},
@@ -11669,33 +11723,33 @@ inline constexpr FieldDesc kFields2036[] = {
 	{"limit", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2037[] = {
+inline constexpr FieldDesc kFields2054[] = {
 	{"flags", "#", 65535},
 	{"approved", "true", 0},
 	{"peer", "InputPeer", 65535},
 	{"user_id", "InputUser", 65535},
 };
 
-inline constexpr FieldDesc kFields2038[] = {
+inline constexpr FieldDesc kFields2055[] = {
 	{"flags", "#", 65535},
 	{"approved", "true", 0},
 	{"peer", "InputPeer", 65535},
 	{"link", "string", 1},
 };
 
-inline constexpr FieldDesc kFields2039[] = {
+inline constexpr FieldDesc kFields2056[] = {
 	{"flags", "#", 65535},
 	{"peer", "InputPeer", 65535},
 	{"enabled", "Bool", 65535},
 	{"request_msg_id", "int", 0},
 };
 
-inline constexpr FieldDesc kFields2040[] = {
+inline constexpr FieldDesc kFields2057[] = {
 	{"peer", "InputPeer", 65535},
 	{"send_as", "InputPeer", 65535},
 };
 
-inline constexpr FieldDesc kFields2041[] = {
+inline constexpr FieldDesc kFields2058[] = {
 	{"flags", "#", 65535},
 	{"big", "true", 1},
 	{"add_to_recent", "true", 2},
@@ -11704,12 +11758,12 @@ inline constexpr FieldDesc kFields2041[] = {
 	{"reaction", "Vector<Reaction>", 0},
 };
 
-inline constexpr FieldDesc kFields2042[] = {
+inline constexpr FieldDesc kFields2059[] = {
 	{"peer", "InputPeer", 65535},
 	{"id", "Vector<int>", 65535},
 };
 
-inline constexpr FieldDesc kFields2043[] = {
+inline constexpr FieldDesc kFields2060[] = {
 	{"flags", "#", 65535},
 	{"peer", "InputPeer", 65535},
 	{"id", "int", 65535},
@@ -11718,7 +11772,7 @@ inline constexpr FieldDesc kFields2043[] = {
 	{"limit", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2044[] = {
+inline constexpr FieldDesc kFields2061[] = {
 	{"flags", "#", 65535},
 	{"peer", "InputPeer", 65535},
 	{"available_reactions", "ChatReactions", 65535},
@@ -11726,15 +11780,15 @@ inline constexpr FieldDesc kFields2044[] = {
 	{"paid_enabled", "Bool", 1},
 };
 
-inline constexpr FieldDesc kFields2045[] = {
+inline constexpr FieldDesc kFields2062[] = {
 	{"hash", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2046[] = {
+inline constexpr FieldDesc kFields2063[] = {
 	{"reaction", "Reaction", 65535},
 };
 
-inline constexpr FieldDesc kFields2047[] = {
+inline constexpr FieldDesc kFields2064[] = {
 	{"flags", "#", 65535},
 	{"peer", "InputPeer", 0},
 	{"id", "Vector<int>", 0},
@@ -11743,7 +11797,7 @@ inline constexpr FieldDesc kFields2047[] = {
 	{"tone", "string", 2},
 };
 
-inline constexpr FieldDesc kFields2048[] = {
+inline constexpr FieldDesc kFields2065[] = {
 	{"flags", "#", 65535},
 	{"peer", "InputPeer", 65535},
 	{"top_msg_id", "int", 0},
@@ -11755,35 +11809,35 @@ inline constexpr FieldDesc kFields2048[] = {
 	{"min_id", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2049[] = {
+inline constexpr FieldDesc kFields2066[] = {
 	{"flags", "#", 65535},
 	{"peer", "InputPeer", 65535},
 	{"top_msg_id", "int", 0},
 	{"saved_peer_id", "InputPeer", 1},
 };
 
-inline constexpr FieldDesc kFields2050[] = {
+inline constexpr FieldDesc kFields2067[] = {
 	{"q", "string", 65535},
 	{"filter", "MessagesFilter", 65535},
 	{"limit", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2051[] = {
+inline constexpr FieldDesc kFields2068[] = {
 	{"hash", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields2052[] = {
+inline constexpr FieldDesc kFields2069[] = {
 	{"bot", "InputUser", 65535},
 };
 
-inline constexpr FieldDesc kFields2053[] = {
+inline constexpr FieldDesc kFields2070[] = {
 	{"flags", "#", 65535},
 	{"write_allowed", "true", 0},
 	{"bot", "InputUser", 65535},
 	{"enabled", "Bool", 65535},
 };
 
-inline constexpr FieldDesc kFields2054[] = {
+inline constexpr FieldDesc kFields2071[] = {
 	{"flags", "#", 65535},
 	{"from_bot_menu", "true", 4},
 	{"silent", "true", 5},
@@ -11799,7 +11853,7 @@ inline constexpr FieldDesc kFields2054[] = {
 	{"send_as", "InputPeer", 13},
 };
 
-inline constexpr FieldDesc kFields2055[] = {
+inline constexpr FieldDesc kFields2072[] = {
 	{"flags", "#", 65535},
 	{"silent", "true", 5},
 	{"peer", "InputPeer", 65535},
@@ -11809,7 +11863,7 @@ inline constexpr FieldDesc kFields2055[] = {
 	{"send_as", "InputPeer", 13},
 };
 
-inline constexpr FieldDesc kFields2056[] = {
+inline constexpr FieldDesc kFields2073[] = {
 	{"flags", "#", 65535},
 	{"from_switch_webview", "true", 1},
 	{"from_side_menu", "true", 2},
@@ -11822,64 +11876,68 @@ inline constexpr FieldDesc kFields2056[] = {
 	{"platform", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2057[] = {
+inline constexpr FieldDesc kFields2074[] = {
 	{"bot_query_id", "string", 65535},
 	{"result", "InputBotInlineResult", 65535},
 };
 
-inline constexpr FieldDesc kFields2058[] = {
+inline constexpr FieldDesc kFields2075[] = {
 	{"bot", "InputUser", 65535},
 	{"random_id", "long", 65535},
 	{"button_text", "string", 65535},
 	{"data", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2059[] = {
+inline constexpr FieldDesc kFields2076[] = {
 	{"peer", "InputPeer", 65535},
 	{"msg_id", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2060[] = {
+inline constexpr FieldDesc kFields2077[] = {
 	{"peer", "InputPeer", 65535},
 	{"msg_id", "int", 65535},
 	{"transcription_id", "long", 65535},
 	{"good", "Bool", 65535},
 };
 
-inline constexpr FieldDesc kFields2061[] = {
+inline constexpr FieldDesc kFields2078[] = {
+	{"document_id", "Vector<long>", 65535},
+};
+
+inline constexpr FieldDesc kFields2079[] = {
 	{"hash", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields2062[] = {
+inline constexpr FieldDesc kFields2080[] = {
 	{"hash", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields2063[] = {
+inline constexpr FieldDesc kFields2081[] = {
 	{"peer", "InputPeer", 65535},
 	{"id", "int", 65535},
 	{"reaction_peer", "InputPeer", 65535},
 };
 
-inline constexpr FieldDesc kFields2064[] = {
+inline constexpr FieldDesc kFields2082[] = {
 	{"limit", "int", 65535},
 	{"hash", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields2065[] = {
+inline constexpr FieldDesc kFields2083[] = {
 	{"limit", "int", 65535},
 	{"hash", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields2067[] = {
+inline constexpr FieldDesc kFields2085[] = {
 	{"peer", "InputPeer", 65535},
 	{"id", "Vector<int>", 65535},
 };
 
-inline constexpr FieldDesc kFields2068[] = {
+inline constexpr FieldDesc kFields2086[] = {
 	{"period", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2070[] = {
+inline constexpr FieldDesc kFields2088[] = {
 	{"flags", "#", 65535},
 	{"peer", "InputPeer", 65535},
 	{"msg_id", "int", 0},
@@ -11888,35 +11946,35 @@ inline constexpr FieldDesc kFields2070[] = {
 	{"requested_peers", "Vector<InputPeer>", 65535},
 };
 
-inline constexpr FieldDesc kFields2071[] = {
+inline constexpr FieldDesc kFields2089[] = {
 	{"hash", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2072[] = {
+inline constexpr FieldDesc kFields2090[] = {
 	{"hash", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2073[] = {
+inline constexpr FieldDesc kFields2091[] = {
 	{"hash", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2074[] = {
+inline constexpr FieldDesc kFields2092[] = {
 	{"emoticon", "string", 65535},
 	{"hash", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields2075[] = {
+inline constexpr FieldDesc kFields2093[] = {
 	{"flags", "#", 65535},
 	{"disabled", "true", 0},
 	{"peer", "InputPeer", 65535},
 };
 
-inline constexpr FieldDesc kFields2076[] = {
+inline constexpr FieldDesc kFields2094[] = {
 	{"app", "InputBotApp", 65535},
 	{"hash", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields2077[] = {
+inline constexpr FieldDesc kFields2095[] = {
 	{"flags", "#", 65535},
 	{"write_allowed", "true", 0},
 	{"compact", "true", 7},
@@ -11928,7 +11986,7 @@ inline constexpr FieldDesc kFields2077[] = {
 	{"platform", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2078[] = {
+inline constexpr FieldDesc kFields2096[] = {
 	{"flags", "#", 65535},
 	{"for_both", "true", 3},
 	{"revert", "true", 4},
@@ -11938,14 +11996,14 @@ inline constexpr FieldDesc kFields2078[] = {
 	{"id", "int", 1},
 };
 
-inline constexpr FieldDesc kFields2079[] = {
+inline constexpr FieldDesc kFields2097[] = {
 	{"flags", "#", 65535},
 	{"exclude_featured", "true", 0},
 	{"q", "string", 65535},
 	{"hash", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields2080[] = {
+inline constexpr FieldDesc kFields2098[] = {
 	{"flags", "#", 65535},
 	{"exclude_pinned", "true", 0},
 	{"parent_peer", "InputPeer", 1},
@@ -11956,7 +12014,7 @@ inline constexpr FieldDesc kFields2080[] = {
 	{"hash", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields2081[] = {
+inline constexpr FieldDesc kFields2099[] = {
 	{"flags", "#", 65535},
 	{"parent_peer", "InputPeer", 0},
 	{"peer", "InputPeer", 65535},
@@ -11969,7 +12027,7 @@ inline constexpr FieldDesc kFields2081[] = {
 	{"hash", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields2082[] = {
+inline constexpr FieldDesc kFields2100[] = {
 	{"flags", "#", 65535},
 	{"parent_peer", "InputPeer", 0},
 	{"peer", "InputPeer", 65535},
@@ -11978,108 +12036,113 @@ inline constexpr FieldDesc kFields2082[] = {
 	{"max_date", "int", 3},
 };
 
-inline constexpr FieldDesc kFields2084[] = {
+inline constexpr FieldDesc kFields2102[] = {
 	{"flags", "#", 65535},
 	{"pinned", "true", 0},
 	{"peer", "InputDialogPeer", 65535},
 };
 
-inline constexpr FieldDesc kFields2085[] = {
+inline constexpr FieldDesc kFields2103[] = {
 	{"flags", "#", 65535},
 	{"force", "true", 0},
 	{"order", "Vector<InputDialogPeer>", 65535},
 };
 
-inline constexpr FieldDesc kFields2086[] = {
+inline constexpr FieldDesc kFields2104[] = {
 	{"flags", "#", 65535},
 	{"peer", "InputPeer", 0},
 	{"hash", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields2087[] = {
+inline constexpr FieldDesc kFields2105[] = {
 	{"flags", "#", 65535},
 	{"reaction", "Reaction", 65535},
 	{"title", "string", 0},
 };
 
-inline constexpr FieldDesc kFields2088[] = {
+inline constexpr FieldDesc kFields2106[] = {
 	{"hash", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields2089[] = {
+inline constexpr FieldDesc kFields2107[] = {
 	{"peer", "InputPeer", 65535},
 	{"msg_id", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2090[] = {
+inline constexpr FieldDesc kFields2108[] = {
 	{"hash", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields2091[] = {
+inline constexpr FieldDesc kFields2109[] = {
 	{"order", "Vector<int>", 65535},
 };
 
-inline constexpr FieldDesc kFields2092[] = {
+inline constexpr FieldDesc kFields2110[] = {
 	{"shortcut", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2093[] = {
+inline constexpr FieldDesc kFields2111[] = {
 	{"shortcut_id", "int", 65535},
 	{"shortcut", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2094[] = {
+inline constexpr FieldDesc kFields2112[] = {
 	{"shortcut_id", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2095[] = {
+inline constexpr FieldDesc kFields2113[] = {
 	{"flags", "#", 65535},
 	{"shortcut_id", "int", 65535},
 	{"id", "Vector<int>", 0},
 	{"hash", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields2096[] = {
+inline constexpr FieldDesc kFields2114[] = {
 	{"peer", "InputPeer", 65535},
 	{"shortcut_id", "int", 65535},
 	{"id", "Vector<int>", 65535},
 	{"random_id", "Vector<long>", 65535},
 };
 
-inline constexpr FieldDesc kFields2097[] = {
+inline constexpr FieldDesc kFields2115[] = {
 	{"shortcut_id", "int", 65535},
 	{"id", "Vector<int>", 65535},
 };
 
-inline constexpr FieldDesc kFields2098[] = {
+inline constexpr FieldDesc kFields2116[] = {
 	{"enabled", "Bool", 65535},
 };
 
-inline constexpr FieldDesc kFields2099[] = {
+inline constexpr FieldDesc kFields2117[] = {
 	{"offset_id", "long", 65535},
 	{"limit", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2100[] = {
+inline constexpr FieldDesc kFields2118[] = {
 	{"hash", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2101[] = {
+inline constexpr FieldDesc kFields2119[] = {
 	{"hash", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2102[] = {
+inline constexpr FieldDesc kFields2120[] = {
 	{"peer", "InputPeer", 65535},
 	{"msg_id", "int", 65535},
 	{"text", "TextWithEntities", 65535},
 };
 
-inline constexpr FieldDesc kFields2103[] = {
+inline constexpr FieldDesc kFields2121[] = {
 	{"peer", "InputPeer", 65535},
 	{"msg_id", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2104[] = {
+inline constexpr FieldDesc kFields2122[] = {
+	{"peer", "InputPeer", 65535},
+	{"msg_id", "Vector<int>", 65535},
+};
+
+inline constexpr FieldDesc kFields2123[] = {
 	{"flags", "#", 65535},
 	{"compact", "true", 7},
 	{"fullscreen", "true", 8},
@@ -12090,7 +12153,7 @@ inline constexpr FieldDesc kFields2104[] = {
 	{"platform", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2105[] = {
+inline constexpr FieldDesc kFields2124[] = {
 	{"flags", "#", 65535},
 	{"peer", "InputPeer", 65535},
 	{"msg_id", "int", 65535},
@@ -12099,47 +12162,47 @@ inline constexpr FieldDesc kFields2105[] = {
 	{"private", "PaidReactionPrivacy", 0},
 };
 
-inline constexpr FieldDesc kFields2106[] = {
+inline constexpr FieldDesc kFields2125[] = {
 	{"peer", "InputPeer", 65535},
 	{"msg_id", "int", 65535},
 	{"private", "PaidReactionPrivacy", 65535},
 };
 
-inline constexpr FieldDesc kFields2108[] = {
+inline constexpr FieldDesc kFields2127[] = {
 	{"random_id", "bytes", 65535},
 };
 
-inline constexpr FieldDesc kFields2109[] = {
+inline constexpr FieldDesc kFields2128[] = {
 	{"flags", "#", 65535},
 	{"media", "true", 0},
 	{"fullscreen", "true", 1},
 	{"random_id", "bytes", 65535},
 };
 
-inline constexpr FieldDesc kFields2110[] = {
+inline constexpr FieldDesc kFields2129[] = {
 	{"random_id", "bytes", 65535},
 	{"option", "bytes", 65535},
 };
 
-inline constexpr FieldDesc kFields2111[] = {
+inline constexpr FieldDesc kFields2130[] = {
 	{"flags", "#", 65535},
 	{"peer", "InputPeer", 65535},
 	{"msg_id", "int", 0},
 };
 
-inline constexpr FieldDesc kFields2112[] = {
+inline constexpr FieldDesc kFields2131[] = {
 	{"flags", "#", 65535},
 	{"result", "InputBotInlineResult", 65535},
 	{"user_id", "InputUser", 65535},
 	{"peer_types", "Vector<InlineQueryPeerType>", 0},
 };
 
-inline constexpr FieldDesc kFields2113[] = {
+inline constexpr FieldDesc kFields2132[] = {
 	{"bot", "InputUser", 65535},
 	{"id", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2114[] = {
+inline constexpr FieldDesc kFields2133[] = {
 	{"flags", "#", 65535},
 	{"emojis", "true", 0},
 	{"q", "string", 65535},
@@ -12150,39 +12213,39 @@ inline constexpr FieldDesc kFields2114[] = {
 	{"hash", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields2115[] = {
+inline constexpr FieldDesc kFields2134[] = {
 	{"flags", "#", 65535},
 	{"push", "true", 0},
 	{"peer", "InputPeer", 65535},
 	{"id", "Vector<int>", 65535},
 };
 
-inline constexpr FieldDesc kFields2116[] = {
+inline constexpr FieldDesc kFields2135[] = {
 	{"flags", "#", 65535},
 	{"parent_peer", "InputPeer", 1},
 	{"ids", "Vector<InputPeer>", 65535},
 };
 
-inline constexpr FieldDesc kFields2117[] = {
+inline constexpr FieldDesc kFields2136[] = {
 	{"parent_peer", "InputPeer", 65535},
 	{"peer", "InputPeer", 65535},
 	{"max_id", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2118[] = {
+inline constexpr FieldDesc kFields2137[] = {
 	{"peer", "InputPeer", 65535},
 	{"msg_id", "int", 65535},
 	{"completed", "Vector<int>", 65535},
 	{"incompleted", "Vector<int>", 65535},
 };
 
-inline constexpr FieldDesc kFields2119[] = {
+inline constexpr FieldDesc kFields2138[] = {
 	{"peer", "InputPeer", 65535},
 	{"msg_id", "int", 65535},
 	{"list", "Vector<TodoItem>", 65535},
 };
 
-inline constexpr FieldDesc kFields2120[] = {
+inline constexpr FieldDesc kFields2139[] = {
 	{"flags", "#", 65535},
 	{"reject", "true", 1},
 	{"peer", "InputPeer", 65535},
@@ -12191,7 +12254,7 @@ inline constexpr FieldDesc kFields2120[] = {
 	{"reject_comment", "string", 2},
 };
 
-inline constexpr FieldDesc kFields2121[] = {
+inline constexpr FieldDesc kFields2140[] = {
 	{"flags", "#", 65535},
 	{"peer", "InputPeer", 65535},
 	{"q", "string", 0},
@@ -12201,12 +12264,12 @@ inline constexpr FieldDesc kFields2121[] = {
 	{"limit", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2122[] = {
+inline constexpr FieldDesc kFields2141[] = {
 	{"peer", "InputPeer", 65535},
 	{"topics", "Vector<int>", 65535},
 };
 
-inline constexpr FieldDesc kFields2123[] = {
+inline constexpr FieldDesc kFields2142[] = {
 	{"flags", "#", 65535},
 	{"peer", "InputPeer", 65535},
 	{"topic_id", "int", 65535},
@@ -12216,20 +12279,20 @@ inline constexpr FieldDesc kFields2123[] = {
 	{"hidden", "Bool", 3},
 };
 
-inline constexpr FieldDesc kFields2124[] = {
+inline constexpr FieldDesc kFields2143[] = {
 	{"peer", "InputPeer", 65535},
 	{"topic_id", "int", 65535},
 	{"pinned", "Bool", 65535},
 };
 
-inline constexpr FieldDesc kFields2125[] = {
+inline constexpr FieldDesc kFields2144[] = {
 	{"flags", "#", 65535},
 	{"force", "true", 0},
 	{"peer", "InputPeer", 65535},
 	{"order", "Vector<int>", 65535},
 };
 
-inline constexpr FieldDesc kFields2126[] = {
+inline constexpr FieldDesc kFields2145[] = {
 	{"flags", "#", 65535},
 	{"title_missing", "true", 4},
 	{"peer", "InputPeer", 65535},
@@ -12240,12 +12303,12 @@ inline constexpr FieldDesc kFields2126[] = {
 	{"send_as", "InputPeer", 2},
 };
 
-inline constexpr FieldDesc kFields2127[] = {
+inline constexpr FieldDesc kFields2146[] = {
 	{"peer", "InputPeer", 65535},
 	{"top_msg_id", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2129[] = {
+inline constexpr FieldDesc kFields2148[] = {
 	{"flags", "#", 65535},
 	{"peer", "InputPeer", 65535},
 	{"id", "int", 65535},
@@ -12253,32 +12316,32 @@ inline constexpr FieldDesc kFields2129[] = {
 	{"tone", "string", 2},
 };
 
-inline constexpr FieldDesc kFields2130[] = {
+inline constexpr FieldDesc kFields2149[] = {
 	{"peer", "InputPeer", 65535},
 	{"user_id", "InputUser", 65535},
 	{"password", "InputCheckPasswordSRP", 65535},
 };
 
-inline constexpr FieldDesc kFields2131[] = {
+inline constexpr FieldDesc kFields2150[] = {
 	{"peer", "InputPeer", 65535},
 };
 
-inline constexpr FieldDesc kFields2132[] = {
+inline constexpr FieldDesc kFields2151[] = {
 	{"peer", "InputPeer", 65535},
 	{"participant", "InputPeer", 65535},
 	{"rank", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2133[] = {
+inline constexpr FieldDesc kFields2152[] = {
 	{"url", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2134[] = {
+inline constexpr FieldDesc kFields2153[] = {
 	{"url", "string", 65535},
 	{"match_code", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2135[] = {
+inline constexpr FieldDesc kFields2154[] = {
 	{"flags", "#", 65535},
 	{"proofread", "true", 0},
 	{"emojify", "true", 3},
@@ -12287,29 +12350,29 @@ inline constexpr FieldDesc kFields2135[] = {
 	{"tone", "InputAiComposeTone", 2},
 };
 
-inline constexpr FieldDesc kFields2136[] = {
+inline constexpr FieldDesc kFields2155[] = {
 	{"peer", "InputPeer", 65535},
 	{"metrics", "Vector<InputMessageReadMetric>", 65535},
 };
 
-inline constexpr FieldDesc kFields2137[] = {
+inline constexpr FieldDesc kFields2156[] = {
 	{"id", "InputDocument", 65535},
 	{"listened_duration", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2138[] = {
+inline constexpr FieldDesc kFields2157[] = {
 	{"peer", "InputPeer", 65535},
 	{"msg_id", "int", 65535},
 	{"answer", "PollAnswer", 65535},
 };
 
-inline constexpr FieldDesc kFields2139[] = {
+inline constexpr FieldDesc kFields2158[] = {
 	{"peer", "InputPeer", 65535},
 	{"msg_id", "int", 65535},
 	{"option", "bytes", 65535},
 };
 
-inline constexpr FieldDesc kFields2140[] = {
+inline constexpr FieldDesc kFields2159[] = {
 	{"flags", "#", 65535},
 	{"peer", "InputPeer", 65535},
 	{"top_msg_id", "int", 0},
@@ -12320,29 +12383,29 @@ inline constexpr FieldDesc kFields2140[] = {
 	{"min_id", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2141[] = {
+inline constexpr FieldDesc kFields2160[] = {
 	{"flags", "#", 65535},
 	{"peer", "InputPeer", 65535},
 	{"top_msg_id", "int", 0},
 };
 
-inline constexpr FieldDesc kFields2142[] = {
+inline constexpr FieldDesc kFields2161[] = {
 	{"query_id", "long", 65535},
 	{"result", "InputBotInlineResult", 65535},
 };
 
-inline constexpr FieldDesc kFields2143[] = {
+inline constexpr FieldDesc kFields2162[] = {
 	{"peer", "InputPeer", 65535},
 	{"participant", "InputPeer", 65535},
 };
 
-inline constexpr FieldDesc kFields2144[] = {
+inline constexpr FieldDesc kFields2163[] = {
 	{"peer", "InputPeer", 65535},
 	{"msg_id", "int", 65535},
 	{"participant", "InputPeer", 65535},
 };
 
-inline constexpr FieldDesc kFields2145[] = {
+inline constexpr FieldDesc kFields2164[] = {
 	{"user_id", "InputUser", 65535},
 	{"limit", "int", 65535},
 	{"max_id", "int", 65535},
@@ -12350,12 +12413,12 @@ inline constexpr FieldDesc kFields2145[] = {
 	{"hash", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields2146[] = {
+inline constexpr FieldDesc kFields2165[] = {
 	{"peer", "InputPeer", 65535},
 	{"id", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2147[] = {
+inline constexpr FieldDesc kFields2166[] = {
 	{"flags", "#", 65535},
 	{"peer", "InputPeer", 0},
 	{"id", "Vector<int>", 0},
@@ -12364,7 +12427,7 @@ inline constexpr FieldDesc kFields2147[] = {
 	{"tone", "string", 2},
 };
 
-inline constexpr FieldDesc kFields2148[] = {
+inline constexpr FieldDesc kFields2167[] = {
 	{"flags", "#", 65535},
 	{"proofread", "true", 0},
 	{"emojify", "true", 3},
@@ -12373,14 +12436,14 @@ inline constexpr FieldDesc kFields2148[] = {
 	{"tone", "InputAiComposeTone", 2},
 };
 
-inline constexpr FieldDesc kFields2149[] = {
+inline constexpr FieldDesc kFields2168[] = {
 	{"flags", "#", 65535},
 	{"query_id", "long", 65535},
 	{"theme_params", "DataJSON", 0},
 	{"platform", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2151[] = {
+inline constexpr FieldDesc kFields2170[] = {
 	{"flags", "#", 65535},
 	{"pts", "int", 65535},
 	{"pts_limit", "int", 1},
@@ -12390,7 +12453,7 @@ inline constexpr FieldDesc kFields2151[] = {
 	{"qts_limit", "int", 2},
 };
 
-inline constexpr FieldDesc kFields2152[] = {
+inline constexpr FieldDesc kFields2171[] = {
 	{"flags", "#", 65535},
 	{"force", "true", 0},
 	{"channel", "InputChannel", 65535},
@@ -12399,14 +12462,14 @@ inline constexpr FieldDesc kFields2152[] = {
 	{"limit", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2153[] = {
+inline constexpr FieldDesc kFields2172[] = {
 	{"flags", "#", 65535},
 	{"fallback", "true", 0},
 	{"bot", "InputUser", 1},
 	{"id", "InputPhoto", 65535},
 };
 
-inline constexpr FieldDesc kFields2154[] = {
+inline constexpr FieldDesc kFields2173[] = {
 	{"flags", "#", 65535},
 	{"fallback", "true", 3},
 	{"bot", "InputUser", 5},
@@ -12416,14 +12479,18 @@ inline constexpr FieldDesc kFields2154[] = {
 	{"video_emoji_markup", "VideoSize", 4},
 };
 
-inline constexpr FieldDesc kFields2155[] = {
+inline constexpr FieldDesc kFields2174[] = {
+	{"id", "Vector<InputPhoto>", 65535},
+};
+
+inline constexpr FieldDesc kFields2175[] = {
 	{"user_id", "InputUser", 65535},
 	{"offset", "int", 65535},
 	{"max_id", "long", 65535},
 	{"limit", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2156[] = {
+inline constexpr FieldDesc kFields2176[] = {
 	{"flags", "#", 65535},
 	{"suggest", "true", 3},
 	{"save", "true", 4},
@@ -12434,13 +12501,13 @@ inline constexpr FieldDesc kFields2156[] = {
 	{"video_emoji_markup", "VideoSize", 5},
 };
 
-inline constexpr FieldDesc kFields2157[] = {
+inline constexpr FieldDesc kFields2177[] = {
 	{"file_id", "long", 65535},
 	{"file_part", "int", 65535},
 	{"bytes", "bytes", 65535},
 };
 
-inline constexpr FieldDesc kFields2158[] = {
+inline constexpr FieldDesc kFields2178[] = {
 	{"flags", "#", 65535},
 	{"precise", "true", 0},
 	{"cdn_supported", "true", 1},
@@ -12449,116 +12516,131 @@ inline constexpr FieldDesc kFields2158[] = {
 	{"limit", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2159[] = {
+inline constexpr FieldDesc kFields2179[] = {
 	{"file_id", "long", 65535},
 	{"file_part", "int", 65535},
 	{"file_total_parts", "int", 65535},
 	{"bytes", "bytes", 65535},
 };
 
-inline constexpr FieldDesc kFields2160[] = {
+inline constexpr FieldDesc kFields2180[] = {
 	{"location", "InputWebFileLocation", 65535},
 	{"offset", "int", 65535},
 	{"limit", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2161[] = {
+inline constexpr FieldDesc kFields2181[] = {
 	{"file_token", "bytes", 65535},
 	{"offset", "long", 65535},
 	{"limit", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2164[] = {
+inline constexpr FieldDesc kFields2182[] = {
+	{"file_token", "bytes", 65535},
+	{"request_token", "bytes", 65535},
+};
+
+inline constexpr FieldDesc kFields2183[] = {
+	{"file_token", "bytes", 65535},
+	{"offset", "long", 65535},
+};
+
+inline constexpr FieldDesc kFields2184[] = {
+	{"location", "InputFileLocation", 65535},
+	{"offset", "long", 65535},
+};
+
+inline constexpr FieldDesc kFields2187[] = {
 	{"source", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2167[] = {
+inline constexpr FieldDesc kFields2190[] = {
 	{"pending_updates_count", "int", 65535},
 	{"message", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2169[] = {
+inline constexpr FieldDesc kFields2192[] = {
 	{"referer", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2171[] = {
+inline constexpr FieldDesc kFields2194[] = {
 	{"id", "DataJSON", 65535},
 };
 
-inline constexpr FieldDesc kFields2172[] = {
+inline constexpr FieldDesc kFields2195[] = {
 	{"path", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2173[] = {
+inline constexpr FieldDesc kFields2196[] = {
 	{"hash", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2174[] = {
+inline constexpr FieldDesc kFields2197[] = {
 	{"events", "Vector<InputAppEvent>", 65535},
 };
 
-inline constexpr FieldDesc kFields2175[] = {
+inline constexpr FieldDesc kFields2198[] = {
 	{"hash", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2177[] = {
+inline constexpr FieldDesc kFields2200[] = {
 	{"user_id", "InputUser", 65535},
 };
 
-inline constexpr FieldDesc kFields2178[] = {
+inline constexpr FieldDesc kFields2201[] = {
 	{"user_id", "InputUser", 65535},
 	{"message", "string", 65535},
 	{"entities", "Vector<MessageEntity>", 65535},
 };
 
-inline constexpr FieldDesc kFields2180[] = {
+inline constexpr FieldDesc kFields2203[] = {
 	{"peer", "InputPeer", 65535},
 };
 
-inline constexpr FieldDesc kFields2181[] = {
+inline constexpr FieldDesc kFields2204[] = {
 	{"peer", "InputPeer", 65535},
 	{"suggestion", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2182[] = {
+inline constexpr FieldDesc kFields2205[] = {
 	{"lang_code", "string", 65535},
 	{"hash", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2184[] = {
+inline constexpr FieldDesc kFields2207[] = {
 	{"hash", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2185[] = {
+inline constexpr FieldDesc kFields2208[] = {
 	{"hash", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2186[] = {
+inline constexpr FieldDesc kFields2209[] = {
 	{"hash", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2187[] = {
+inline constexpr FieldDesc kFields2210[] = {
 	{"channel", "InputChannel", 65535},
 	{"max_id", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2188[] = {
+inline constexpr FieldDesc kFields2211[] = {
 	{"channel", "InputChannel", 65535},
 	{"id", "Vector<int>", 65535},
 };
 
-inline constexpr FieldDesc kFields2189[] = {
+inline constexpr FieldDesc kFields2212[] = {
 	{"channel", "InputChannel", 65535},
 	{"participant", "InputPeer", 65535},
 	{"id", "Vector<int>", 65535},
 };
 
-inline constexpr FieldDesc kFields2190[] = {
+inline constexpr FieldDesc kFields2213[] = {
 	{"channel", "InputChannel", 65535},
 	{"id", "Vector<InputMessage>", 65535},
 };
 
-inline constexpr FieldDesc kFields2191[] = {
+inline constexpr FieldDesc kFields2214[] = {
 	{"channel", "InputChannel", 65535},
 	{"filter", "ChannelParticipantsFilter", 65535},
 	{"offset", "int", 65535},
@@ -12566,20 +12648,20 @@ inline constexpr FieldDesc kFields2191[] = {
 	{"hash", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields2192[] = {
+inline constexpr FieldDesc kFields2215[] = {
 	{"channel", "InputChannel", 65535},
 	{"participant", "InputPeer", 65535},
 };
 
-inline constexpr FieldDesc kFields2193[] = {
+inline constexpr FieldDesc kFields2216[] = {
 	{"id", "Vector<InputChannel>", 65535},
 };
 
-inline constexpr FieldDesc kFields2194[] = {
+inline constexpr FieldDesc kFields2217[] = {
 	{"channel", "InputChannel", 65535},
 };
 
-inline constexpr FieldDesc kFields2195[] = {
+inline constexpr FieldDesc kFields2218[] = {
 	{"flags", "#", 65535},
 	{"broadcast", "true", 0},
 	{"megagroup", "true", 1},
@@ -12592,7 +12674,7 @@ inline constexpr FieldDesc kFields2195[] = {
 	{"ttl_period", "int", 4},
 };
 
-inline constexpr FieldDesc kFields2196[] = {
+inline constexpr FieldDesc kFields2219[] = {
 	{"flags", "#", 65535},
 	{"channel", "InputChannel", 65535},
 	{"user_id", "InputUser", 65535},
@@ -12600,44 +12682,44 @@ inline constexpr FieldDesc kFields2196[] = {
 	{"rank", "string", 0},
 };
 
-inline constexpr FieldDesc kFields2197[] = {
+inline constexpr FieldDesc kFields2220[] = {
 	{"channel", "InputChannel", 65535},
 	{"title", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2198[] = {
+inline constexpr FieldDesc kFields2221[] = {
 	{"channel", "InputChannel", 65535},
 	{"photo", "InputChatPhoto", 65535},
 };
 
-inline constexpr FieldDesc kFields2199[] = {
+inline constexpr FieldDesc kFields2222[] = {
 	{"channel", "InputChannel", 65535},
 	{"username", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2200[] = {
+inline constexpr FieldDesc kFields2223[] = {
 	{"channel", "InputChannel", 65535},
 	{"username", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2201[] = {
+inline constexpr FieldDesc kFields2224[] = {
 	{"channel", "InputChannel", 65535},
 };
 
-inline constexpr FieldDesc kFields2202[] = {
+inline constexpr FieldDesc kFields2225[] = {
 	{"channel", "InputChannel", 65535},
 };
 
-inline constexpr FieldDesc kFields2203[] = {
+inline constexpr FieldDesc kFields2226[] = {
 	{"channel", "InputChannel", 65535},
 	{"users", "Vector<InputUser>", 65535},
 };
 
-inline constexpr FieldDesc kFields2204[] = {
+inline constexpr FieldDesc kFields2227[] = {
 	{"channel", "InputChannel", 65535},
 };
 
-inline constexpr FieldDesc kFields2205[] = {
+inline constexpr FieldDesc kFields2228[] = {
 	{"flags", "#", 65535},
 	{"grouped", "true", 0},
 	{"thread", "true", 1},
@@ -12645,14 +12727,14 @@ inline constexpr FieldDesc kFields2205[] = {
 	{"id", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2206[] = {
+inline constexpr FieldDesc kFields2229[] = {
 	{"flags", "#", 65535},
 	{"signatures_enabled", "true", 0},
 	{"profiles_enabled", "true", 1},
 	{"channel", "InputChannel", 65535},
 };
 
-inline constexpr FieldDesc kFields2207[] = {
+inline constexpr FieldDesc kFields2230[] = {
 	{"flags", "#", 65535},
 	{"by_location", "true", 0},
 	{"check_limit", "true", 1},
@@ -12660,13 +12742,13 @@ inline constexpr FieldDesc kFields2207[] = {
 	{"for_community_peer", "true", 3},
 };
 
-inline constexpr FieldDesc kFields2208[] = {
+inline constexpr FieldDesc kFields2231[] = {
 	{"channel", "InputChannel", 65535},
 	{"participant", "InputPeer", 65535},
 	{"banned_rights", "ChatBannedRights", 65535},
 };
 
-inline constexpr FieldDesc kFields2209[] = {
+inline constexpr FieldDesc kFields2232[] = {
 	{"flags", "#", 65535},
 	{"channel", "InputChannel", 65535},
 	{"q", "string", 65535},
@@ -12677,70 +12759,70 @@ inline constexpr FieldDesc kFields2209[] = {
 	{"limit", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2210[] = {
+inline constexpr FieldDesc kFields2233[] = {
 	{"channel", "InputChannel", 65535},
 	{"stickerset", "InputStickerSet", 65535},
 };
 
-inline constexpr FieldDesc kFields2211[] = {
+inline constexpr FieldDesc kFields2234[] = {
 	{"channel", "InputChannel", 65535},
 	{"id", "Vector<int>", 65535},
 };
 
-inline constexpr FieldDesc kFields2212[] = {
+inline constexpr FieldDesc kFields2235[] = {
 	{"flags", "#", 65535},
 	{"for_everyone", "true", 0},
 	{"channel", "InputChannel", 65535},
 	{"max_id", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2213[] = {
+inline constexpr FieldDesc kFields2236[] = {
 	{"channel", "InputChannel", 65535},
 	{"enabled", "Bool", 65535},
 };
 
-inline constexpr FieldDesc kFields2214[] = {
+inline constexpr FieldDesc kFields2237[] = {
 	{"offset", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2216[] = {
+inline constexpr FieldDesc kFields2239[] = {
 	{"broadcast", "InputChannel", 65535},
 	{"group", "InputChannel", 65535},
 };
 
-inline constexpr FieldDesc kFields2217[] = {
+inline constexpr FieldDesc kFields2240[] = {
 	{"channel", "InputChannel", 65535},
 	{"geo_point", "InputGeoPoint", 65535},
 	{"address", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2218[] = {
+inline constexpr FieldDesc kFields2241[] = {
 	{"channel", "InputChannel", 65535},
 	{"seconds", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2220[] = {
+inline constexpr FieldDesc kFields2243[] = {
 	{"channel", "InputChannel", 65535},
 };
 
-inline constexpr FieldDesc kFields2221[] = {
+inline constexpr FieldDesc kFields2244[] = {
 	{"flags", "#", 65535},
 	{"for_paid_reactions", "true", 0},
 	{"for_live_stories", "true", 1},
 	{"peer", "InputPeer", 65535},
 };
 
-inline constexpr FieldDesc kFields2222[] = {
+inline constexpr FieldDesc kFields2245[] = {
 	{"channel", "InputChannel", 65535},
 	{"participant", "InputPeer", 65535},
 };
 
-inline constexpr FieldDesc kFields2223[] = {
+inline constexpr FieldDesc kFields2246[] = {
 	{"channel", "InputChannel", 65535},
 	{"enabled", "Bool", 65535},
 };
 
-inline constexpr FieldDesc kFields2224[] = {
+inline constexpr FieldDesc kFields2247[] = {
 	{"flags", "#", 65535},
 	{"apply_to_invites", "true", 1},
 	{"channel", "InputChannel", 65535},
@@ -12748,43 +12830,43 @@ inline constexpr FieldDesc kFields2224[] = {
 	{"guard_bot", "InputUser", 0},
 };
 
-inline constexpr FieldDesc kFields2225[] = {
+inline constexpr FieldDesc kFields2248[] = {
 	{"channel", "InputChannel", 65535},
 	{"order", "Vector<string>", 65535},
 };
 
-inline constexpr FieldDesc kFields2226[] = {
+inline constexpr FieldDesc kFields2249[] = {
 	{"channel", "InputChannel", 65535},
 	{"username", "string", 65535},
 	{"active", "Bool", 65535},
 };
 
-inline constexpr FieldDesc kFields2227[] = {
+inline constexpr FieldDesc kFields2250[] = {
 	{"channel", "InputChannel", 65535},
 };
 
-inline constexpr FieldDesc kFields2228[] = {
+inline constexpr FieldDesc kFields2251[] = {
 	{"channel", "InputChannel", 65535},
 	{"enabled", "Bool", 65535},
 	{"tabs", "Bool", 65535},
 };
 
-inline constexpr FieldDesc kFields2229[] = {
+inline constexpr FieldDesc kFields2252[] = {
 	{"channel", "InputChannel", 65535},
 	{"enabled", "Bool", 65535},
 };
 
-inline constexpr FieldDesc kFields2230[] = {
+inline constexpr FieldDesc kFields2253[] = {
 	{"channel", "InputChannel", 65535},
 	{"msg_id", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2231[] = {
+inline constexpr FieldDesc kFields2254[] = {
 	{"channel", "InputChannel", 65535},
 	{"enabled", "Bool", 65535},
 };
 
-inline constexpr FieldDesc kFields2232[] = {
+inline constexpr FieldDesc kFields2255[] = {
 	{"flags", "#", 65535},
 	{"for_profile", "true", 1},
 	{"channel", "InputChannel", 65535},
@@ -12792,37 +12874,37 @@ inline constexpr FieldDesc kFields2232[] = {
 	{"background_emoji_id", "long", 0},
 };
 
-inline constexpr FieldDesc kFields2233[] = {
+inline constexpr FieldDesc kFields2256[] = {
 	{"channel", "InputChannel", 65535},
 	{"enabled", "Bool", 65535},
 };
 
-inline constexpr FieldDesc kFields2234[] = {
+inline constexpr FieldDesc kFields2257[] = {
 	{"flags", "#", 65535},
 	{"channel", "InputChannel", 0},
 };
 
-inline constexpr FieldDesc kFields2235[] = {
+inline constexpr FieldDesc kFields2258[] = {
 	{"channel", "InputChannel", 65535},
 	{"emoji_status", "EmojiStatus", 65535},
 };
 
-inline constexpr FieldDesc kFields2236[] = {
+inline constexpr FieldDesc kFields2259[] = {
 	{"channel", "InputChannel", 65535},
 	{"boosts", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2237[] = {
+inline constexpr FieldDesc kFields2260[] = {
 	{"channel", "InputChannel", 65535},
 	{"stickerset", "InputStickerSet", 65535},
 };
 
-inline constexpr FieldDesc kFields2238[] = {
+inline constexpr FieldDesc kFields2261[] = {
 	{"channel", "InputChannel", 65535},
 	{"restricted", "Bool", 65535},
 };
 
-inline constexpr FieldDesc kFields2239[] = {
+inline constexpr FieldDesc kFields2262[] = {
 	{"flags", "#", 65535},
 	{"hashtag", "string", 0},
 	{"query", "string", 1},
@@ -12833,72 +12915,77 @@ inline constexpr FieldDesc kFields2239[] = {
 	{"allow_paid_stars", "long", 2},
 };
 
-inline constexpr FieldDesc kFields2240[] = {
+inline constexpr FieldDesc kFields2263[] = {
 	{"flags", "#", 65535},
 	{"broadcast_messages_allowed", "true", 0},
 	{"channel", "InputChannel", 65535},
 	{"send_paid_messages_stars", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields2241[] = {
+inline constexpr FieldDesc kFields2264[] = {
 	{"channel", "InputChannel", 65535},
 	{"enabled", "Bool", 65535},
 };
 
-inline constexpr FieldDesc kFields2242[] = {
+inline constexpr FieldDesc kFields2265[] = {
 	{"channel", "InputChannel", 65535},
 	{"id", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2243[] = {
+inline constexpr FieldDesc kFields2266[] = {
 	{"flags", "#", 65535},
 	{"query", "string", 0},
 };
 
-inline constexpr FieldDesc kFields2244[] = {
+inline constexpr FieldDesc kFields2267[] = {
 	{"channel", "InputChannel", 65535},
 	{"tab", "ProfileTab", 65535},
 };
 
-inline constexpr FieldDesc kFields2245[] = {
+inline constexpr FieldDesc kFields2268[] = {
 	{"custom_method", "string", 65535},
 	{"params", "DataJSON", 65535},
 };
 
-inline constexpr FieldDesc kFields2246[] = {
+inline constexpr FieldDesc kFields2269[] = {
 	{"query_id", "long", 65535},
 	{"data", "DataJSON", 65535},
 };
 
-inline constexpr FieldDesc kFields2247[] = {
+inline constexpr FieldDesc kFields2270[] = {
 	{"scope", "BotCommandScope", 65535},
 	{"lang_code", "string", 65535},
 	{"commands", "Vector<BotCommand>", 65535},
 };
 
-inline constexpr FieldDesc kFields2248[] = {
+inline constexpr FieldDesc kFields2271[] = {
 	{"scope", "BotCommandScope", 65535},
 	{"lang_code", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2249[] = {
+inline constexpr FieldDesc kFields2272[] = {
+	{"scope", "BotCommandScope", 65535},
+	{"lang_code", "string", 65535},
+};
+
+inline constexpr FieldDesc kFields2273[] = {
 	{"user_id", "InputUser", 65535},
 	{"button", "BotMenuButton", 65535},
 };
 
-inline constexpr FieldDesc kFields2250[] = {
+inline constexpr FieldDesc kFields2274[] = {
 	{"user_id", "InputUser", 65535},
 };
 
-inline constexpr FieldDesc kFields2251[] = {
+inline constexpr FieldDesc kFields2275[] = {
 	{"admin_rights", "ChatAdminRights", 65535},
 };
 
-inline constexpr FieldDesc kFields2252[] = {
+inline constexpr FieldDesc kFields2276[] = {
 	{"admin_rights", "ChatAdminRights", 65535},
 };
 
-inline constexpr FieldDesc kFields2253[] = {
+inline constexpr FieldDesc kFields2277[] = {
 	{"flags", "#", 65535},
 	{"bot", "InputUser", 2},
 	{"lang_code", "string", 65535},
@@ -12907,96 +12994,100 @@ inline constexpr FieldDesc kFields2253[] = {
 	{"description", "string", 1},
 };
 
-inline constexpr FieldDesc kFields2254[] = {
+inline constexpr FieldDesc kFields2278[] = {
 	{"flags", "#", 65535},
 	{"bot", "InputUser", 0},
 	{"lang_code", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2255[] = {
+inline constexpr FieldDesc kFields2279[] = {
 	{"bot", "InputUser", 65535},
 	{"order", "Vector<string>", 65535},
 };
 
-inline constexpr FieldDesc kFields2256[] = {
+inline constexpr FieldDesc kFields2280[] = {
 	{"bot", "InputUser", 65535},
 	{"username", "string", 65535},
 	{"active", "Bool", 65535},
 };
 
-inline constexpr FieldDesc kFields2257[] = {
+inline constexpr FieldDesc kFields2281[] = {
 	{"bot", "InputUser", 65535},
 };
 
-inline constexpr FieldDesc kFields2258[] = {
+inline constexpr FieldDesc kFields2282[] = {
 	{"bot", "InputUser", 65535},
 };
 
-inline constexpr FieldDesc kFields2259[] = {
+inline constexpr FieldDesc kFields2283[] = {
 	{"bot", "InputUser", 65535},
 	{"custom_method", "string", 65535},
 	{"params", "DataJSON", 65535},
 };
 
-inline constexpr FieldDesc kFields2260[] = {
+inline constexpr FieldDesc kFields2284[] = {
 	{"offset", "string", 65535},
 	{"limit", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2261[] = {
+inline constexpr FieldDesc kFields2285[] = {
 	{"bot", "InputUser", 65535},
 	{"lang_code", "string", 65535},
 	{"media", "InputMedia", 65535},
 };
 
-inline constexpr FieldDesc kFields2262[] = {
+inline constexpr FieldDesc kFields2286[] = {
 	{"bot", "InputUser", 65535},
 	{"lang_code", "string", 65535},
 	{"media", "InputMedia", 65535},
 	{"new_media", "InputMedia", 65535},
 };
 
-inline constexpr FieldDesc kFields2263[] = {
+inline constexpr FieldDesc kFields2287[] = {
 	{"bot", "InputUser", 65535},
 	{"lang_code", "string", 65535},
 	{"media", "Vector<InputMedia>", 65535},
 };
 
-inline constexpr FieldDesc kFields2264[] = {
+inline constexpr FieldDesc kFields2288[] = {
 	{"bot", "InputUser", 65535},
 	{"lang_code", "string", 65535},
 	{"order", "Vector<InputMedia>", 65535},
 };
 
-inline constexpr FieldDesc kFields2265[] = {
+inline constexpr FieldDesc kFields2289[] = {
 	{"bot", "InputUser", 65535},
 	{"lang_code", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2266[] = {
+inline constexpr FieldDesc kFields2290[] = {
+	{"bot", "InputUser", 65535},
+};
+
+inline constexpr FieldDesc kFields2291[] = {
 	{"user_id", "InputUser", 65535},
 	{"emoji_status", "EmojiStatus", 65535},
 };
 
-inline constexpr FieldDesc kFields2267[] = {
+inline constexpr FieldDesc kFields2292[] = {
 	{"bot", "InputUser", 65535},
 	{"enabled", "Bool", 65535},
 };
 
-inline constexpr FieldDesc kFields2268[] = {
+inline constexpr FieldDesc kFields2293[] = {
 	{"bot", "InputUser", 65535},
 	{"file_name", "string", 65535},
 	{"url", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2269[] = {
+inline constexpr FieldDesc kFields2295[] = {
 	{"flags", "#", 65535},
 	{"bot", "InputUser", 65535},
 	{"commission_permille", "int", 65535},
 	{"duration_months", "int", 0},
 };
 
-inline constexpr FieldDesc kFields2270[] = {
+inline constexpr FieldDesc kFields2296[] = {
 	{"flags", "#", 65535},
 	{"enabled", "true", 1},
 	{"bot", "InputUser", 0},
@@ -13004,15 +13095,15 @@ inline constexpr FieldDesc kFields2270[] = {
 	{"custom_description", "string", 2},
 };
 
-inline constexpr FieldDesc kFields2271[] = {
+inline constexpr FieldDesc kFields2297[] = {
 	{"bot", "InputUser", 65535},
 };
 
-inline constexpr FieldDesc kFields2272[] = {
+inline constexpr FieldDesc kFields2298[] = {
 	{"username", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2273[] = {
+inline constexpr FieldDesc kFields2299[] = {
 	{"flags", "#", 65535},
 	{"via_deeplink", "true", 0},
 	{"name", "string", 65535},
@@ -13020,56 +13111,56 @@ inline constexpr FieldDesc kFields2273[] = {
 	{"manager_id", "InputUser", 65535},
 };
 
-inline constexpr FieldDesc kFields2274[] = {
+inline constexpr FieldDesc kFields2300[] = {
 	{"bot", "InputUser", 65535},
 	{"revoke", "Bool", 65535},
 };
 
-inline constexpr FieldDesc kFields2275[] = {
+inline constexpr FieldDesc kFields2301[] = {
 	{"user_id", "InputUser", 65535},
 	{"button", "KeyboardButton", 65535},
 };
 
-inline constexpr FieldDesc kFields2276[] = {
+inline constexpr FieldDesc kFields2302[] = {
 	{"bot", "InputUser", 65535},
 	{"webapp_req_id", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2277[] = {
+inline constexpr FieldDesc kFields2303[] = {
 	{"bot", "InputUser", 65535},
 };
 
-inline constexpr FieldDesc kFields2278[] = {
+inline constexpr FieldDesc kFields2304[] = {
 	{"flags", "#", 65535},
 	{"restricted", "true", 0},
 	{"bot", "InputUser", 65535},
 	{"add_users", "Vector<InputUser>", 1},
 };
 
-inline constexpr FieldDesc kFields2279[] = {
+inline constexpr FieldDesc kFields2305[] = {
 	{"query_id", "long", 65535},
 	{"result", "JoinChatBotResult", 65535},
 };
 
-inline constexpr FieldDesc kFields2280[] = {
+inline constexpr FieldDesc kFields2306[] = {
 	{"flags", "#", 65535},
 	{"invoice", "InputInvoice", 65535},
 	{"theme_params", "DataJSON", 0},
 };
 
-inline constexpr FieldDesc kFields2281[] = {
+inline constexpr FieldDesc kFields2307[] = {
 	{"peer", "InputPeer", 65535},
 	{"msg_id", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2282[] = {
+inline constexpr FieldDesc kFields2308[] = {
 	{"flags", "#", 65535},
 	{"save", "true", 0},
 	{"invoice", "InputInvoice", 65535},
 	{"info", "PaymentRequestedInfo", 65535},
 };
 
-inline constexpr FieldDesc kFields2283[] = {
+inline constexpr FieldDesc kFields2309[] = {
 	{"flags", "#", 65535},
 	{"form_id", "long", 65535},
 	{"invoice", "InputInvoice", 65535},
@@ -13079,56 +13170,61 @@ inline constexpr FieldDesc kFields2283[] = {
 	{"tip_amount", "long", 2},
 };
 
-inline constexpr FieldDesc kFields2285[] = {
+inline constexpr FieldDesc kFields2311[] = {
 	{"flags", "#", 65535},
 	{"credentials", "true", 0},
 	{"info", "true", 1},
 };
 
-inline constexpr FieldDesc kFields2286[] = {
+inline constexpr FieldDesc kFields2312[] = {
 	{"number", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2287[] = {
+inline constexpr FieldDesc kFields2313[] = {
 	{"invoice_media", "InputMedia", 65535},
 };
 
-inline constexpr FieldDesc kFields2288[] = {
+inline constexpr FieldDesc kFields2314[] = {
 	{"receipt", "bytes", 65535},
 	{"purpose", "InputStorePaymentPurpose", 65535},
 };
 
-inline constexpr FieldDesc kFields2289[] = {
+inline constexpr FieldDesc kFields2315[] = {
 	{"receipt", "DataJSON", 65535},
 	{"purpose", "InputStorePaymentPurpose", 65535},
 };
 
-inline constexpr FieldDesc kFields2290[] = {
+inline constexpr FieldDesc kFields2316[] = {
+	{"flags", "#", 65535},
+	{"boost_peer", "InputPeer", 0},
+};
+
+inline constexpr FieldDesc kFields2317[] = {
 	{"slug", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2291[] = {
+inline constexpr FieldDesc kFields2318[] = {
 	{"slug", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2292[] = {
+inline constexpr FieldDesc kFields2319[] = {
 	{"peer", "InputPeer", 65535},
 	{"msg_id", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2293[] = {
+inline constexpr FieldDesc kFields2320[] = {
 	{"peer", "InputPeer", 65535},
 	{"giveaway_id", "long", 65535},
 	{"purpose", "InputStorePaymentPurpose", 65535},
 };
 
-inline constexpr FieldDesc kFields2294[] = {
+inline constexpr FieldDesc kFields2322[] = {
 	{"flags", "#", 65535},
 	{"ton", "true", 0},
 	{"peer", "InputPeer", 65535},
 };
 
-inline constexpr FieldDesc kFields2295[] = {
+inline constexpr FieldDesc kFields2323[] = {
 	{"flags", "#", 65535},
 	{"inbound", "true", 0},
 	{"outbound", "true", 1},
@@ -13140,24 +13236,24 @@ inline constexpr FieldDesc kFields2295[] = {
 	{"limit", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2296[] = {
+inline constexpr FieldDesc kFields2324[] = {
 	{"form_id", "long", 65535},
 	{"invoice", "InputInvoice", 65535},
 };
 
-inline constexpr FieldDesc kFields2297[] = {
+inline constexpr FieldDesc kFields2325[] = {
 	{"user_id", "InputUser", 65535},
 	{"charge_id", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2298[] = {
+inline constexpr FieldDesc kFields2326[] = {
 	{"flags", "#", 65535},
 	{"dark", "true", 0},
 	{"ton", "true", 1},
 	{"peer", "InputPeer", 65535},
 };
 
-inline constexpr FieldDesc kFields2299[] = {
+inline constexpr FieldDesc kFields2327[] = {
 	{"flags", "#", 65535},
 	{"ton", "true", 0},
 	{"peer", "InputPeer", 65535},
@@ -13165,58 +13261,63 @@ inline constexpr FieldDesc kFields2299[] = {
 	{"password", "InputCheckPasswordSRP", 65535},
 };
 
-inline constexpr FieldDesc kFields2300[] = {
+inline constexpr FieldDesc kFields2328[] = {
 	{"peer", "InputPeer", 65535},
 };
 
-inline constexpr FieldDesc kFields2301[] = {
+inline constexpr FieldDesc kFields2329[] = {
 	{"flags", "#", 65535},
 	{"ton", "true", 0},
 	{"peer", "InputPeer", 65535},
 	{"id", "Vector<InputStarsTransaction>", 65535},
 };
 
-inline constexpr FieldDesc kFields2302[] = {
+inline constexpr FieldDesc kFields2330[] = {
+	{"flags", "#", 65535},
+	{"user_id", "InputUser", 0},
+};
+
+inline constexpr FieldDesc kFields2331[] = {
 	{"flags", "#", 65535},
 	{"missing_balance", "true", 0},
 	{"peer", "InputPeer", 65535},
 	{"offset", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2303[] = {
+inline constexpr FieldDesc kFields2332[] = {
 	{"flags", "#", 65535},
 	{"peer", "InputPeer", 65535},
 	{"subscription_id", "string", 65535},
 	{"canceled", "Bool", 0},
 };
 
-inline constexpr FieldDesc kFields2304[] = {
+inline constexpr FieldDesc kFields2333[] = {
 	{"peer", "InputPeer", 65535},
 	{"subscription_id", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2305[] = {
+inline constexpr FieldDesc kFields2335[] = {
 	{"hash", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2306[] = {
+inline constexpr FieldDesc kFields2336[] = {
 	{"flags", "#", 65535},
 	{"unsave", "true", 0},
 	{"stargift", "InputSavedStarGift", 65535},
 };
 
-inline constexpr FieldDesc kFields2307[] = {
+inline constexpr FieldDesc kFields2337[] = {
 	{"stargift", "InputSavedStarGift", 65535},
 };
 
-inline constexpr FieldDesc kFields2308[] = {
+inline constexpr FieldDesc kFields2338[] = {
 	{"flags", "#", 65535},
 	{"restore", "true", 0},
 	{"user_id", "InputUser", 65535},
 	{"charge_id", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2309[] = {
+inline constexpr FieldDesc kFields2339[] = {
 	{"flags", "#", 65535},
 	{"peer", "InputPeer", 65535},
 	{"offset_date", "int", 2},
@@ -13224,12 +13325,12 @@ inline constexpr FieldDesc kFields2309[] = {
 	{"limit", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2310[] = {
+inline constexpr FieldDesc kFields2340[] = {
 	{"peer", "InputPeer", 65535},
 	{"bot", "InputUser", 65535},
 };
 
-inline constexpr FieldDesc kFields2311[] = {
+inline constexpr FieldDesc kFields2341[] = {
 	{"flags", "#", 65535},
 	{"order_by_revenue", "true", 0},
 	{"order_by_date", "true", 1},
@@ -13238,38 +13339,38 @@ inline constexpr FieldDesc kFields2311[] = {
 	{"limit", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2312[] = {
+inline constexpr FieldDesc kFields2342[] = {
 	{"peer", "InputPeer", 65535},
 	{"bot", "InputUser", 65535},
 };
 
-inline constexpr FieldDesc kFields2313[] = {
+inline constexpr FieldDesc kFields2343[] = {
 	{"flags", "#", 65535},
 	{"revoked", "true", 0},
 	{"peer", "InputPeer", 65535},
 	{"link", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2314[] = {
+inline constexpr FieldDesc kFields2344[] = {
 	{"gift_id", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields2315[] = {
+inline constexpr FieldDesc kFields2345[] = {
 	{"flags", "#", 65535},
 	{"keep_original_details", "true", 0},
 	{"stargift", "InputSavedStarGift", 65535},
 };
 
-inline constexpr FieldDesc kFields2316[] = {
+inline constexpr FieldDesc kFields2346[] = {
 	{"stargift", "InputSavedStarGift", 65535},
 	{"to_id", "InputPeer", 65535},
 };
 
-inline constexpr FieldDesc kFields2317[] = {
+inline constexpr FieldDesc kFields2347[] = {
 	{"slug", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2318[] = {
+inline constexpr FieldDesc kFields2348[] = {
 	{"flags", "#", 65535},
 	{"exclude_unsaved", "true", 0},
 	{"exclude_saved", "true", 1},
@@ -13286,31 +13387,31 @@ inline constexpr FieldDesc kFields2318[] = {
 	{"limit", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2319[] = {
+inline constexpr FieldDesc kFields2349[] = {
 	{"stargift", "Vector<InputSavedStarGift>", 65535},
 };
 
-inline constexpr FieldDesc kFields2320[] = {
+inline constexpr FieldDesc kFields2350[] = {
 	{"stargift", "InputSavedStarGift", 65535},
 	{"password", "InputCheckPasswordSRP", 65535},
 };
 
-inline constexpr FieldDesc kFields2321[] = {
+inline constexpr FieldDesc kFields2351[] = {
 	{"flags", "#", 65535},
 	{"enabled", "true", 0},
 	{"peer", "InputPeer", 65535},
 };
 
-inline constexpr FieldDesc kFields2322[] = {
+inline constexpr FieldDesc kFields2352[] = {
 	{"peer", "InputPeer", 65535},
 	{"stargift", "Vector<InputSavedStarGift>", 65535},
 };
 
-inline constexpr FieldDesc kFields2323[] = {
+inline constexpr FieldDesc kFields2353[] = {
 	{"purpose", "InputStorePaymentPurpose", 65535},
 };
 
-inline constexpr FieldDesc kFields2324[] = {
+inline constexpr FieldDesc kFields2354[] = {
 	{"flags", "#", 65535},
 	{"sort_by_price", "true", 1},
 	{"sort_by_num", "true", 2},
@@ -13323,18 +13424,18 @@ inline constexpr FieldDesc kFields2324[] = {
 	{"limit", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2325[] = {
+inline constexpr FieldDesc kFields2355[] = {
 	{"stargift", "InputSavedStarGift", 65535},
 	{"resell_amount", "StarsAmount", 65535},
 };
 
-inline constexpr FieldDesc kFields2326[] = {
+inline constexpr FieldDesc kFields2356[] = {
 	{"peer", "InputPeer", 65535},
 	{"title", "string", 65535},
 	{"stargift", "Vector<InputSavedStarGift>", 65535},
 };
 
-inline constexpr FieldDesc kFields2327[] = {
+inline constexpr FieldDesc kFields2357[] = {
 	{"flags", "#", 65535},
 	{"peer", "InputPeer", 65535},
 	{"collection_id", "int", 65535},
@@ -13344,49 +13445,49 @@ inline constexpr FieldDesc kFields2327[] = {
 	{"order", "Vector<InputSavedStarGift>", 3},
 };
 
-inline constexpr FieldDesc kFields2328[] = {
+inline constexpr FieldDesc kFields2358[] = {
 	{"peer", "InputPeer", 65535},
 	{"order", "Vector<int>", 65535},
 };
 
-inline constexpr FieldDesc kFields2329[] = {
+inline constexpr FieldDesc kFields2359[] = {
 	{"peer", "InputPeer", 65535},
 	{"collection_id", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2330[] = {
+inline constexpr FieldDesc kFields2360[] = {
 	{"peer", "InputPeer", 65535},
 	{"hash", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields2331[] = {
+inline constexpr FieldDesc kFields2361[] = {
 	{"slug", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2332[] = {
+inline constexpr FieldDesc kFields2362[] = {
 	{"gift_id", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields2333[] = {
+inline constexpr FieldDesc kFields2363[] = {
 	{"auction", "InputStarGiftAuction", 65535},
 	{"version", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2334[] = {
+inline constexpr FieldDesc kFields2364[] = {
 	{"gift_id", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields2335[] = {
+inline constexpr FieldDesc kFields2365[] = {
 	{"hash", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields2336[] = {
+inline constexpr FieldDesc kFields2366[] = {
 	{"flags", "#", 65535},
 	{"decline", "true", 0},
 	{"offer_msg_id", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2337[] = {
+inline constexpr FieldDesc kFields2367[] = {
 	{"flags", "#", 65535},
 	{"peer", "InputPeer", 65535},
 	{"slug", "string", 65535},
@@ -13396,21 +13497,21 @@ inline constexpr FieldDesc kFields2337[] = {
 	{"allow_paid_stars", "long", 0},
 };
 
-inline constexpr FieldDesc kFields2338[] = {
+inline constexpr FieldDesc kFields2368[] = {
 	{"gift_id", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields2339[] = {
+inline constexpr FieldDesc kFields2369[] = {
 	{"gift_id", "long", 65535},
 	{"offset", "string", 65535},
 	{"limit", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2340[] = {
+inline constexpr FieldDesc kFields2370[] = {
 	{"stargift", "Vector<InputSavedStarGift>", 65535},
 };
 
-inline constexpr FieldDesc kFields2341[] = {
+inline constexpr FieldDesc kFields2371[] = {
 	{"flags", "#", 65535},
 	{"masks", "true", 0},
 	{"emojis", "true", 5},
@@ -13423,36 +13524,36 @@ inline constexpr FieldDesc kFields2341[] = {
 	{"software", "string", 3},
 };
 
-inline constexpr FieldDesc kFields2342[] = {
+inline constexpr FieldDesc kFields2372[] = {
 	{"sticker", "InputDocument", 65535},
 };
 
-inline constexpr FieldDesc kFields2343[] = {
+inline constexpr FieldDesc kFields2373[] = {
 	{"sticker", "InputDocument", 65535},
 	{"position", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2344[] = {
+inline constexpr FieldDesc kFields2374[] = {
 	{"stickerset", "InputStickerSet", 65535},
 	{"sticker", "InputStickerSetItem", 65535},
 };
 
-inline constexpr FieldDesc kFields2345[] = {
+inline constexpr FieldDesc kFields2375[] = {
 	{"flags", "#", 65535},
 	{"stickerset", "InputStickerSet", 65535},
 	{"thumb", "InputDocument", 0},
 	{"thumb_document_id", "long", 1},
 };
 
-inline constexpr FieldDesc kFields2346[] = {
+inline constexpr FieldDesc kFields2376[] = {
 	{"short_name", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2347[] = {
+inline constexpr FieldDesc kFields2377[] = {
 	{"title", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2348[] = {
+inline constexpr FieldDesc kFields2378[] = {
 	{"flags", "#", 65535},
 	{"sticker", "InputDocument", 65535},
 	{"emoji", "string", 0},
@@ -13460,21 +13561,21 @@ inline constexpr FieldDesc kFields2348[] = {
 	{"keywords", "string", 2},
 };
 
-inline constexpr FieldDesc kFields2349[] = {
+inline constexpr FieldDesc kFields2379[] = {
 	{"stickerset", "InputStickerSet", 65535},
 	{"title", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2350[] = {
+inline constexpr FieldDesc kFields2380[] = {
 	{"stickerset", "InputStickerSet", 65535},
 };
 
-inline constexpr FieldDesc kFields2351[] = {
+inline constexpr FieldDesc kFields2381[] = {
 	{"sticker", "InputDocument", 65535},
 	{"new_sticker", "InputStickerSetItem", 65535},
 };
 
-inline constexpr FieldDesc kFields2353[] = {
+inline constexpr FieldDesc kFields2383[] = {
 	{"flags", "#", 65535},
 	{"video", "true", 0},
 	{"user_id", "InputUser", 65535},
@@ -13483,24 +13584,24 @@ inline constexpr FieldDesc kFields2353[] = {
 	{"protocol", "PhoneCallProtocol", 65535},
 };
 
-inline constexpr FieldDesc kFields2354[] = {
+inline constexpr FieldDesc kFields2384[] = {
 	{"peer", "InputPhoneCall", 65535},
 	{"g_b", "bytes", 65535},
 	{"protocol", "PhoneCallProtocol", 65535},
 };
 
-inline constexpr FieldDesc kFields2355[] = {
+inline constexpr FieldDesc kFields2385[] = {
 	{"peer", "InputPhoneCall", 65535},
 	{"g_a", "bytes", 65535},
 	{"key_fingerprint", "long", 65535},
 	{"protocol", "PhoneCallProtocol", 65535},
 };
 
-inline constexpr FieldDesc kFields2356[] = {
+inline constexpr FieldDesc kFields2386[] = {
 	{"peer", "InputPhoneCall", 65535},
 };
 
-inline constexpr FieldDesc kFields2357[] = {
+inline constexpr FieldDesc kFields2387[] = {
 	{"flags", "#", 65535},
 	{"video", "true", 0},
 	{"peer", "InputPhoneCall", 65535},
@@ -13509,7 +13610,7 @@ inline constexpr FieldDesc kFields2357[] = {
 	{"connection_id", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields2358[] = {
+inline constexpr FieldDesc kFields2388[] = {
 	{"flags", "#", 65535},
 	{"user_initiative", "true", 0},
 	{"peer", "InputPhoneCall", 65535},
@@ -13517,17 +13618,17 @@ inline constexpr FieldDesc kFields2358[] = {
 	{"comment", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2359[] = {
+inline constexpr FieldDesc kFields2389[] = {
 	{"peer", "InputPhoneCall", 65535},
 	{"debug", "DataJSON", 65535},
 };
 
-inline constexpr FieldDesc kFields2360[] = {
+inline constexpr FieldDesc kFields2390[] = {
 	{"peer", "InputPhoneCall", 65535},
 	{"data", "bytes", 65535},
 };
 
-inline constexpr FieldDesc kFields2361[] = {
+inline constexpr FieldDesc kFields2391[] = {
 	{"flags", "#", 65535},
 	{"rtmp_stream", "true", 2},
 	{"peer", "InputPeer", 65535},
@@ -13536,7 +13637,7 @@ inline constexpr FieldDesc kFields2361[] = {
 	{"schedule_date", "int", 1},
 };
 
-inline constexpr FieldDesc kFields2362[] = {
+inline constexpr FieldDesc kFields2392[] = {
 	{"flags", "#", 65535},
 	{"muted", "true", 0},
 	{"video_stopped", "true", 2},
@@ -13548,21 +13649,21 @@ inline constexpr FieldDesc kFields2362[] = {
 	{"params", "DataJSON", 65535},
 };
 
-inline constexpr FieldDesc kFields2363[] = {
+inline constexpr FieldDesc kFields2393[] = {
 	{"call", "InputGroupCall", 65535},
 	{"source", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2364[] = {
+inline constexpr FieldDesc kFields2394[] = {
 	{"call", "InputGroupCall", 65535},
 	{"users", "Vector<InputUser>", 65535},
 };
 
-inline constexpr FieldDesc kFields2365[] = {
+inline constexpr FieldDesc kFields2395[] = {
 	{"call", "InputGroupCall", 65535},
 };
 
-inline constexpr FieldDesc kFields2366[] = {
+inline constexpr FieldDesc kFields2396[] = {
 	{"flags", "#", 65535},
 	{"reset_invite_hash", "true", 1},
 	{"call", "InputGroupCall", 65535},
@@ -13571,12 +13672,12 @@ inline constexpr FieldDesc kFields2366[] = {
 	{"send_paid_messages_stars", "long", 3},
 };
 
-inline constexpr FieldDesc kFields2367[] = {
+inline constexpr FieldDesc kFields2397[] = {
 	{"call", "InputGroupCall", 65535},
 	{"limit", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2368[] = {
+inline constexpr FieldDesc kFields2398[] = {
 	{"call", "InputGroupCall", 65535},
 	{"ids", "Vector<InputPeer>", 65535},
 	{"sources", "Vector<int>", 65535},
@@ -13584,7 +13685,12 @@ inline constexpr FieldDesc kFields2368[] = {
 	{"limit", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2369[] = {
+inline constexpr FieldDesc kFields2399[] = {
+	{"call", "InputGroupCall", 65535},
+	{"sources", "Vector<int>", 65535},
+};
+
+inline constexpr FieldDesc kFields2400[] = {
 	{"flags", "#", 65535},
 	{"start", "true", 0},
 	{"video", "true", 2},
@@ -13593,7 +13699,7 @@ inline constexpr FieldDesc kFields2369[] = {
 	{"video_portrait", "Bool", 2},
 };
 
-inline constexpr FieldDesc kFields2370[] = {
+inline constexpr FieldDesc kFields2401[] = {
 	{"flags", "#", 65535},
 	{"call", "InputGroupCall", 65535},
 	{"participant", "InputPeer", 65535},
@@ -13605,61 +13711,61 @@ inline constexpr FieldDesc kFields2370[] = {
 	{"presentation_paused", "Bool", 5},
 };
 
-inline constexpr FieldDesc kFields2371[] = {
+inline constexpr FieldDesc kFields2402[] = {
 	{"call", "InputGroupCall", 65535},
 	{"title", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2372[] = {
+inline constexpr FieldDesc kFields2403[] = {
 	{"peer", "InputPeer", 65535},
 };
 
-inline constexpr FieldDesc kFields2373[] = {
+inline constexpr FieldDesc kFields2404[] = {
 	{"flags", "#", 65535},
 	{"can_self_unmute", "true", 0},
 	{"call", "InputGroupCall", 65535},
 };
 
-inline constexpr FieldDesc kFields2374[] = {
+inline constexpr FieldDesc kFields2405[] = {
 	{"call", "InputGroupCall", 65535},
 	{"subscribed", "Bool", 65535},
 };
 
-inline constexpr FieldDesc kFields2375[] = {
+inline constexpr FieldDesc kFields2406[] = {
 	{"call", "InputGroupCall", 65535},
 };
 
-inline constexpr FieldDesc kFields2376[] = {
+inline constexpr FieldDesc kFields2407[] = {
 	{"peer", "InputPeer", 65535},
 	{"join_as", "InputPeer", 65535},
 };
 
-inline constexpr FieldDesc kFields2377[] = {
+inline constexpr FieldDesc kFields2408[] = {
 	{"call", "InputGroupCall", 65535},
 	{"params", "DataJSON", 65535},
 };
 
-inline constexpr FieldDesc kFields2378[] = {
+inline constexpr FieldDesc kFields2409[] = {
 	{"call", "InputGroupCall", 65535},
 };
 
-inline constexpr FieldDesc kFields2379[] = {
+inline constexpr FieldDesc kFields2410[] = {
 	{"call", "InputGroupCall", 65535},
 };
 
-inline constexpr FieldDesc kFields2380[] = {
+inline constexpr FieldDesc kFields2411[] = {
 	{"flags", "#", 65535},
 	{"live_story", "true", 0},
 	{"peer", "InputPeer", 65535},
 	{"revoke", "Bool", 65535},
 };
 
-inline constexpr FieldDesc kFields2381[] = {
+inline constexpr FieldDesc kFields2412[] = {
 	{"peer", "InputPhoneCall", 65535},
 	{"file", "InputFile", 65535},
 };
 
-inline constexpr FieldDesc kFields2382[] = {
+inline constexpr FieldDesc kFields2413[] = {
 	{"flags", "#", 65535},
 	{"muted", "true", 0},
 	{"video_stopped", "true", 2},
@@ -13670,7 +13776,7 @@ inline constexpr FieldDesc kFields2382[] = {
 	{"params", "DataJSON", 3},
 };
 
-inline constexpr FieldDesc kFields2383[] = {
+inline constexpr FieldDesc kFields2414[] = {
 	{"flags", "#", 65535},
 	{"only_left", "true", 0},
 	{"kick", "true", 1},
@@ -13679,30 +13785,30 @@ inline constexpr FieldDesc kFields2383[] = {
 	{"block", "bytes", 65535},
 };
 
-inline constexpr FieldDesc kFields2384[] = {
+inline constexpr FieldDesc kFields2415[] = {
 	{"call", "InputGroupCall", 65535},
 	{"block", "bytes", 65535},
 };
 
-inline constexpr FieldDesc kFields2385[] = {
+inline constexpr FieldDesc kFields2416[] = {
 	{"flags", "#", 65535},
 	{"video", "true", 0},
 	{"call", "InputGroupCall", 65535},
 	{"user_id", "InputUser", 65535},
 };
 
-inline constexpr FieldDesc kFields2386[] = {
+inline constexpr FieldDesc kFields2417[] = {
 	{"msg_id", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2387[] = {
+inline constexpr FieldDesc kFields2418[] = {
 	{"call", "InputGroupCall", 65535},
 	{"sub_chain_id", "int", 65535},
 	{"offset", "int", 65535},
 	{"limit", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2388[] = {
+inline constexpr FieldDesc kFields2419[] = {
 	{"flags", "#", 65535},
 	{"call", "InputGroupCall", 65535},
 	{"random_id", "long", 65535},
@@ -13711,119 +13817,129 @@ inline constexpr FieldDesc kFields2388[] = {
 	{"send_as", "InputPeer", 1},
 };
 
-inline constexpr FieldDesc kFields2389[] = {
+inline constexpr FieldDesc kFields2420[] = {
 	{"call", "InputGroupCall", 65535},
 	{"encrypted_message", "bytes", 65535},
 };
 
-inline constexpr FieldDesc kFields2390[] = {
+inline constexpr FieldDesc kFields2421[] = {
 	{"flags", "#", 65535},
 	{"report_spam", "true", 0},
 	{"call", "InputGroupCall", 65535},
 	{"messages", "Vector<int>", 65535},
 };
 
-inline constexpr FieldDesc kFields2391[] = {
+inline constexpr FieldDesc kFields2422[] = {
 	{"flags", "#", 65535},
 	{"report_spam", "true", 0},
 	{"call", "InputGroupCall", 65535},
 	{"participant", "InputPeer", 65535},
 };
 
-inline constexpr FieldDesc kFields2392[] = {
+inline constexpr FieldDesc kFields2423[] = {
 	{"call", "InputGroupCall", 65535},
 };
 
-inline constexpr FieldDesc kFields2393[] = {
+inline constexpr FieldDesc kFields2424[] = {
 	{"call", "InputGroupCall", 65535},
 	{"send_as", "InputPeer", 65535},
 };
 
-inline constexpr FieldDesc kFields2394[] = {
+inline constexpr FieldDesc kFields2425[] = {
 	{"lang_pack", "string", 65535},
 	{"lang_code", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2395[] = {
+inline constexpr FieldDesc kFields2426[] = {
+	{"lang_pack", "string", 65535},
+	{"lang_code", "string", 65535},
+	{"keys", "Vector<string>", 65535},
+};
+
+inline constexpr FieldDesc kFields2427[] = {
 	{"lang_pack", "string", 65535},
 	{"lang_code", "string", 65535},
 	{"from_version", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2396[] = {
+inline constexpr FieldDesc kFields2428[] = {
+	{"lang_pack", "string", 65535},
+};
+
+inline constexpr FieldDesc kFields2429[] = {
 	{"lang_pack", "string", 65535},
 	{"lang_code", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2397[] = {
+inline constexpr FieldDesc kFields2430[] = {
 	{"folder_peers", "Vector<InputFolderPeer>", 65535},
 };
 
-inline constexpr FieldDesc kFields2398[] = {
+inline constexpr FieldDesc kFields2431[] = {
 	{"flags", "#", 65535},
 	{"dark", "true", 0},
 	{"channel", "InputChannel", 65535},
 };
 
-inline constexpr FieldDesc kFields2399[] = {
+inline constexpr FieldDesc kFields2432[] = {
 	{"flags", "#", 65535},
 	{"token", "string", 65535},
 	{"x", "long", 0},
 };
 
-inline constexpr FieldDesc kFields2400[] = {
+inline constexpr FieldDesc kFields2433[] = {
 	{"flags", "#", 65535},
 	{"dark", "true", 0},
 	{"channel", "InputChannel", 65535},
 };
 
-inline constexpr FieldDesc kFields2401[] = {
+inline constexpr FieldDesc kFields2434[] = {
 	{"channel", "InputChannel", 65535},
 	{"msg_id", "int", 65535},
 	{"offset", "string", 65535},
 	{"limit", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2402[] = {
+inline constexpr FieldDesc kFields2435[] = {
 	{"flags", "#", 65535},
 	{"dark", "true", 0},
 	{"channel", "InputChannel", 65535},
 	{"msg_id", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2403[] = {
+inline constexpr FieldDesc kFields2436[] = {
 	{"flags", "#", 65535},
 	{"dark", "true", 0},
 	{"peer", "InputPeer", 65535},
 	{"id", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2404[] = {
+inline constexpr FieldDesc kFields2437[] = {
 	{"peer", "InputPeer", 65535},
 	{"id", "int", 65535},
 	{"offset", "string", 65535},
 	{"limit", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2405[] = {
+inline constexpr FieldDesc kFields2438[] = {
 	{"flags", "#", 65535},
 	{"dark", "true", 0},
 	{"peer", "InputPeer", 65535},
 	{"msg_id", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2406[] = {
+inline constexpr FieldDesc kFields2439[] = {
 	{"chatlist", "InputChatlist", 65535},
 	{"title", "string", 65535},
 	{"peers", "Vector<InputPeer>", 65535},
 };
 
-inline constexpr FieldDesc kFields2407[] = {
+inline constexpr FieldDesc kFields2440[] = {
 	{"chatlist", "InputChatlist", 65535},
 	{"slug", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2408[] = {
+inline constexpr FieldDesc kFields2441[] = {
 	{"flags", "#", 65535},
 	{"chatlist", "InputChatlist", 65535},
 	{"slug", "string", 65535},
@@ -13831,42 +13947,46 @@ inline constexpr FieldDesc kFields2408[] = {
 	{"peers", "Vector<InputPeer>", 2},
 };
 
-inline constexpr FieldDesc kFields2409[] = {
+inline constexpr FieldDesc kFields2442[] = {
 	{"chatlist", "InputChatlist", 65535},
 };
 
-inline constexpr FieldDesc kFields2410[] = {
+inline constexpr FieldDesc kFields2443[] = {
 	{"slug", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2411[] = {
+inline constexpr FieldDesc kFields2444[] = {
 	{"slug", "string", 65535},
 	{"peers", "Vector<InputPeer>", 65535},
 };
 
-inline constexpr FieldDesc kFields2412[] = {
+inline constexpr FieldDesc kFields2445[] = {
 	{"chatlist", "InputChatlist", 65535},
 };
 
-inline constexpr FieldDesc kFields2413[] = {
-	{"chatlist", "InputChatlist", 65535},
-	{"peers", "Vector<InputPeer>", 65535},
-};
-
-inline constexpr FieldDesc kFields2414[] = {
-	{"chatlist", "InputChatlist", 65535},
-};
-
-inline constexpr FieldDesc kFields2415[] = {
+inline constexpr FieldDesc kFields2446[] = {
 	{"chatlist", "InputChatlist", 65535},
 	{"peers", "Vector<InputPeer>", 65535},
 };
 
-inline constexpr FieldDesc kFields2416[] = {
+inline constexpr FieldDesc kFields2447[] = {
+	{"chatlist", "InputChatlist", 65535},
+};
+
+inline constexpr FieldDesc kFields2448[] = {
+	{"chatlist", "InputChatlist", 65535},
+};
+
+inline constexpr FieldDesc kFields2449[] = {
+	{"chatlist", "InputChatlist", 65535},
+	{"peers", "Vector<InputPeer>", 65535},
+};
+
+inline constexpr FieldDesc kFields2450[] = {
 	{"peer", "InputPeer", 65535},
 };
 
-inline constexpr FieldDesc kFields2417[] = {
+inline constexpr FieldDesc kFields2451[] = {
 	{"flags", "#", 65535},
 	{"pinned", "true", 2},
 	{"noforwards", "true", 4},
@@ -13885,7 +14005,7 @@ inline constexpr FieldDesc kFields2417[] = {
 	{"music", "InputDocument", 9},
 };
 
-inline constexpr FieldDesc kFields2418[] = {
+inline constexpr FieldDesc kFields2452[] = {
 	{"flags", "#", 65535},
 	{"peer", "InputPeer", 65535},
 	{"id", "int", 65535},
@@ -13897,40 +14017,56 @@ inline constexpr FieldDesc kFields2418[] = {
 	{"music", "InputDocument", 4},
 };
 
-inline constexpr FieldDesc kFields2419[] = {
+inline constexpr FieldDesc kFields2453[] = {
+	{"peer", "InputPeer", 65535},
+	{"id", "Vector<int>", 65535},
+};
+
+inline constexpr FieldDesc kFields2454[] = {
+	{"peer", "InputPeer", 65535},
+	{"id", "Vector<int>", 65535},
+	{"pinned", "Bool", 65535},
+};
+
+inline constexpr FieldDesc kFields2455[] = {
 	{"flags", "#", 65535},
 	{"next", "true", 1},
 	{"hidden", "true", 2},
 	{"state", "string", 0},
 };
 
-inline constexpr FieldDesc kFields2420[] = {
+inline constexpr FieldDesc kFields2456[] = {
 	{"peer", "InputPeer", 65535},
 	{"offset_id", "int", 65535},
 	{"limit", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2421[] = {
+inline constexpr FieldDesc kFields2457[] = {
 	{"peer", "InputPeer", 65535},
 	{"offset_id", "int", 65535},
 	{"limit", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2422[] = {
+inline constexpr FieldDesc kFields2458[] = {
 	{"peer", "InputPeer", 65535},
 	{"id", "Vector<int>", 65535},
 };
 
-inline constexpr FieldDesc kFields2423[] = {
+inline constexpr FieldDesc kFields2459[] = {
 	{"hidden", "Bool", 65535},
 };
 
-inline constexpr FieldDesc kFields2424[] = {
+inline constexpr FieldDesc kFields2460[] = {
+	{"peer", "InputPeer", 65535},
+	{"max_id", "int", 65535},
+};
+
+inline constexpr FieldDesc kFields2461[] = {
 	{"peer", "InputPeer", 65535},
 	{"id", "Vector<int>", 65535},
 };
 
-inline constexpr FieldDesc kFields2425[] = {
+inline constexpr FieldDesc kFields2462[] = {
 	{"flags", "#", 65535},
 	{"just_contacts", "true", 0},
 	{"reactions_first", "true", 2},
@@ -13942,30 +14078,30 @@ inline constexpr FieldDesc kFields2425[] = {
 	{"limit", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2426[] = {
+inline constexpr FieldDesc kFields2463[] = {
 	{"peer", "InputPeer", 65535},
 	{"id", "Vector<int>", 65535},
 };
 
-inline constexpr FieldDesc kFields2427[] = {
+inline constexpr FieldDesc kFields2464[] = {
 	{"peer", "InputPeer", 65535},
 	{"id", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2428[] = {
+inline constexpr FieldDesc kFields2465[] = {
 	{"peer", "InputPeer", 65535},
 	{"id", "Vector<int>", 65535},
 	{"option", "bytes", 65535},
 	{"message", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2429[] = {
+inline constexpr FieldDesc kFields2466[] = {
 	{"flags", "#", 65535},
 	{"past", "true", 0},
 	{"future", "true", 1},
 };
 
-inline constexpr FieldDesc kFields2430[] = {
+inline constexpr FieldDesc kFields2467[] = {
 	{"flags", "#", 65535},
 	{"add_to_recent", "true", 0},
 	{"peer", "InputPeer", 65535},
@@ -13973,16 +14109,20 @@ inline constexpr FieldDesc kFields2430[] = {
 	{"reaction", "Reaction", 65535},
 };
 
-inline constexpr FieldDesc kFields2431[] = {
+inline constexpr FieldDesc kFields2468[] = {
 	{"peer", "InputPeer", 65535},
 };
 
-inline constexpr FieldDesc kFields2434[] = {
+inline constexpr FieldDesc kFields2470[] = {
+	{"id", "Vector<InputPeer>", 65535},
+};
+
+inline constexpr FieldDesc kFields2472[] = {
 	{"peer", "InputPeer", 65535},
 	{"hidden", "Bool", 65535},
 };
 
-inline constexpr FieldDesc kFields2435[] = {
+inline constexpr FieldDesc kFields2473[] = {
 	{"flags", "#", 65535},
 	{"forwards_first", "true", 2},
 	{"peer", "InputPeer", 65535},
@@ -13992,12 +14132,12 @@ inline constexpr FieldDesc kFields2435[] = {
 	{"limit", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2436[] = {
+inline constexpr FieldDesc kFields2474[] = {
 	{"peer", "InputPeer", 65535},
 	{"id", "Vector<int>", 65535},
 };
 
-inline constexpr FieldDesc kFields2437[] = {
+inline constexpr FieldDesc kFields2475[] = {
 	{"flags", "#", 65535},
 	{"hashtag", "string", 0},
 	{"area", "MediaArea", 1},
@@ -14006,13 +14146,13 @@ inline constexpr FieldDesc kFields2437[] = {
 	{"limit", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2438[] = {
+inline constexpr FieldDesc kFields2476[] = {
 	{"peer", "InputPeer", 65535},
 	{"title", "string", 65535},
 	{"stories", "Vector<int>", 65535},
 };
 
-inline constexpr FieldDesc kFields2439[] = {
+inline constexpr FieldDesc kFields2477[] = {
 	{"flags", "#", 65535},
 	{"peer", "InputPeer", 65535},
 	{"album_id", "int", 65535},
@@ -14022,29 +14162,29 @@ inline constexpr FieldDesc kFields2439[] = {
 	{"order", "Vector<int>", 3},
 };
 
-inline constexpr FieldDesc kFields2440[] = {
+inline constexpr FieldDesc kFields2478[] = {
 	{"peer", "InputPeer", 65535},
 	{"order", "Vector<int>", 65535},
 };
 
-inline constexpr FieldDesc kFields2441[] = {
+inline constexpr FieldDesc kFields2479[] = {
 	{"peer", "InputPeer", 65535},
 	{"album_id", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2442[] = {
+inline constexpr FieldDesc kFields2480[] = {
 	{"peer", "InputPeer", 65535},
 	{"hash", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields2443[] = {
+inline constexpr FieldDesc kFields2481[] = {
 	{"peer", "InputPeer", 65535},
 	{"album_id", "int", 65535},
 	{"offset", "int", 65535},
 	{"limit", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2444[] = {
+inline constexpr FieldDesc kFields2482[] = {
 	{"flags", "#", 65535},
 	{"pinned", "true", 2},
 	{"noforwards", "true", 4},
@@ -14058,7 +14198,7 @@ inline constexpr FieldDesc kFields2444[] = {
 	{"send_paid_messages_stars", "long", 7},
 };
 
-inline constexpr FieldDesc kFields2445[] = {
+inline constexpr FieldDesc kFields2483[] = {
 	{"flags", "#", 65535},
 	{"gifts", "true", 0},
 	{"peer", "InputPeer", 65535},
@@ -14066,41 +14206,41 @@ inline constexpr FieldDesc kFields2445[] = {
 	{"limit", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2447[] = {
+inline constexpr FieldDesc kFields2485[] = {
 	{"flags", "#", 65535},
 	{"slots", "Vector<int>", 0},
 	{"peer", "InputPeer", 65535},
 };
 
-inline constexpr FieldDesc kFields2448[] = {
+inline constexpr FieldDesc kFields2486[] = {
 	{"peer", "InputPeer", 65535},
 };
 
-inline constexpr FieldDesc kFields2449[] = {
+inline constexpr FieldDesc kFields2487[] = {
 	{"peer", "InputPeer", 65535},
 	{"user_id", "InputUser", 65535},
 };
 
-inline constexpr FieldDesc kFields2453[] = {
+inline constexpr FieldDesc kFields2491[] = {
 	{"flags", "#", 65535},
 	{"allow_international", "true", 0},
 };
 
-inline constexpr FieldDesc kFields2455[] = {
+inline constexpr FieldDesc kFields2493[] = {
 	{"job_id", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2456[] = {
+inline constexpr FieldDesc kFields2494[] = {
 	{"flags", "#", 65535},
 	{"job_id", "string", 65535},
 	{"error", "string", 0},
 };
 
-inline constexpr FieldDesc kFields2457[] = {
+inline constexpr FieldDesc kFields2495[] = {
 	{"collectible", "InputCollectible", 65535},
 };
 
-inline constexpr FieldDesc kFields2458[] = {
+inline constexpr FieldDesc kFields2496[] = {
 	{"flags", "#", 65535},
 	{"display_author", "true", 0},
 	{"emoji_id", "long", 65535},
@@ -14108,7 +14248,7 @@ inline constexpr FieldDesc kFields2458[] = {
 	{"prompt", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2459[] = {
+inline constexpr FieldDesc kFields2497[] = {
 	{"flags", "#", 65535},
 	{"tone", "InputAiComposeTone", 65535},
 	{"display_author", "Bool", 0},
@@ -14117,29 +14257,29 @@ inline constexpr FieldDesc kFields2459[] = {
 	{"prompt", "string", 3},
 };
 
-inline constexpr FieldDesc kFields2460[] = {
+inline constexpr FieldDesc kFields2498[] = {
 	{"tone", "InputAiComposeTone", 65535},
 	{"unsave", "Bool", 65535},
 };
 
-inline constexpr FieldDesc kFields2461[] = {
+inline constexpr FieldDesc kFields2499[] = {
 	{"tone", "InputAiComposeTone", 65535},
 };
 
-inline constexpr FieldDesc kFields2462[] = {
+inline constexpr FieldDesc kFields2500[] = {
 	{"tone", "InputAiComposeTone", 65535},
 };
 
-inline constexpr FieldDesc kFields2463[] = {
+inline constexpr FieldDesc kFields2501[] = {
 	{"hash", "long", 65535},
 };
 
-inline constexpr FieldDesc kFields2464[] = {
+inline constexpr FieldDesc kFields2502[] = {
 	{"tone", "InputAiComposeTone", 65535},
 	{"num", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2465[] = {
+inline constexpr FieldDesc kFields2503[] = {
 	{"flags", "#", 65535},
 	{"hidden", "true", 1},
 	{"title", "string", 65535},
@@ -14147,7 +14287,7 @@ inline constexpr FieldDesc kFields2465[] = {
 	{"peer", "InputPeer", 65535},
 };
 
-inline constexpr FieldDesc kFields2466[] = {
+inline constexpr FieldDesc kFields2504[] = {
 	{"flags", "#", 65535},
 	{"visible", "true", 0},
 	{"hidden", "true", 1},
@@ -14156,44 +14296,44 @@ inline constexpr FieldDesc kFields2466[] = {
 	{"peer", "InputPeer", 65535},
 };
 
-inline constexpr FieldDesc kFields2468[] = {
+inline constexpr FieldDesc kFields2506[] = {
 	{"flags", "#", 65535},
 	{"collapsed", "true", 0},
 	{"community", "InputChannel", 65535},
 };
 
-inline constexpr FieldDesc kFields2469[] = {
+inline constexpr FieldDesc kFields2507[] = {
 	{"community", "InputChannel", 65535},
 	{"offset", "string", 65535},
 	{"limit", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2470[] = {
+inline constexpr FieldDesc kFields2508[] = {
 	{"flags", "#", 65535},
 	{"reject", "true", 0},
 	{"community", "InputChannel", 65535},
 	{"peer", "InputPeer", 65535},
 };
 
-inline constexpr FieldDesc kFields2471[] = {
+inline constexpr FieldDesc kFields2509[] = {
 	{"flags", "#", 65535},
 	{"reject", "true", 0},
 	{"community", "InputChannel", 65535},
 };
 
-inline constexpr FieldDesc kFields2472[] = {
+inline constexpr FieldDesc kFields2510[] = {
 	{"flags", "#", 65535},
 	{"unban", "true", 0},
 	{"community", "InputChannel", 65535},
 	{"participant", "InputPeer", 65535},
 };
 
-inline constexpr FieldDesc kFields2473[] = {
+inline constexpr FieldDesc kFields2511[] = {
 	{"community", "InputChannel", 65535},
 	{"participant", "InputPeer", 65535},
 };
 
-inline constexpr FieldDesc kFields2474[] = {
+inline constexpr FieldDesc kFields2512[] = {
 	{"flags", "#", 65535},
 	{"invert_media", "true", 6},
 	{"welcome", "true", 7},
@@ -14211,28 +14351,28 @@ inline constexpr FieldDesc kFields2474[] = {
 	{"reply_to", "InputReplyTo", 5},
 };
 
-inline constexpr FieldDesc kFields2475[] = {
+inline constexpr FieldDesc kFields2513[] = {
 	{"flags", "#", 65535},
 	{"peer", "InputPeer", 0},
 	{"receiver_id", "InputUser", 65535},
 	{"id", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2476[] = {
+inline constexpr FieldDesc kFields2514[] = {
 	{"peer", "InputPeer", 65535},
 	{"id", "int", 65535},
 	{"option", "bytes", 65535},
 	{"message", "string", 65535},
 };
 
-inline constexpr FieldDesc kFields2477[] = {
+inline constexpr FieldDesc kFields2515[] = {
 	{"flags", "#", 65535},
 	{"peer", "InputPeer", 65535},
 	{"id", "int", 65535},
 	{"data", "bytes", 1},
 };
 
-inline constexpr FieldDesc kFields2478[] = {
+inline constexpr FieldDesc kFields2516[] = {
 	{"flags", "#", 65535},
 	{"invert_media", "true", 5},
 	{"welcome", "true", 6},
@@ -14246,16 +14386,16 @@ inline constexpr FieldDesc kFields2478[] = {
 	{"rich_message", "InputRichMessage", 4},
 };
 
-inline constexpr FieldDesc kFields2479[] = {
+inline constexpr FieldDesc kFields2517[] = {
 	{"peer", "InputPeer", 65535},
 	{"id", "int", 65535},
 };
 
-inline constexpr FieldDesc kFields2480[] = {
+inline constexpr FieldDesc kFields2518[] = {
 	{"peer", "InputPeer", 65535},
 };
 
-inline constexpr FieldDesc kFields2481[] = {
+inline constexpr FieldDesc kFields2519[] = {
 	{"peer", "InputPeer", 65535},
 	{"hash", "long", 65535},
 };
@@ -16038,713 +16178,751 @@ inline constexpr CtorDesc kCtors[] = {
 	{0x182e6d6fu, "account.getWebAuthorizations", "account.WebAuthorizations", 0u, nullptr},
 	{0x2d01b9efu, "account.resetWebAuthorization", "Bool", 1u, kFields1775},
 	{0x682d2594u, "account.resetWebAuthorizations", "Bool", 0u, nullptr},
-	{0x899fe31du, "account.saveSecureValue", "SecureValue", 2u, kFields1777},
-	{0xb880bc4bu, "account.deleteSecureValue", "Bool", 1u, kFields1778},
-	{0xa929597au, "account.getAuthorizationForm", "account.AuthorizationForm", 3u, kFields1779},
-	{0xf3ed4c73u, "account.acceptAuthorization", "Bool", 5u, kFields1780},
-	{0xa5a356f9u, "account.sendVerifyPhoneCode", "auth.SentCode", 2u, kFields1781},
-	{0x4dd3a7f6u, "account.verifyPhone", "Bool", 3u, kFields1782},
-	{0x98e037bbu, "account.sendVerifyEmailCode", "account.SentEmailCode", 2u, kFields1783},
-	{0x032da4cfu, "account.verifyEmail", "account.EmailVerified", 2u, kFields1784},
-	{0x8ef3eab0u, "account.initTakeoutSession", "account.Takeout", 8u, kFields1785},
-	{0x1d2652eeu, "account.finishTakeoutSession", "Bool", 2u, kFields1786},
-	{0x8fdf1920u, "account.confirmPasswordEmail", "Bool", 1u, kFields1787},
+	{0xb288bc7du, "account.getAllSecureValues", "Vector<SecureValue>", 0u, nullptr},
+	{0x73665bc2u, "account.getSecureValue", "Vector<SecureValue>", 1u, kFields1778},
+	{0x899fe31du, "account.saveSecureValue", "SecureValue", 2u, kFields1779},
+	{0xb880bc4bu, "account.deleteSecureValue", "Bool", 1u, kFields1780},
+	{0xa929597au, "account.getAuthorizationForm", "account.AuthorizationForm", 3u, kFields1781},
+	{0xf3ed4c73u, "account.acceptAuthorization", "Bool", 5u, kFields1782},
+	{0xa5a356f9u, "account.sendVerifyPhoneCode", "auth.SentCode", 2u, kFields1783},
+	{0x4dd3a7f6u, "account.verifyPhone", "Bool", 3u, kFields1784},
+	{0x98e037bbu, "account.sendVerifyEmailCode", "account.SentEmailCode", 2u, kFields1785},
+	{0x032da4cfu, "account.verifyEmail", "account.EmailVerified", 2u, kFields1786},
+	{0x8ef3eab0u, "account.initTakeoutSession", "account.Takeout", 8u, kFields1787},
+	{0x1d2652eeu, "account.finishTakeoutSession", "Bool", 2u, kFields1788},
+	{0x8fdf1920u, "account.confirmPasswordEmail", "Bool", 1u, kFields1789},
 	{0x7a7f2a15u, "account.resendPasswordEmail", "Bool", 0u, nullptr},
 	{0xc1cbd5b6u, "account.cancelPasswordEmail", "Bool", 0u, nullptr},
 	{0x9f07c728u, "account.getContactSignUpNotification", "Bool", 0u, nullptr},
-	{0xcff43f61u, "account.setContactSignUpNotification", "Bool", 1u, kFields1791},
-	{0x53577479u, "account.getNotifyExceptions", "Updates", 4u, kFields1792},
-	{0xfc8ddbeau, "account.getWallPaper", "WallPaper", 1u, kFields1793},
-	{0xe39a8f03u, "account.uploadWallPaper", "WallPaper", 5u, kFields1794},
-	{0x6c5a5b37u, "account.saveWallPaper", "Bool", 3u, kFields1795},
-	{0xfeed5769u, "account.installWallPaper", "Bool", 2u, kFields1796},
+	{0xcff43f61u, "account.setContactSignUpNotification", "Bool", 1u, kFields1793},
+	{0x53577479u, "account.getNotifyExceptions", "Updates", 4u, kFields1794},
+	{0xfc8ddbeau, "account.getWallPaper", "WallPaper", 1u, kFields1795},
+	{0xe39a8f03u, "account.uploadWallPaper", "WallPaper", 5u, kFields1796},
+	{0x6c5a5b37u, "account.saveWallPaper", "Bool", 3u, kFields1797},
+	{0xfeed5769u, "account.installWallPaper", "Bool", 2u, kFields1798},
 	{0xbb3b9804u, "account.resetWallPapers", "Bool", 0u, nullptr},
 	{0x56da0b3fu, "account.getAutoDownloadSettings", "account.AutoDownloadSettings", 0u, nullptr},
-	{0x76f36233u, "account.saveAutoDownloadSettings", "Bool", 4u, kFields1799},
-	{0x1c3db333u, "account.uploadTheme", "Document", 5u, kFields1800},
-	{0x652e4400u, "account.createTheme", "Theme", 5u, kFields1801},
-	{0x2bf40cccu, "account.updateTheme", "Theme", 7u, kFields1802},
-	{0xf257106cu, "account.saveTheme", "Bool", 2u, kFields1803},
-	{0xc727bb3bu, "account.installTheme", "Bool", 5u, kFields1804},
-	{0x3a5869ecu, "account.getTheme", "Theme", 2u, kFields1805},
-	{0x7206e458u, "account.getThemes", "account.Themes", 2u, kFields1806},
-	{0xb574b16bu, "account.setContentSettings", "Bool", 2u, kFields1807},
+	{0x76f36233u, "account.saveAutoDownloadSettings", "Bool", 4u, kFields1801},
+	{0x1c3db333u, "account.uploadTheme", "Document", 5u, kFields1802},
+	{0x652e4400u, "account.createTheme", "Theme", 5u, kFields1803},
+	{0x2bf40cccu, "account.updateTheme", "Theme", 7u, kFields1804},
+	{0xf257106cu, "account.saveTheme", "Bool", 2u, kFields1805},
+	{0xc727bb3bu, "account.installTheme", "Bool", 5u, kFields1806},
+	{0x3a5869ecu, "account.getTheme", "Theme", 2u, kFields1807},
+	{0x7206e458u, "account.getThemes", "account.Themes", 2u, kFields1808},
+	{0xb574b16bu, "account.setContentSettings", "Bool", 2u, kFields1809},
 	{0x8b9b4daeu, "account.getContentSettings", "account.ContentSettings", 0u, nullptr},
+	{0x65ad71dcu, "account.getMultiWallPapers", "Vector<WallPaper>", 1u, kFields1811},
 	{0xeb2b4cf6u, "account.getGlobalPrivacySettings", "GlobalPrivacySettings", 0u, nullptr},
-	{0x1edaaac2u, "account.setGlobalPrivacySettings", "GlobalPrivacySettings", 1u, kFields1810},
-	{0xfa8cc6f5u, "account.reportProfilePhoto", "Bool", 4u, kFields1811},
+	{0x1edaaac2u, "account.setGlobalPrivacySettings", "GlobalPrivacySettings", 1u, kFields1813},
+	{0xfa8cc6f5u, "account.reportProfilePhoto", "Bool", 4u, kFields1814},
 	{0x9308ce1bu, "account.resetPassword", "account.ResetPasswordResult", 0u, nullptr},
 	{0x4c9409f6u, "account.declinePasswordReset", "Bool", 0u, nullptr},
-	{0xd638de89u, "account.getChatThemes", "account.Themes", 1u, kFields1814},
-	{0xbf899aa0u, "account.setAuthorizationTTL", "Bool", 1u, kFields1815},
-	{0x40f48462u, "account.changeAuthorizationSettings", "Bool", 5u, kFields1816},
-	{0xe1902288u, "account.getSavedRingtones", "account.SavedRingtones", 1u, kFields1817},
-	{0x3dea5b03u, "account.saveRingtone", "account.SavedRingtone", 2u, kFields1818},
-	{0x831a83a2u, "account.uploadRingtone", "Document", 3u, kFields1819},
-	{0xfbd3de6bu, "account.updateEmojiStatus", "Bool", 1u, kFields1820},
-	{0xd6753386u, "account.getDefaultEmojiStatuses", "account.EmojiStatuses", 1u, kFields1821},
-	{0x0f578105u, "account.getRecentEmojiStatuses", "account.EmojiStatuses", 1u, kFields1822},
+	{0xd638de89u, "account.getChatThemes", "account.Themes", 1u, kFields1817},
+	{0xbf899aa0u, "account.setAuthorizationTTL", "Bool", 1u, kFields1818},
+	{0x40f48462u, "account.changeAuthorizationSettings", "Bool", 5u, kFields1819},
+	{0xe1902288u, "account.getSavedRingtones", "account.SavedRingtones", 1u, kFields1820},
+	{0x3dea5b03u, "account.saveRingtone", "account.SavedRingtone", 2u, kFields1821},
+	{0x831a83a2u, "account.uploadRingtone", "Document", 3u, kFields1822},
+	{0xfbd3de6bu, "account.updateEmojiStatus", "Bool", 1u, kFields1823},
+	{0xd6753386u, "account.getDefaultEmojiStatuses", "account.EmojiStatuses", 1u, kFields1824},
+	{0x0f578105u, "account.getRecentEmojiStatuses", "account.EmojiStatuses", 1u, kFields1825},
 	{0x18201aaeu, "account.clearRecentEmojiStatuses", "Bool", 0u, nullptr},
-	{0xef500eabu, "account.reorderUsernames", "Bool", 1u, kFields1824},
-	{0x58d6b376u, "account.toggleUsername", "Bool", 2u, kFields1825},
-	{0xe2750328u, "account.getDefaultProfilePhotoEmojis", "EmojiList", 1u, kFields1826},
-	{0x915860aeu, "account.getDefaultGroupPhotoEmojis", "EmojiList", 1u, kFields1827},
+	{0xef500eabu, "account.reorderUsernames", "Bool", 1u, kFields1827},
+	{0x58d6b376u, "account.toggleUsername", "Bool", 2u, kFields1828},
+	{0xe2750328u, "account.getDefaultProfilePhotoEmojis", "EmojiList", 1u, kFields1829},
+	{0x915860aeu, "account.getDefaultGroupPhotoEmojis", "EmojiList", 1u, kFields1830},
 	{0xadcbbcdau, "account.getAutoSaveSettings", "account.AutoSaveSettings", 0u, nullptr},
-	{0xd69b8361u, "account.saveAutoSaveSettings", "Bool", 6u, kFields1829},
+	{0xd69b8361u, "account.saveAutoSaveSettings", "Bool", 6u, kFields1832},
 	{0x53bc0020u, "account.deleteAutoSaveExceptions", "Bool", 0u, nullptr},
-	{0xca8ae8bau, "account.invalidateSignInCodes", "Bool", 1u, kFields1831},
-	{0x684d214eu, "account.updateColor", "Bool", 3u, kFields1832},
-	{0xa60ab9ceu, "account.getDefaultBackgroundEmojis", "EmojiList", 1u, kFields1833},
-	{0x7727a7d5u, "account.getChannelDefaultEmojiStatuses", "account.EmojiStatuses", 1u, kFields1834},
-	{0x35a9e0d5u, "account.getChannelRestrictedStatusEmojis", "EmojiList", 1u, kFields1835},
-	{0x4b00e066u, "account.updateBusinessWorkHours", "Bool", 2u, kFields1836},
-	{0x9e6b131au, "account.updateBusinessLocation", "Bool", 3u, kFields1837},
-	{0x66cdafc4u, "account.updateBusinessGreetingMessage", "Bool", 2u, kFields1838},
-	{0xa26a7fa5u, "account.updateBusinessAwayMessage", "Bool", 2u, kFields1839},
-	{0x66a08c7eu, "account.updateConnectedBot", "Updates", 5u, kFields1840},
+	{0xca8ae8bau, "account.invalidateSignInCodes", "Bool", 1u, kFields1834},
+	{0x684d214eu, "account.updateColor", "Bool", 3u, kFields1835},
+	{0xa60ab9ceu, "account.getDefaultBackgroundEmojis", "EmojiList", 1u, kFields1836},
+	{0x7727a7d5u, "account.getChannelDefaultEmojiStatuses", "account.EmojiStatuses", 1u, kFields1837},
+	{0x35a9e0d5u, "account.getChannelRestrictedStatusEmojis", "EmojiList", 1u, kFields1838},
+	{0x4b00e066u, "account.updateBusinessWorkHours", "Bool", 2u, kFields1839},
+	{0x9e6b131au, "account.updateBusinessLocation", "Bool", 3u, kFields1840},
+	{0x66cdafc4u, "account.updateBusinessGreetingMessage", "Bool", 2u, kFields1841},
+	{0xa26a7fa5u, "account.updateBusinessAwayMessage", "Bool", 2u, kFields1842},
+	{0x66a08c7eu, "account.updateConnectedBot", "Updates", 5u, kFields1843},
 	{0x4ea4c80fu, "account.getConnectedBots", "account.ConnectedBots", 0u, nullptr},
-	{0x76a86270u, "account.getBotBusinessConnection", "Updates", 1u, kFields1842},
-	{0xa614d034u, "account.updateBusinessIntro", "Bool", 2u, kFields1843},
-	{0x646e1097u, "account.toggleConnectedBotPaused", "Bool", 2u, kFields1844},
-	{0x5e437ed9u, "account.disablePeerConnectedBot", "Bool", 1u, kFields1845},
-	{0xcc6e0c11u, "account.updateBirthday", "Bool", 2u, kFields1846},
-	{0x8851e68eu, "account.createBusinessChatLink", "BusinessChatLink", 1u, kFields1847},
-	{0x8c3410afu, "account.editBusinessChatLink", "BusinessChatLink", 2u, kFields1848},
-	{0x60073674u, "account.deleteBusinessChatLink", "Bool", 1u, kFields1849},
+	{0x76a86270u, "account.getBotBusinessConnection", "Updates", 1u, kFields1845},
+	{0xa614d034u, "account.updateBusinessIntro", "Bool", 2u, kFields1846},
+	{0x646e1097u, "account.toggleConnectedBotPaused", "Bool", 2u, kFields1847},
+	{0x5e437ed9u, "account.disablePeerConnectedBot", "Bool", 1u, kFields1848},
+	{0xcc6e0c11u, "account.updateBirthday", "Bool", 2u, kFields1849},
+	{0x8851e68eu, "account.createBusinessChatLink", "BusinessChatLink", 1u, kFields1850},
+	{0x8c3410afu, "account.editBusinessChatLink", "BusinessChatLink", 2u, kFields1851},
+	{0x60073674u, "account.deleteBusinessChatLink", "Bool", 1u, kFields1852},
 	{0x6f70dde1u, "account.getBusinessChatLinks", "account.BusinessChatLinks", 0u, nullptr},
-	{0x5492e5eeu, "account.resolveBusinessChatLink", "account.ResolvedBusinessChatLinks", 1u, kFields1851},
-	{0xd94305e0u, "account.updatePersonalChannel", "Bool", 1u, kFields1852},
-	{0xb9d9a38du, "account.toggleSponsoredMessages", "Bool", 1u, kFields1853},
+	{0x5492e5eeu, "account.resolveBusinessChatLink", "account.ResolvedBusinessChatLinks", 1u, kFields1854},
+	{0xd94305e0u, "account.updatePersonalChannel", "Bool", 1u, kFields1855},
+	{0xb9d9a38du, "account.toggleSponsoredMessages", "Bool", 1u, kFields1856},
 	{0x06dd654cu, "account.getReactionsNotifySettings", "ReactionsNotifySettings", 0u, nullptr},
-	{0x316ce548u, "account.setReactionsNotifySettings", "ReactionsNotifySettings", 1u, kFields1855},
-	{0x2e7b4543u, "account.getCollectibleEmojiStatuses", "account.EmojiStatuses", 1u, kFields1856},
-	{0x19ba4a67u, "account.getPaidMessagesRevenue", "account.PaidMessagesRevenue", 3u, kFields1857},
-	{0xfe2eda76u, "account.toggleNoPaidMessagesException", "Bool", 5u, kFields1858},
-	{0x5dee78b0u, "account.setMainProfileTab", "Bool", 1u, kFields1859},
-	{0xb26732a9u, "account.saveMusic", "Bool", 4u, kFields1860},
-	{0xe09d5fafu, "account.getSavedMusicIds", "account.SavedMusicIds", 1u, kFields1861},
-	{0xe42ce9c9u, "account.getUniqueGiftChatThemes", "account.ChatThemes", 3u, kFields1862},
+	{0x316ce548u, "account.setReactionsNotifySettings", "ReactionsNotifySettings", 1u, kFields1858},
+	{0x2e7b4543u, "account.getCollectibleEmojiStatuses", "account.EmojiStatuses", 1u, kFields1859},
+	{0x19ba4a67u, "account.getPaidMessagesRevenue", "account.PaidMessagesRevenue", 3u, kFields1860},
+	{0xfe2eda76u, "account.toggleNoPaidMessagesException", "Bool", 5u, kFields1861},
+	{0x5dee78b0u, "account.setMainProfileTab", "Bool", 1u, kFields1862},
+	{0xb26732a9u, "account.saveMusic", "Bool", 4u, kFields1863},
+	{0xe09d5fafu, "account.getSavedMusicIds", "account.SavedMusicIds", 1u, kFields1864},
+	{0xe42ce9c9u, "account.getUniqueGiftChatThemes", "account.ChatThemes", 3u, kFields1865},
 	{0x429547e8u, "account.initPasskeyRegistration", "account.PasskeyRegistrationOptions", 0u, nullptr},
-	{0x55b41fd6u, "account.registerPasskey", "Passkey", 1u, kFields1864},
+	{0x55b41fd6u, "account.registerPasskey", "Passkey", 1u, kFields1867},
 	{0xea1f0c52u, "account.getPasskeys", "account.Passkeys", 0u, nullptr},
-	{0xf5b5563fu, "account.deletePasskey", "Bool", 1u, kFields1866},
-	{0x67ed1f68u, "account.confirmBotConnection", "Bool", 1u, kFields1867},
-	{0x56655768u, "account.getWebBrowserSettings", "account.WebBrowserSettings", 1u, kFields1868},
-	{0x9adf82feu, "account.updateWebBrowserSettings", "account.WebBrowserSettings", 3u, kFields1869},
-	{0x60ed4229u, "account.toggleWebBrowserSettingsException", "Updates", 4u, kFields1870},
+	{0xf5b5563fu, "account.deletePasskey", "Bool", 1u, kFields1869},
+	{0x67ed1f68u, "account.confirmBotConnection", "Bool", 1u, kFields1870},
+	{0x56655768u, "account.getWebBrowserSettings", "account.WebBrowserSettings", 1u, kFields1871},
+	{0x9adf82feu, "account.updateWebBrowserSettings", "account.WebBrowserSettings", 3u, kFields1872},
+	{0x60ed4229u, "account.toggleWebBrowserSettingsException", "Updates", 4u, kFields1873},
 	{0x86a0765du, "account.deleteWebBrowserSettingsExceptions", "account.WebBrowserSettings", 0u, nullptr},
-	{0xb60f5918u, "users.getFullUser", "users.UserFull", 1u, kFields1872},
-	{0x90c894b5u, "users.setSecureValueErrors", "Bool", 2u, kFields1873},
-	{0x788d7fe3u, "users.getSavedMusic", "users.SavedMusic", 4u, kFields1874},
-	{0x7573a4e9u, "users.getSavedMusicByID", "users.SavedMusic", 2u, kFields1875},
-	{0xfc533372u, "users.suggestBirthday", "Updates", 2u, kFields1876},
-	{0x5dd69e12u, "contacts.getContacts", "contacts.Contacts", 1u, kFields1877},
-	{0x2c800be5u, "contacts.importContacts", "contacts.ImportedContacts", 1u, kFields1878},
-	{0x096a0e00u, "contacts.deleteContacts", "Updates", 1u, kFields1879},
-	{0x1013fd9eu, "contacts.deleteByPhones", "Bool", 1u, kFields1880},
-	{0x2e2e8734u, "contacts.block", "Bool", 3u, kFields1881},
-	{0xb550d328u, "contacts.unblock", "Bool", 3u, kFields1882},
-	{0x9a868f80u, "contacts.getBlocked", "contacts.Blocked", 4u, kFields1883},
-	{0x05f58d0fu, "contacts.search", "contacts.Found", 5u, kFields1884},
-	{0x725afbbcu, "contacts.resolveUsername", "contacts.ResolvedPeer", 3u, kFields1885},
-	{0x973478b6u, "contacts.getTopPeers", "contacts.TopPeers", 14u, kFields1886},
-	{0x1ae373acu, "contacts.resetTopPeerRating", "Bool", 2u, kFields1887},
+	{0x0d91a548u, "users.getUsers", "Vector<User>", 1u, kFields1875},
+	{0xb60f5918u, "users.getFullUser", "users.UserFull", 1u, kFields1876},
+	{0x90c894b5u, "users.setSecureValueErrors", "Bool", 2u, kFields1877},
+	{0xd89a83a3u, "users.getRequirementsToContact", "Vector<RequirementToContact>", 1u, kFields1878},
+	{0x788d7fe3u, "users.getSavedMusic", "users.SavedMusic", 4u, kFields1879},
+	{0x7573a4e9u, "users.getSavedMusicByID", "users.SavedMusic", 2u, kFields1880},
+	{0xfc533372u, "users.suggestBirthday", "Updates", 2u, kFields1881},
+	{0x7adc669du, "contacts.getContactIDs", "Vector<int>", 1u, kFields1882},
+	{0xc4a353eeu, "contacts.getStatuses", "Vector<ContactStatus>", 0u, nullptr},
+	{0x5dd69e12u, "contacts.getContacts", "contacts.Contacts", 1u, kFields1884},
+	{0x2c800be5u, "contacts.importContacts", "contacts.ImportedContacts", 1u, kFields1885},
+	{0x096a0e00u, "contacts.deleteContacts", "Updates", 1u, kFields1886},
+	{0x1013fd9eu, "contacts.deleteByPhones", "Bool", 1u, kFields1887},
+	{0x2e2e8734u, "contacts.block", "Bool", 3u, kFields1888},
+	{0xb550d328u, "contacts.unblock", "Bool", 3u, kFields1889},
+	{0x9a868f80u, "contacts.getBlocked", "contacts.Blocked", 4u, kFields1890},
+	{0x05f58d0fu, "contacts.search", "contacts.Found", 5u, kFields1891},
+	{0x725afbbcu, "contacts.resolveUsername", "contacts.ResolvedPeer", 3u, kFields1892},
+	{0x973478b6u, "contacts.getTopPeers", "contacts.TopPeers", 14u, kFields1893},
+	{0x1ae373acu, "contacts.resetTopPeerRating", "Bool", 2u, kFields1894},
 	{0x879537f1u, "contacts.resetSaved", "Bool", 0u, nullptr},
-	{0x8514bddau, "contacts.toggleTopPeers", "Bool", 1u, kFields1889},
-	{0xd9ba2e54u, "contacts.addContact", "Updates", 7u, kFields1890},
-	{0xf831a20fu, "contacts.acceptContact", "Updates", 1u, kFields1891},
-	{0xd348bc44u, "contacts.getLocated", "Updates", 4u, kFields1892},
-	{0x29a8962cu, "contacts.blockFromReplies", "Updates", 5u, kFields1893},
-	{0x8af94344u, "contacts.resolvePhone", "contacts.ResolvedPeer", 1u, kFields1894},
+	{0x82f1e39fu, "contacts.getSaved", "Vector<SavedContact>", 0u, nullptr},
+	{0x8514bddau, "contacts.toggleTopPeers", "Bool", 1u, kFields1897},
+	{0xd9ba2e54u, "contacts.addContact", "Updates", 7u, kFields1898},
+	{0xf831a20fu, "contacts.acceptContact", "Updates", 1u, kFields1899},
+	{0xd348bc44u, "contacts.getLocated", "Updates", 4u, kFields1900},
+	{0x29a8962cu, "contacts.blockFromReplies", "Updates", 5u, kFields1901},
+	{0x8af94344u, "contacts.resolvePhone", "contacts.ResolvedPeer", 1u, kFields1902},
 	{0xf8654027u, "contacts.exportContactToken", "ExportedContactToken", 0u, nullptr},
-	{0x13005788u, "contacts.importContactToken", "User", 1u, kFields1896},
-	{0xba6705f0u, "contacts.editCloseFriends", "Bool", 1u, kFields1897},
-	{0x94c65c76u, "contacts.setBlocked", "Bool", 4u, kFields1898},
+	{0x13005788u, "contacts.importContactToken", "User", 1u, kFields1904},
+	{0xba6705f0u, "contacts.editCloseFriends", "Bool", 1u, kFields1905},
+	{0x94c65c76u, "contacts.setBlocked", "Bool", 4u, kFields1906},
 	{0xdaeda864u, "contacts.getBirthdays", "contacts.ContactBirthdays", 0u, nullptr},
-	{0xb6c8c393u, "contacts.getSponsoredPeers", "contacts.SponsoredPeers", 1u, kFields1900},
-	{0x139f63fbu, "contacts.updateContactNote", "Bool", 2u, kFields1901},
-	{0x63c66506u, "messages.getMessages", "messages.Messages", 1u, kFields1902},
-	{0xa0f4cb4fu, "messages.getDialogs", "messages.Dialogs", 8u, kFields1903},
-	{0x4423e6c5u, "messages.getHistory", "messages.Messages", 8u, kFields1904},
-	{0x29ee847au, "messages.search", "messages.Messages", 16u, kFields1905},
-	{0x0e306d3au, "messages.readHistory", "messages.AffectedMessages", 2u, kFields1906},
-	{0xb08f922au, "messages.deleteHistory", "messages.AffectedHistory", 7u, kFields1907},
-	{0xe58e95d2u, "messages.deleteMessages", "messages.AffectedMessages", 3u, kFields1908},
-	{0x58943ee2u, "messages.setTyping", "Bool", 4u, kFields1909},
-	{0xfef48f62u, "messages.sendMessage", "Updates", 23u, kFields1910},
-	{0x0330e77fu, "messages.sendMedia", "Updates", 22u, kFields1911},
-	{0x13704a7cu, "messages.forwardMessages", "Updates", 23u, kFields1912},
-	{0xcf1592dbu, "messages.reportSpam", "Bool", 1u, kFields1913},
-	{0xefd9a6a2u, "messages.getPeerSettings", "messages.PeerSettings", 1u, kFields1914},
-	{0xfc78af9bu, "messages.report", "ReportResult", 4u, kFields1915},
-	{0x49e9528fu, "messages.getChats", "messages.Chats", 1u, kFields1916},
-	{0xaeb00b34u, "messages.getFullChat", "messages.ChatFull", 1u, kFields1917},
-	{0x73783ffdu, "messages.editChatTitle", "Updates", 2u, kFields1918},
-	{0x35ddd674u, "messages.editChatPhoto", "Updates", 2u, kFields1919},
-	{0xcbc6d107u, "messages.addChatUser", "messages.InvitedUsers", 3u, kFields1920},
-	{0xa2185cabu, "messages.deleteChatUser", "Updates", 4u, kFields1921},
-	{0x92ceddd4u, "messages.createChat", "messages.InvitedUsers", 4u, kFields1922},
-	{0x26cf8950u, "messages.getDhConfig", "messages.DhConfig", 2u, kFields1923},
-	{0xf64daf43u, "messages.requestEncryption", "EncryptedChat", 3u, kFields1924},
-	{0x3dbc0415u, "messages.acceptEncryption", "EncryptedChat", 3u, kFields1925},
-	{0xf393aea0u, "messages.discardEncryption", "Bool", 3u, kFields1926},
-	{0x791451edu, "messages.setEncryptedTyping", "Bool", 2u, kFields1927},
-	{0x7f4b690au, "messages.readEncryptedHistory", "Bool", 2u, kFields1928},
-	{0x44fa7a15u, "messages.sendEncrypted", "messages.SentEncryptedMessage", 5u, kFields1929},
-	{0x5559481du, "messages.sendEncryptedFile", "messages.SentEncryptedMessage", 6u, kFields1930},
-	{0x32d439a4u, "messages.sendEncryptedService", "messages.SentEncryptedMessage", 3u, kFields1931},
-	{0x4b0c8c0fu, "messages.reportEncryptedSpam", "Bool", 1u, kFields1932},
-	{0x36a73f77u, "messages.readMessageContents", "messages.AffectedMessages", 1u, kFields1933},
-	{0xd5a5d3a1u, "messages.getStickers", "messages.Stickers", 2u, kFields1934},
-	{0xb8a0a1a8u, "messages.getAllStickers", "messages.AllStickers", 1u, kFields1935},
-	{0x570d6f6fu, "messages.getWebPagePreview", "messages.WebPagePreview", 3u, kFields1936},
-	{0xa455de90u, "messages.exportChatInvite", "ExportedChatInvite", 8u, kFields1937},
-	{0x3eadb1bbu, "messages.checkChatInvite", "ChatInvite", 1u, kFields1938},
-	{0xde91436eu, "messages.importChatInvite", "messages.ChatInviteJoinResult", 1u, kFields1939},
-	{0xc8a0ec74u, "messages.getStickerSet", "messages.StickerSet", 2u, kFields1940},
-	{0xc78fe460u, "messages.installStickerSet", "messages.StickerSetInstallResult", 2u, kFields1941},
-	{0xf96e55deu, "messages.uninstallStickerSet", "Bool", 1u, kFields1942},
-	{0xe6df7378u, "messages.startBot", "Updates", 4u, kFields1943},
-	{0x5784d3e1u, "messages.getMessagesViews", "messages.MessageViews", 3u, kFields1944},
-	{0xa85bd1c2u, "messages.editChatAdmin", "Bool", 3u, kFields1945},
-	{0xa2875319u, "messages.migrateChat", "Updates", 1u, kFields1946},
-	{0x6126a43cu, "messages.searchGlobal", "messages.Messages", 14u, kFields1947},
-	{0x78337739u, "messages.reorderStickerSets", "Bool", 4u, kFields1948},
-	{0xb1f2061fu, "messages.getDocumentByHash", "Document", 3u, kFields1949},
-	{0x5cf09635u, "messages.getSavedGifs", "messages.SavedGifs", 1u, kFields1950},
-	{0x327a30cbu, "messages.saveGif", "Bool", 2u, kFields1951},
-	{0x514e999du, "messages.getInlineBotResults", "messages.BotResults", 6u, kFields1952},
-	{0xbb12a419u, "messages.setInlineBotResults", "Bool", 9u, kFields1953},
-	{0xc0cf7646u, "messages.sendInlineBotResult", "Updates", 14u, kFields1954},
-	{0xfda68d36u, "messages.getMessageEditData", "messages.MessageEditData", 2u, kFields1955},
-	{0xb106e66cu, "messages.editMessage", "Updates", 13u, kFields1956},
-	{0xa423bb51u, "messages.editInlineBotMessage", "Bool", 9u, kFields1957},
-	{0x9342ca07u, "messages.getBotCallbackAnswer", "messages.BotCallbackAnswer", 6u, kFields1958},
-	{0xd58f130au, "messages.setBotCallbackAnswer", "Bool", 6u, kFields1959},
-	{0xe470bcfdu, "messages.getPeerDialogs", "messages.PeerDialogs", 1u, kFields1960},
-	{0xad0fa15cu, "messages.saveDraft", "Bool", 11u, kFields1961},
+	{0xb6c8c393u, "contacts.getSponsoredPeers", "contacts.SponsoredPeers", 1u, kFields1908},
+	{0x139f63fbu, "contacts.updateContactNote", "Bool", 2u, kFields1909},
+	{0x63c66506u, "messages.getMessages", "messages.Messages", 1u, kFields1910},
+	{0xa0f4cb4fu, "messages.getDialogs", "messages.Dialogs", 8u, kFields1911},
+	{0x4423e6c5u, "messages.getHistory", "messages.Messages", 8u, kFields1912},
+	{0x29ee847au, "messages.search", "messages.Messages", 16u, kFields1913},
+	{0x0e306d3au, "messages.readHistory", "messages.AffectedMessages", 2u, kFields1914},
+	{0xb08f922au, "messages.deleteHistory", "messages.AffectedHistory", 7u, kFields1915},
+	{0xe58e95d2u, "messages.deleteMessages", "messages.AffectedMessages", 3u, kFields1916},
+	{0x05a954c0u, "messages.receivedMessages", "Vector<ReceivedNotifyMessage>", 1u, kFields1917},
+	{0x58943ee2u, "messages.setTyping", "Bool", 4u, kFields1918},
+	{0xfef48f62u, "messages.sendMessage", "Updates", 23u, kFields1919},
+	{0x0330e77fu, "messages.sendMedia", "Updates", 22u, kFields1920},
+	{0x13704a7cu, "messages.forwardMessages", "Updates", 23u, kFields1921},
+	{0xcf1592dbu, "messages.reportSpam", "Bool", 1u, kFields1922},
+	{0xefd9a6a2u, "messages.getPeerSettings", "messages.PeerSettings", 1u, kFields1923},
+	{0xfc78af9bu, "messages.report", "ReportResult", 4u, kFields1924},
+	{0x49e9528fu, "messages.getChats", "messages.Chats", 1u, kFields1925},
+	{0xaeb00b34u, "messages.getFullChat", "messages.ChatFull", 1u, kFields1926},
+	{0x73783ffdu, "messages.editChatTitle", "Updates", 2u, kFields1927},
+	{0x35ddd674u, "messages.editChatPhoto", "Updates", 2u, kFields1928},
+	{0xcbc6d107u, "messages.addChatUser", "messages.InvitedUsers", 3u, kFields1929},
+	{0xa2185cabu, "messages.deleteChatUser", "Updates", 4u, kFields1930},
+	{0x92ceddd4u, "messages.createChat", "messages.InvitedUsers", 4u, kFields1931},
+	{0x26cf8950u, "messages.getDhConfig", "messages.DhConfig", 2u, kFields1932},
+	{0xf64daf43u, "messages.requestEncryption", "EncryptedChat", 3u, kFields1933},
+	{0x3dbc0415u, "messages.acceptEncryption", "EncryptedChat", 3u, kFields1934},
+	{0xf393aea0u, "messages.discardEncryption", "Bool", 3u, kFields1935},
+	{0x791451edu, "messages.setEncryptedTyping", "Bool", 2u, kFields1936},
+	{0x7f4b690au, "messages.readEncryptedHistory", "Bool", 2u, kFields1937},
+	{0x44fa7a15u, "messages.sendEncrypted", "messages.SentEncryptedMessage", 5u, kFields1938},
+	{0x5559481du, "messages.sendEncryptedFile", "messages.SentEncryptedMessage", 6u, kFields1939},
+	{0x32d439a4u, "messages.sendEncryptedService", "messages.SentEncryptedMessage", 3u, kFields1940},
+	{0x55a5bb66u, "messages.receivedQueue", "Vector<long>", 1u, kFields1941},
+	{0x4b0c8c0fu, "messages.reportEncryptedSpam", "Bool", 1u, kFields1942},
+	{0x36a73f77u, "messages.readMessageContents", "messages.AffectedMessages", 1u, kFields1943},
+	{0xd5a5d3a1u, "messages.getStickers", "messages.Stickers", 2u, kFields1944},
+	{0xb8a0a1a8u, "messages.getAllStickers", "messages.AllStickers", 1u, kFields1945},
+	{0x570d6f6fu, "messages.getWebPagePreview", "messages.WebPagePreview", 3u, kFields1946},
+	{0xa455de90u, "messages.exportChatInvite", "ExportedChatInvite", 8u, kFields1947},
+	{0x3eadb1bbu, "messages.checkChatInvite", "ChatInvite", 1u, kFields1948},
+	{0xde91436eu, "messages.importChatInvite", "messages.ChatInviteJoinResult", 1u, kFields1949},
+	{0xc8a0ec74u, "messages.getStickerSet", "messages.StickerSet", 2u, kFields1950},
+	{0xc78fe460u, "messages.installStickerSet", "messages.StickerSetInstallResult", 2u, kFields1951},
+	{0xf96e55deu, "messages.uninstallStickerSet", "Bool", 1u, kFields1952},
+	{0xe6df7378u, "messages.startBot", "Updates", 4u, kFields1953},
+	{0x5784d3e1u, "messages.getMessagesViews", "messages.MessageViews", 3u, kFields1954},
+	{0xa85bd1c2u, "messages.editChatAdmin", "Bool", 3u, kFields1955},
+	{0xa2875319u, "messages.migrateChat", "Updates", 1u, kFields1956},
+	{0x6126a43cu, "messages.searchGlobal", "messages.Messages", 14u, kFields1957},
+	{0x78337739u, "messages.reorderStickerSets", "Bool", 4u, kFields1958},
+	{0xb1f2061fu, "messages.getDocumentByHash", "Document", 3u, kFields1959},
+	{0x5cf09635u, "messages.getSavedGifs", "messages.SavedGifs", 1u, kFields1960},
+	{0x327a30cbu, "messages.saveGif", "Bool", 2u, kFields1961},
+	{0x514e999du, "messages.getInlineBotResults", "messages.BotResults", 6u, kFields1962},
+	{0xbb12a419u, "messages.setInlineBotResults", "Bool", 9u, kFields1963},
+	{0xc0cf7646u, "messages.sendInlineBotResult", "Updates", 14u, kFields1964},
+	{0xfda68d36u, "messages.getMessageEditData", "messages.MessageEditData", 2u, kFields1965},
+	{0xb106e66cu, "messages.editMessage", "Updates", 13u, kFields1966},
+	{0xa423bb51u, "messages.editInlineBotMessage", "Bool", 9u, kFields1967},
+	{0x9342ca07u, "messages.getBotCallbackAnswer", "messages.BotCallbackAnswer", 6u, kFields1968},
+	{0xd58f130au, "messages.setBotCallbackAnswer", "Bool", 6u, kFields1969},
+	{0xe470bcfdu, "messages.getPeerDialogs", "messages.PeerDialogs", 1u, kFields1970},
+	{0xad0fa15cu, "messages.saveDraft", "Bool", 11u, kFields1971},
 	{0x6a3f8d65u, "messages.getAllDrafts", "Updates", 0u, nullptr},
-	{0x64780b14u, "messages.getFeaturedStickers", "messages.FeaturedStickers", 1u, kFields1963},
-	{0x5b118126u, "messages.readFeaturedStickers", "Bool", 1u, kFields1964},
-	{0x9da9403bu, "messages.getRecentStickers", "messages.RecentStickers", 3u, kFields1965},
-	{0x392718f8u, "messages.saveRecentSticker", "Bool", 4u, kFields1966},
-	{0x8999602du, "messages.clearRecentStickers", "Bool", 2u, kFields1967},
-	{0x57f17692u, "messages.getArchivedStickers", "messages.ArchivedStickers", 5u, kFields1968},
-	{0x640f82b8u, "messages.getMaskStickers", "messages.AllStickers", 1u, kFields1969},
-	{0x8ef8ecc0u, "messages.setGameScore", "Updates", 7u, kFields1970},
-	{0x15ad9f64u, "messages.setInlineGameScore", "Bool", 6u, kFields1971},
-	{0xe822649du, "messages.getGameHighScores", "messages.HighScores", 3u, kFields1972},
-	{0x0f635e1bu, "messages.getInlineGameHighScores", "messages.HighScores", 2u, kFields1973},
-	{0xe40ca104u, "messages.getCommonChats", "messages.Chats", 3u, kFields1974},
-	{0x8d9692a3u, "messages.getWebPage", "messages.WebPage", 2u, kFields1975},
-	{0xa731e257u, "messages.toggleDialogPin", "Bool", 3u, kFields1976},
-	{0x3b1adf37u, "messages.reorderPinnedDialogs", "Bool", 4u, kFields1977},
-	{0xd6b94df2u, "messages.getPinnedDialogs", "messages.PeerDialogs", 1u, kFields1978},
-	{0xe5f672fau, "messages.setBotShippingResults", "Bool", 4u, kFields1979},
-	{0x09c2dd95u, "messages.setBotPrecheckoutResults", "Bool", 4u, kFields1980},
-	{0x14967978u, "messages.uploadMedia", "MessageMedia", 4u, kFields1981},
-	{0xa1405817u, "messages.sendScreenshotNotification", "Updates", 3u, kFields1982},
-	{0x04f1aaa9u, "messages.getFavedStickers", "messages.FavedStickers", 1u, kFields1983},
-	{0xb9ffc55bu, "messages.faveSticker", "Bool", 2u, kFields1984},
-	{0xf107e790u, "messages.getUnreadMentions", "messages.Messages", 8u, kFields1985},
-	{0x36e5bf4du, "messages.readMentions", "messages.AffectedHistory", 3u, kFields1986},
-	{0x702a40e0u, "messages.getRecentLocations", "messages.Messages", 3u, kFields1987},
-	{0x1bf89d74u, "messages.sendMultiMedia", "Updates", 16u, kFields1988},
-	{0x5057c497u, "messages.uploadEncryptedFile", "EncryptedFile", 2u, kFields1989},
-	{0x35705b8au, "messages.searchStickerSets", "messages.FoundStickerSets", 4u, kFields1990},
-	{0x8c5006f8u, "messages.markDialogUnread", "Bool", 4u, kFields1991},
+	{0x64780b14u, "messages.getFeaturedStickers", "messages.FeaturedStickers", 1u, kFields1973},
+	{0x5b118126u, "messages.readFeaturedStickers", "Bool", 1u, kFields1974},
+	{0x9da9403bu, "messages.getRecentStickers", "messages.RecentStickers", 3u, kFields1975},
+	{0x392718f8u, "messages.saveRecentSticker", "Bool", 4u, kFields1976},
+	{0x8999602du, "messages.clearRecentStickers", "Bool", 2u, kFields1977},
+	{0x57f17692u, "messages.getArchivedStickers", "messages.ArchivedStickers", 5u, kFields1978},
+	{0x640f82b8u, "messages.getMaskStickers", "messages.AllStickers", 1u, kFields1979},
+	{0xcc5b67ccu, "messages.getAttachedStickers", "Vector<StickerSetCovered>", 1u, kFields1980},
+	{0x8ef8ecc0u, "messages.setGameScore", "Updates", 7u, kFields1981},
+	{0x15ad9f64u, "messages.setInlineGameScore", "Bool", 6u, kFields1982},
+	{0xe822649du, "messages.getGameHighScores", "messages.HighScores", 3u, kFields1983},
+	{0x0f635e1bu, "messages.getInlineGameHighScores", "messages.HighScores", 2u, kFields1984},
+	{0xe40ca104u, "messages.getCommonChats", "messages.Chats", 3u, kFields1985},
+	{0x8d9692a3u, "messages.getWebPage", "messages.WebPage", 2u, kFields1986},
+	{0xa731e257u, "messages.toggleDialogPin", "Bool", 3u, kFields1987},
+	{0x3b1adf37u, "messages.reorderPinnedDialogs", "Bool", 4u, kFields1988},
+	{0xd6b94df2u, "messages.getPinnedDialogs", "messages.PeerDialogs", 1u, kFields1989},
+	{0xe5f672fau, "messages.setBotShippingResults", "Bool", 4u, kFields1990},
+	{0x09c2dd95u, "messages.setBotPrecheckoutResults", "Bool", 4u, kFields1991},
+	{0x14967978u, "messages.uploadMedia", "MessageMedia", 4u, kFields1992},
+	{0xa1405817u, "messages.sendScreenshotNotification", "Updates", 3u, kFields1993},
+	{0x04f1aaa9u, "messages.getFavedStickers", "messages.FavedStickers", 1u, kFields1994},
+	{0xb9ffc55bu, "messages.faveSticker", "Bool", 2u, kFields1995},
+	{0xf107e790u, "messages.getUnreadMentions", "messages.Messages", 8u, kFields1996},
+	{0x36e5bf4du, "messages.readMentions", "messages.AffectedHistory", 3u, kFields1997},
+	{0x702a40e0u, "messages.getRecentLocations", "messages.Messages", 3u, kFields1998},
+	{0x1bf89d74u, "messages.sendMultiMedia", "Updates", 16u, kFields1999},
+	{0x5057c497u, "messages.uploadEncryptedFile", "EncryptedFile", 2u, kFields2000},
+	{0x35705b8au, "messages.searchStickerSets", "messages.FoundStickerSets", 4u, kFields2001},
+	{0x1cff7e08u, "messages.getSplitRanges", "Vector<MessageRange>", 0u, nullptr},
+	{0x8c5006f8u, "messages.markDialogUnread", "Bool", 4u, kFields2003},
+	{0x21202222u, "messages.getDialogUnreadMarks", "Vector<DialogPeer>", 2u, kFields2004},
 	{0x7e58ee9cu, "messages.clearAllDrafts", "Bool", 0u, nullptr},
-	{0xd2aaf7ecu, "messages.updatePinnedMessage", "Updates", 6u, kFields1993},
-	{0x10ea6184u, "messages.sendVote", "Updates", 3u, kFields1994},
-	{0xeda3e33bu, "messages.getPollResults", "Updates", 3u, kFields1995},
-	{0x6e2be050u, "messages.getOnlines", "ChatOnlines", 1u, kFields1996},
-	{0xdef60797u, "messages.editChatAbout", "Bool", 2u, kFields1997},
-	{0xa5866b41u, "messages.editChatDefaultBannedRights", "Updates", 2u, kFields1998},
-	{0x35a0e062u, "messages.getEmojiKeywords", "EmojiKeywordsDifference", 1u, kFields1999},
-	{0x1508b6afu, "messages.getEmojiKeywordsDifference", "EmojiKeywordsDifference", 2u, kFields2000},
-	{0xd5b10c26u, "messages.getEmojiURL", "EmojiURL", 1u, kFields2001},
-	{0x894cc99cu, "messages.requestUrlAuth", "UrlAuthResult", 6u, kFields2002},
-	{0x67a3f0deu, "messages.acceptUrlAuth", "UrlAuthResult", 8u, kFields2003},
-	{0x4facb138u, "messages.hidePeerSettingsBar", "Bool", 1u, kFields2004},
-	{0xf516760bu, "messages.getScheduledHistory", "messages.Messages", 2u, kFields2005},
-	{0xbdbb0464u, "messages.getScheduledMessages", "messages.Messages", 2u, kFields2006},
-	{0xbd38850au, "messages.sendScheduledMessages", "Updates", 2u, kFields2007},
-	{0x59ae2b16u, "messages.deleteScheduledMessages", "Updates", 2u, kFields2008},
-	{0xb86e380eu, "messages.getPollVotes", "messages.VotesList", 6u, kFields2009},
-	{0xb5052feau, "messages.toggleStickerSets", "Bool", 5u, kFields2010},
+	{0xd2aaf7ecu, "messages.updatePinnedMessage", "Updates", 6u, kFields2006},
+	{0x10ea6184u, "messages.sendVote", "Updates", 3u, kFields2007},
+	{0xeda3e33bu, "messages.getPollResults", "Updates", 3u, kFields2008},
+	{0x6e2be050u, "messages.getOnlines", "ChatOnlines", 1u, kFields2009},
+	{0xdef60797u, "messages.editChatAbout", "Bool", 2u, kFields2010},
+	{0xa5866b41u, "messages.editChatDefaultBannedRights", "Updates", 2u, kFields2011},
+	{0x35a0e062u, "messages.getEmojiKeywords", "EmojiKeywordsDifference", 1u, kFields2012},
+	{0x1508b6afu, "messages.getEmojiKeywordsDifference", "EmojiKeywordsDifference", 2u, kFields2013},
+	{0x4e9963b2u, "messages.getEmojiKeywordsLanguages", "Vector<EmojiLanguage>", 1u, kFields2014},
+	{0xd5b10c26u, "messages.getEmojiURL", "EmojiURL", 1u, kFields2015},
+	{0x1bbcf300u, "messages.getSearchCounters", "Vector<messages.SearchCounter>", 5u, kFields2016},
+	{0x894cc99cu, "messages.requestUrlAuth", "UrlAuthResult", 6u, kFields2017},
+	{0x67a3f0deu, "messages.acceptUrlAuth", "UrlAuthResult", 8u, kFields2018},
+	{0x4facb138u, "messages.hidePeerSettingsBar", "Bool", 1u, kFields2019},
+	{0xf516760bu, "messages.getScheduledHistory", "messages.Messages", 2u, kFields2020},
+	{0xbdbb0464u, "messages.getScheduledMessages", "messages.Messages", 2u, kFields2021},
+	{0xbd38850au, "messages.sendScheduledMessages", "Updates", 2u, kFields2022},
+	{0x59ae2b16u, "messages.deleteScheduledMessages", "Updates", 2u, kFields2023},
+	{0xb86e380eu, "messages.getPollVotes", "messages.VotesList", 6u, kFields2024},
+	{0xb5052feau, "messages.toggleStickerSets", "Bool", 5u, kFields2025},
 	{0xefd48c89u, "messages.getDialogFilters", "messages.DialogFilters", 0u, nullptr},
-	{0x1ad4a04au, "messages.updateDialogFilter", "Bool", 3u, kFields2012},
-	{0xc563c1e4u, "messages.updateDialogFiltersOrder", "Bool", 1u, kFields2013},
-	{0x7ed094a1u, "messages.getOldFeaturedStickers", "messages.FeaturedStickers", 3u, kFields2014},
-	{0x22ddd30cu, "messages.getReplies", "messages.Messages", 9u, kFields2015},
-	{0x446972fdu, "messages.getDiscussionMessage", "messages.DiscussionMessage", 2u, kFields2016},
-	{0xf731a9f4u, "messages.readDiscussion", "Bool", 3u, kFields2017},
-	{0x062dd747u, "messages.unpinAllMessages", "messages.AffectedHistory", 4u, kFields2018},
-	{0x5bd0ee50u, "messages.deleteChat", "Bool", 1u, kFields2019},
-	{0xf9cbe409u, "messages.deletePhoneCallHistory", "messages.AffectedFoundMessages", 2u, kFields2020},
-	{0x43fe19f3u, "messages.checkHistoryImport", "messages.HistoryImportParsed", 1u, kFields2021},
-	{0x34090c3bu, "messages.initHistoryImport", "messages.HistoryImport", 3u, kFields2022},
-	{0x2a862092u, "messages.uploadImportedMedia", "MessageMedia", 4u, kFields2023},
-	{0xb43df344u, "messages.startHistoryImport", "Bool", 2u, kFields2024},
-	{0xa2b5a3f6u, "messages.getExportedChatInvites", "messages.ExportedChatInvites", 7u, kFields2025},
-	{0x73746f5cu, "messages.getExportedChatInvite", "messages.ExportedChatInvite", 2u, kFields2026},
-	{0xbdca2f75u, "messages.editExportedChatInvite", "messages.ExportedChatInvite", 8u, kFields2027},
-	{0x56987bd5u, "messages.deleteRevokedExportedChatInvites", "Bool", 2u, kFields2028},
-	{0xd464a42bu, "messages.deleteExportedChatInvite", "Bool", 2u, kFields2029},
-	{0x3920e6efu, "messages.getAdminsWithInvites", "messages.ChatAdminsWithInvites", 1u, kFields2030},
-	{0xdf04dd4eu, "messages.getChatInviteImporters", "messages.ChatInviteImporters", 9u, kFields2031},
-	{0xb80e5fe4u, "messages.setHistoryTTL", "Updates", 2u, kFields2032},
-	{0x5dc60f03u, "messages.checkHistoryImportPeer", "messages.CheckedHistoryImportPeer", 1u, kFields2033},
-	{0x081202c9u, "messages.setChatTheme", "Updates", 2u, kFields2034},
-	{0x6aa3f6bdu, "messages.getSearchResultsCalendar", "messages.SearchResultsCalendar", 6u, kFields2035},
-	{0x9c7f2f10u, "messages.getSearchResultsPositions", "messages.SearchResultsPositions", 6u, kFields2036},
-	{0x7fe7e815u, "messages.hideChatJoinRequest", "Updates", 4u, kFields2037},
-	{0xe085f4eau, "messages.hideAllChatJoinRequests", "Updates", 4u, kFields2038},
-	{0xb2081a35u, "messages.toggleNoForwards", "Updates", 4u, kFields2039},
-	{0xccfddf96u, "messages.saveDefaultSendAs", "Bool", 2u, kFields2040},
-	{0xd30d78d4u, "messages.sendReaction", "Updates", 6u, kFields2041},
-	{0x8bba90e6u, "messages.getMessagesReactions", "Updates", 2u, kFields2042},
-	{0x461b3f48u, "messages.getMessageReactionsList", "messages.MessageReactionsList", 6u, kFields2043},
-	{0x864b2581u, "messages.setChatAvailableReactions", "Updates", 5u, kFields2044},
-	{0x18dea0acu, "messages.getAvailableReactions", "messages.AvailableReactions", 1u, kFields2045},
-	{0x4f47a016u, "messages.setDefaultReaction", "Bool", 1u, kFields2046},
-	{0xa5eec345u, "messages.translateText", "messages.TranslatedText", 6u, kFields2047},
-	{0xbd7f90acu, "messages.getUnreadReactions", "messages.Messages", 9u, kFields2048},
-	{0x9ec44f93u, "messages.readReactions", "messages.AffectedHistory", 4u, kFields2049},
-	{0x107e31a0u, "messages.searchSentMedia", "messages.Messages", 3u, kFields2050},
-	{0x16fcc2cbu, "messages.getAttachMenuBots", "AttachMenuBots", 1u, kFields2051},
-	{0x77216192u, "messages.getAttachMenuBot", "AttachMenuBotsBot", 1u, kFields2052},
-	{0x69f59d69u, "messages.toggleBotInAttachMenu", "Bool", 4u, kFields2053},
-	{0x269dc2c1u, "messages.requestWebView", "WebViewResult", 13u, kFields2054},
-	{0xb0d81a83u, "messages.prolongWebView", "Bool", 7u, kFields2055},
-	{0x413a3e73u, "messages.requestSimpleWebView", "WebViewResult", 10u, kFields2056},
-	{0x0a4314f5u, "messages.sendWebViewResultMessage", "WebViewMessageSent", 2u, kFields2057},
-	{0xdc0242c8u, "messages.sendWebViewData", "Updates", 4u, kFields2058},
-	{0x269e9a49u, "messages.transcribeAudio", "messages.TranscribedAudio", 2u, kFields2059},
-	{0x7f1d072fu, "messages.rateTranscribedAudio", "Bool", 4u, kFields2060},
-	{0xfbfca18fu, "messages.getEmojiStickers", "messages.AllStickers", 1u, kFields2061},
-	{0x0ecf6736u, "messages.getFeaturedEmojiStickers", "messages.FeaturedStickers", 1u, kFields2062},
-	{0x3f64c076u, "messages.reportReaction", "Bool", 3u, kFields2063},
-	{0xbb8125bau, "messages.getTopReactions", "messages.Reactions", 2u, kFields2064},
-	{0x39461db2u, "messages.getRecentReactions", "messages.Reactions", 2u, kFields2065},
+	{0xa29cd42cu, "messages.getSuggestedDialogFilters", "Vector<DialogFilterSuggested>", 0u, nullptr},
+	{0x1ad4a04au, "messages.updateDialogFilter", "Bool", 3u, kFields2028},
+	{0xc563c1e4u, "messages.updateDialogFiltersOrder", "Bool", 1u, kFields2029},
+	{0x7ed094a1u, "messages.getOldFeaturedStickers", "messages.FeaturedStickers", 3u, kFields2030},
+	{0x22ddd30cu, "messages.getReplies", "messages.Messages", 9u, kFields2031},
+	{0x446972fdu, "messages.getDiscussionMessage", "messages.DiscussionMessage", 2u, kFields2032},
+	{0xf731a9f4u, "messages.readDiscussion", "Bool", 3u, kFields2033},
+	{0x062dd747u, "messages.unpinAllMessages", "messages.AffectedHistory", 4u, kFields2034},
+	{0x5bd0ee50u, "messages.deleteChat", "Bool", 1u, kFields2035},
+	{0xf9cbe409u, "messages.deletePhoneCallHistory", "messages.AffectedFoundMessages", 2u, kFields2036},
+	{0x43fe19f3u, "messages.checkHistoryImport", "messages.HistoryImportParsed", 1u, kFields2037},
+	{0x34090c3bu, "messages.initHistoryImport", "messages.HistoryImport", 3u, kFields2038},
+	{0x2a862092u, "messages.uploadImportedMedia", "MessageMedia", 4u, kFields2039},
+	{0xb43df344u, "messages.startHistoryImport", "Bool", 2u, kFields2040},
+	{0xa2b5a3f6u, "messages.getExportedChatInvites", "messages.ExportedChatInvites", 7u, kFields2041},
+	{0x73746f5cu, "messages.getExportedChatInvite", "messages.ExportedChatInvite", 2u, kFields2042},
+	{0xbdca2f75u, "messages.editExportedChatInvite", "messages.ExportedChatInvite", 8u, kFields2043},
+	{0x56987bd5u, "messages.deleteRevokedExportedChatInvites", "Bool", 2u, kFields2044},
+	{0xd464a42bu, "messages.deleteExportedChatInvite", "Bool", 2u, kFields2045},
+	{0x3920e6efu, "messages.getAdminsWithInvites", "messages.ChatAdminsWithInvites", 1u, kFields2046},
+	{0xdf04dd4eu, "messages.getChatInviteImporters", "messages.ChatInviteImporters", 9u, kFields2047},
+	{0xb80e5fe4u, "messages.setHistoryTTL", "Updates", 2u, kFields2048},
+	{0x5dc60f03u, "messages.checkHistoryImportPeer", "messages.CheckedHistoryImportPeer", 1u, kFields2049},
+	{0x081202c9u, "messages.setChatTheme", "Updates", 2u, kFields2050},
+	{0x31c1c44fu, "messages.getMessageReadParticipants", "Vector<ReadParticipantDate>", 2u, kFields2051},
+	{0x6aa3f6bdu, "messages.getSearchResultsCalendar", "messages.SearchResultsCalendar", 6u, kFields2052},
+	{0x9c7f2f10u, "messages.getSearchResultsPositions", "messages.SearchResultsPositions", 6u, kFields2053},
+	{0x7fe7e815u, "messages.hideChatJoinRequest", "Updates", 4u, kFields2054},
+	{0xe085f4eau, "messages.hideAllChatJoinRequests", "Updates", 4u, kFields2055},
+	{0xb2081a35u, "messages.toggleNoForwards", "Updates", 4u, kFields2056},
+	{0xccfddf96u, "messages.saveDefaultSendAs", "Bool", 2u, kFields2057},
+	{0xd30d78d4u, "messages.sendReaction", "Updates", 6u, kFields2058},
+	{0x8bba90e6u, "messages.getMessagesReactions", "Updates", 2u, kFields2059},
+	{0x461b3f48u, "messages.getMessageReactionsList", "messages.MessageReactionsList", 6u, kFields2060},
+	{0x864b2581u, "messages.setChatAvailableReactions", "Updates", 5u, kFields2061},
+	{0x18dea0acu, "messages.getAvailableReactions", "messages.AvailableReactions", 1u, kFields2062},
+	{0x4f47a016u, "messages.setDefaultReaction", "Bool", 1u, kFields2063},
+	{0xa5eec345u, "messages.translateText", "messages.TranslatedText", 6u, kFields2064},
+	{0xbd7f90acu, "messages.getUnreadReactions", "messages.Messages", 9u, kFields2065},
+	{0x9ec44f93u, "messages.readReactions", "messages.AffectedHistory", 4u, kFields2066},
+	{0x107e31a0u, "messages.searchSentMedia", "messages.Messages", 3u, kFields2067},
+	{0x16fcc2cbu, "messages.getAttachMenuBots", "AttachMenuBots", 1u, kFields2068},
+	{0x77216192u, "messages.getAttachMenuBot", "AttachMenuBotsBot", 1u, kFields2069},
+	{0x69f59d69u, "messages.toggleBotInAttachMenu", "Bool", 4u, kFields2070},
+	{0x269dc2c1u, "messages.requestWebView", "WebViewResult", 13u, kFields2071},
+	{0xb0d81a83u, "messages.prolongWebView", "Bool", 7u, kFields2072},
+	{0x413a3e73u, "messages.requestSimpleWebView", "WebViewResult", 10u, kFields2073},
+	{0x0a4314f5u, "messages.sendWebViewResultMessage", "WebViewMessageSent", 2u, kFields2074},
+	{0xdc0242c8u, "messages.sendWebViewData", "Updates", 4u, kFields2075},
+	{0x269e9a49u, "messages.transcribeAudio", "messages.TranscribedAudio", 2u, kFields2076},
+	{0x7f1d072fu, "messages.rateTranscribedAudio", "Bool", 4u, kFields2077},
+	{0xd9ab0f54u, "messages.getCustomEmojiDocuments", "Vector<Document>", 1u, kFields2078},
+	{0xfbfca18fu, "messages.getEmojiStickers", "messages.AllStickers", 1u, kFields2079},
+	{0x0ecf6736u, "messages.getFeaturedEmojiStickers", "messages.FeaturedStickers", 1u, kFields2080},
+	{0x3f64c076u, "messages.reportReaction", "Bool", 3u, kFields2081},
+	{0xbb8125bau, "messages.getTopReactions", "messages.Reactions", 2u, kFields2082},
+	{0x39461db2u, "messages.getRecentReactions", "messages.Reactions", 2u, kFields2083},
 	{0x9dfeefb4u, "messages.clearRecentReactions", "Bool", 0u, nullptr},
-	{0x84f80814u, "messages.getExtendedMedia", "Updates", 2u, kFields2067},
-	{0x9eb51445u, "messages.setDefaultHistoryTTL", "Bool", 1u, kFields2068},
+	{0x84f80814u, "messages.getExtendedMedia", "Updates", 2u, kFields2085},
+	{0x9eb51445u, "messages.setDefaultHistoryTTL", "Bool", 1u, kFields2086},
 	{0x658b7188u, "messages.getDefaultHistoryTTL", "DefaultHistoryTTL", 0u, nullptr},
-	{0x6c5cf2a7u, "messages.sendBotRequestedPeer", "Updates", 6u, kFields2070},
-	{0x7488ce5bu, "messages.getEmojiGroups", "messages.EmojiGroups", 1u, kFields2071},
-	{0x2ecd56cdu, "messages.getEmojiStatusGroups", "messages.EmojiGroups", 1u, kFields2072},
-	{0x21a548f3u, "messages.getEmojiProfilePhotoGroups", "messages.EmojiGroups", 1u, kFields2073},
-	{0x2c11c0d7u, "messages.searchCustomEmoji", "EmojiList", 2u, kFields2074},
-	{0xe47cb579u, "messages.togglePeerTranslations", "Bool", 3u, kFields2075},
-	{0x34fdc5c3u, "messages.getBotApp", "messages.BotApp", 2u, kFields2076},
-	{0x53618bceu, "messages.requestAppWebView", "WebViewResult", 9u, kFields2077},
-	{0x8ffacae1u, "messages.setChatWallPaper", "Updates", 7u, kFields2078},
-	{0x92b4494cu, "messages.searchEmojiStickerSets", "messages.FoundStickerSets", 4u, kFields2079},
-	{0x1e91fc99u, "messages.getSavedDialogs", "messages.SavedDialogs", 8u, kFields2080},
-	{0x998ab009u, "messages.getSavedHistory", "messages.Messages", 10u, kFields2081},
-	{0x4dc5085fu, "messages.deleteSavedHistory", "messages.AffectedHistory", 6u, kFields2082},
+	{0x6c5cf2a7u, "messages.sendBotRequestedPeer", "Updates", 6u, kFields2088},
+	{0x7488ce5bu, "messages.getEmojiGroups", "messages.EmojiGroups", 1u, kFields2089},
+	{0x2ecd56cdu, "messages.getEmojiStatusGroups", "messages.EmojiGroups", 1u, kFields2090},
+	{0x21a548f3u, "messages.getEmojiProfilePhotoGroups", "messages.EmojiGroups", 1u, kFields2091},
+	{0x2c11c0d7u, "messages.searchCustomEmoji", "EmojiList", 2u, kFields2092},
+	{0xe47cb579u, "messages.togglePeerTranslations", "Bool", 3u, kFields2093},
+	{0x34fdc5c3u, "messages.getBotApp", "messages.BotApp", 2u, kFields2094},
+	{0x53618bceu, "messages.requestAppWebView", "WebViewResult", 9u, kFields2095},
+	{0x8ffacae1u, "messages.setChatWallPaper", "Updates", 7u, kFields2096},
+	{0x92b4494cu, "messages.searchEmojiStickerSets", "messages.FoundStickerSets", 4u, kFields2097},
+	{0x1e91fc99u, "messages.getSavedDialogs", "messages.SavedDialogs", 8u, kFields2098},
+	{0x998ab009u, "messages.getSavedHistory", "messages.Messages", 10u, kFields2099},
+	{0x4dc5085fu, "messages.deleteSavedHistory", "messages.AffectedHistory", 6u, kFields2100},
 	{0xd63d94e0u, "messages.getPinnedSavedDialogs", "messages.SavedDialogs", 0u, nullptr},
-	{0xac81bbdeu, "messages.toggleSavedDialogPin", "Bool", 3u, kFields2084},
-	{0x8b716587u, "messages.reorderPinnedSavedDialogs", "Bool", 3u, kFields2085},
-	{0x3637e05bu, "messages.getSavedReactionTags", "messages.SavedReactionTags", 3u, kFields2086},
-	{0x60297decu, "messages.updateSavedReactionTag", "Bool", 3u, kFields2087},
-	{0xbdf93428u, "messages.getDefaultTagReactions", "messages.Reactions", 1u, kFields2088},
-	{0x8c4bfe5du, "messages.getOutboxReadDate", "OutboxReadDate", 2u, kFields2089},
-	{0xd483f2a8u, "messages.getQuickReplies", "messages.QuickReplies", 1u, kFields2090},
-	{0x60331907u, "messages.reorderQuickReplies", "Bool", 1u, kFields2091},
-	{0xf1d0fbd3u, "messages.checkQuickReplyShortcut", "Bool", 1u, kFields2092},
-	{0x5c003cefu, "messages.editQuickReplyShortcut", "Bool", 2u, kFields2093},
-	{0x3cc04740u, "messages.deleteQuickReplyShortcut", "Bool", 1u, kFields2094},
-	{0x94a495c3u, "messages.getQuickReplyMessages", "messages.Messages", 4u, kFields2095},
-	{0x6c750de1u, "messages.sendQuickReplyMessages", "Updates", 4u, kFields2096},
-	{0xe105e910u, "messages.deleteQuickReplyMessages", "Updates", 2u, kFields2097},
-	{0xfd2dda49u, "messages.toggleDialogFilterTags", "Bool", 1u, kFields2098},
-	{0xd0b5e1fcu, "messages.getMyStickers", "messages.MyStickers", 2u, kFields2099},
-	{0x1dd840f5u, "messages.getEmojiStickerGroups", "messages.EmojiGroups", 1u, kFields2100},
-	{0xdea20a39u, "messages.getAvailableEffects", "messages.AvailableEffects", 1u, kFields2101},
-	{0x0589ee75u, "messages.editFactCheck", "Updates", 3u, kFields2102},
-	{0xd1da940cu, "messages.deleteFactCheck", "Updates", 2u, kFields2103},
-	{0xc9e01e7bu, "messages.requestMainWebView", "WebViewResult", 8u, kFields2104},
-	{0x58bbcb50u, "messages.sendPaidReaction", "Updates", 6u, kFields2105},
-	{0x435885b5u, "messages.togglePaidReactionPrivacy", "Bool", 3u, kFields2106},
+	{0xac81bbdeu, "messages.toggleSavedDialogPin", "Bool", 3u, kFields2102},
+	{0x8b716587u, "messages.reorderPinnedSavedDialogs", "Bool", 3u, kFields2103},
+	{0x3637e05bu, "messages.getSavedReactionTags", "messages.SavedReactionTags", 3u, kFields2104},
+	{0x60297decu, "messages.updateSavedReactionTag", "Bool", 3u, kFields2105},
+	{0xbdf93428u, "messages.getDefaultTagReactions", "messages.Reactions", 1u, kFields2106},
+	{0x8c4bfe5du, "messages.getOutboxReadDate", "OutboxReadDate", 2u, kFields2107},
+	{0xd483f2a8u, "messages.getQuickReplies", "messages.QuickReplies", 1u, kFields2108},
+	{0x60331907u, "messages.reorderQuickReplies", "Bool", 1u, kFields2109},
+	{0xf1d0fbd3u, "messages.checkQuickReplyShortcut", "Bool", 1u, kFields2110},
+	{0x5c003cefu, "messages.editQuickReplyShortcut", "Bool", 2u, kFields2111},
+	{0x3cc04740u, "messages.deleteQuickReplyShortcut", "Bool", 1u, kFields2112},
+	{0x94a495c3u, "messages.getQuickReplyMessages", "messages.Messages", 4u, kFields2113},
+	{0x6c750de1u, "messages.sendQuickReplyMessages", "Updates", 4u, kFields2114},
+	{0xe105e910u, "messages.deleteQuickReplyMessages", "Updates", 2u, kFields2115},
+	{0xfd2dda49u, "messages.toggleDialogFilterTags", "Bool", 1u, kFields2116},
+	{0xd0b5e1fcu, "messages.getMyStickers", "messages.MyStickers", 2u, kFields2117},
+	{0x1dd840f5u, "messages.getEmojiStickerGroups", "messages.EmojiGroups", 1u, kFields2118},
+	{0xdea20a39u, "messages.getAvailableEffects", "messages.AvailableEffects", 1u, kFields2119},
+	{0x0589ee75u, "messages.editFactCheck", "Updates", 3u, kFields2120},
+	{0xd1da940cu, "messages.deleteFactCheck", "Updates", 2u, kFields2121},
+	{0xb9cdc5eeu, "messages.getFactCheck", "Vector<FactCheck>", 2u, kFields2122},
+	{0xc9e01e7bu, "messages.requestMainWebView", "WebViewResult", 8u, kFields2123},
+	{0x58bbcb50u, "messages.sendPaidReaction", "Updates", 6u, kFields2124},
+	{0x435885b5u, "messages.togglePaidReactionPrivacy", "Bool", 3u, kFields2125},
 	{0x472455aau, "messages.getPaidReactionPrivacy", "Updates", 0u, nullptr},
-	{0x269e3643u, "messages.viewSponsoredMessage", "Bool", 1u, kFields2108},
-	{0x8235057eu, "messages.clickSponsoredMessage", "Bool", 4u, kFields2109},
-	{0x12cbf0c4u, "messages.reportSponsoredMessage", "channels.SponsoredMessageReportResult", 2u, kFields2110},
-	{0x3d6ce850u, "messages.getSponsoredMessages", "messages.SponsoredMessages", 3u, kFields2111},
-	{0xf21f7f2fu, "messages.savePreparedInlineMessage", "messages.BotPreparedInlineMessage", 4u, kFields2112},
-	{0x857ebdb8u, "messages.getPreparedInlineMessage", "messages.PreparedInlineMessage", 2u, kFields2113},
-	{0x29b1c66au, "messages.searchStickers", "messages.FoundStickers", 8u, kFields2114},
-	{0x5a6d7395u, "messages.reportMessagesDelivery", "Bool", 4u, kFields2115},
-	{0x6f6f9c96u, "messages.getSavedDialogsByID", "messages.SavedDialogs", 3u, kFields2116},
-	{0xba4a3b5bu, "messages.readSavedHistory", "Bool", 3u, kFields2117},
-	{0xd3e03124u, "messages.toggleTodoCompleted", "Updates", 4u, kFields2118},
-	{0x21a61057u, "messages.appendTodoList", "Updates", 3u, kFields2119},
-	{0x8107455cu, "messages.toggleSuggestedPostApproval", "Updates", 6u, kFields2120},
-	{0x3ba47bffu, "messages.getForumTopics", "messages.ForumTopics", 7u, kFields2121},
-	{0xaf0a4a08u, "messages.getForumTopicsByID", "messages.ForumTopics", 2u, kFields2122},
-	{0xcecc1134u, "messages.editForumTopic", "Updates", 7u, kFields2123},
-	{0x175df251u, "messages.updatePinnedForumTopic", "Updates", 3u, kFields2124},
-	{0x0e7841f0u, "messages.reorderPinnedForumTopics", "Updates", 4u, kFields2125},
-	{0x2f98c3d5u, "messages.createForumTopic", "Updates", 8u, kFields2126},
-	{0xd2816f10u, "messages.deleteTopicHistory", "messages.AffectedHistory", 2u, kFields2127},
+	{0x269e3643u, "messages.viewSponsoredMessage", "Bool", 1u, kFields2127},
+	{0x8235057eu, "messages.clickSponsoredMessage", "Bool", 4u, kFields2128},
+	{0x12cbf0c4u, "messages.reportSponsoredMessage", "channels.SponsoredMessageReportResult", 2u, kFields2129},
+	{0x3d6ce850u, "messages.getSponsoredMessages", "messages.SponsoredMessages", 3u, kFields2130},
+	{0xf21f7f2fu, "messages.savePreparedInlineMessage", "messages.BotPreparedInlineMessage", 4u, kFields2131},
+	{0x857ebdb8u, "messages.getPreparedInlineMessage", "messages.PreparedInlineMessage", 2u, kFields2132},
+	{0x29b1c66au, "messages.searchStickers", "messages.FoundStickers", 8u, kFields2133},
+	{0x5a6d7395u, "messages.reportMessagesDelivery", "Bool", 4u, kFields2134},
+	{0x6f6f9c96u, "messages.getSavedDialogsByID", "messages.SavedDialogs", 3u, kFields2135},
+	{0xba4a3b5bu, "messages.readSavedHistory", "Bool", 3u, kFields2136},
+	{0xd3e03124u, "messages.toggleTodoCompleted", "Updates", 4u, kFields2137},
+	{0x21a61057u, "messages.appendTodoList", "Updates", 3u, kFields2138},
+	{0x8107455cu, "messages.toggleSuggestedPostApproval", "Updates", 6u, kFields2139},
+	{0x3ba47bffu, "messages.getForumTopics", "messages.ForumTopics", 7u, kFields2140},
+	{0xaf0a4a08u, "messages.getForumTopicsByID", "messages.ForumTopics", 2u, kFields2141},
+	{0xcecc1134u, "messages.editForumTopic", "Updates", 7u, kFields2142},
+	{0x175df251u, "messages.updatePinnedForumTopic", "Updates", 3u, kFields2143},
+	{0x0e7841f0u, "messages.reorderPinnedForumTopics", "Updates", 4u, kFields2144},
+	{0x2f98c3d5u, "messages.createForumTopic", "Updates", 8u, kFields2145},
+	{0xd2816f10u, "messages.deleteTopicHistory", "messages.AffectedHistory", 2u, kFields2146},
 	{0xfb7e8ca7u, "messages.getEmojiGameInfo", "messages.EmojiGameInfo", 0u, nullptr},
-	{0xabbbd346u, "messages.summarizeText", "TextWithEntities", 5u, kFields2129},
-	{0xf743b857u, "messages.editChatCreator", "Updates", 3u, kFields2130},
-	{0x3b7d0ea6u, "messages.getFutureChatCreatorAfterLeave", "User", 1u, kFields2131},
-	{0xa00f32b0u, "messages.editChatParticipantRank", "Updates", 3u, kFields2132},
-	{0x35436bbcu, "messages.declineUrlAuth", "Bool", 1u, kFields2133},
-	{0xc9a47b0bu, "messages.checkUrlAuthMatchCode", "Bool", 2u, kFields2134},
-	{0xdaecc589u, "messages.composeMessageWithAI", "messages.ComposedMessageWithAI", 6u, kFields2135},
-	{0x4067c5e6u, "messages.reportReadMetrics", "Bool", 2u, kFields2136},
-	{0xddbcd819u, "messages.reportMusicListen", "Bool", 2u, kFields2137},
-	{0x19bc4b6du, "messages.addPollAnswer", "Updates", 3u, kFields2138},
-	{0xac8505a5u, "messages.deletePollAnswer", "Updates", 3u, kFields2139},
-	{0x43286cf2u, "messages.getUnreadPollVotes", "messages.Messages", 8u, kFields2140},
-	{0x1720b4d8u, "messages.readPollVotes", "messages.AffectedHistory", 3u, kFields2141},
-	{0xb8f106e3u, "messages.setBotGuestChatResult", "InputBotInlineMessageID", 2u, kFields2142},
-	{0xa0b80cf8u, "messages.deleteParticipantReactions", "Bool", 2u, kFields2143},
-	{0xe3b7f82cu, "messages.deleteParticipantReaction", "Updates", 3u, kFields2144},
-	{0x55fb0996u, "messages.getPersonalChannelHistory", "messages.Messages", 5u, kFields2145},
-	{0x501569cfu, "messages.getRichMessage", "messages.Messages", 2u, kFields2146},
-	{0x1a542004u, "messages.translateRichMessage", "messages.TranslatedRichMessage", 6u, kFields2147},
-	{0x8d7ae6afu, "messages.composeRichMessageWithAI", "messages.ComposedRichMessageWithAI", 6u, kFields2148},
-	{0xba9ee679u, "messages.requestChatJoinWebView", "WebViewResult", 4u, kFields2149},
+	{0xabbbd346u, "messages.summarizeText", "TextWithEntities", 5u, kFields2148},
+	{0xf743b857u, "messages.editChatCreator", "Updates", 3u, kFields2149},
+	{0x3b7d0ea6u, "messages.getFutureChatCreatorAfterLeave", "User", 1u, kFields2150},
+	{0xa00f32b0u, "messages.editChatParticipantRank", "Updates", 3u, kFields2151},
+	{0x35436bbcu, "messages.declineUrlAuth", "Bool", 1u, kFields2152},
+	{0xc9a47b0bu, "messages.checkUrlAuthMatchCode", "Bool", 2u, kFields2153},
+	{0xdaecc589u, "messages.composeMessageWithAI", "messages.ComposedMessageWithAI", 6u, kFields2154},
+	{0x4067c5e6u, "messages.reportReadMetrics", "Bool", 2u, kFields2155},
+	{0xddbcd819u, "messages.reportMusicListen", "Bool", 2u, kFields2156},
+	{0x19bc4b6du, "messages.addPollAnswer", "Updates", 3u, kFields2157},
+	{0xac8505a5u, "messages.deletePollAnswer", "Updates", 3u, kFields2158},
+	{0x43286cf2u, "messages.getUnreadPollVotes", "messages.Messages", 8u, kFields2159},
+	{0x1720b4d8u, "messages.readPollVotes", "messages.AffectedHistory", 3u, kFields2160},
+	{0xb8f106e3u, "messages.setBotGuestChatResult", "InputBotInlineMessageID", 2u, kFields2161},
+	{0xa0b80cf8u, "messages.deleteParticipantReactions", "Bool", 2u, kFields2162},
+	{0xe3b7f82cu, "messages.deleteParticipantReaction", "Updates", 3u, kFields2163},
+	{0x55fb0996u, "messages.getPersonalChannelHistory", "messages.Messages", 5u, kFields2164},
+	{0x501569cfu, "messages.getRichMessage", "messages.Messages", 2u, kFields2165},
+	{0x1a542004u, "messages.translateRichMessage", "messages.TranslatedRichMessage", 6u, kFields2166},
+	{0x8d7ae6afu, "messages.composeRichMessageWithAI", "messages.ComposedRichMessageWithAI", 6u, kFields2167},
+	{0xba9ee679u, "messages.requestChatJoinWebView", "WebViewResult", 4u, kFields2168},
 	{0xedd4882au, "updates.getState", "updates.State", 0u, nullptr},
-	{0x19c2f763u, "updates.getDifference", "updates.Difference", 7u, kFields2151},
-	{0x03173d78u, "updates.getChannelDifference", "updates.ChannelDifference", 6u, kFields2152},
-	{0x09e82039u, "photos.updateProfilePhoto", "photos.Photo", 4u, kFields2153},
-	{0x0388a3b5u, "photos.uploadProfilePhoto", "photos.Photo", 7u, kFields2154},
-	{0x91cd32a8u, "photos.getUserPhotos", "photos.Photos", 4u, kFields2155},
-	{0xe14c4a71u, "photos.uploadContactProfilePhoto", "photos.Photo", 8u, kFields2156},
-	{0xb304a621u, "upload.saveFilePart", "Bool", 3u, kFields2157},
-	{0xbe5335beu, "upload.getFile", "upload.File", 6u, kFields2158},
-	{0xde7b673du, "upload.saveBigFilePart", "Bool", 4u, kFields2159},
-	{0x24e6818du, "upload.getWebFile", "upload.WebFile", 3u, kFields2160},
-	{0x395f69dau, "upload.getCdnFile", "upload.CdnFile", 3u, kFields2161},
+	{0x19c2f763u, "updates.getDifference", "updates.Difference", 7u, kFields2170},
+	{0x03173d78u, "updates.getChannelDifference", "updates.ChannelDifference", 6u, kFields2171},
+	{0x09e82039u, "photos.updateProfilePhoto", "photos.Photo", 4u, kFields2172},
+	{0x0388a3b5u, "photos.uploadProfilePhoto", "photos.Photo", 7u, kFields2173},
+	{0x87cf7f2fu, "photos.deletePhotos", "Vector<long>", 1u, kFields2174},
+	{0x91cd32a8u, "photos.getUserPhotos", "photos.Photos", 4u, kFields2175},
+	{0xe14c4a71u, "photos.uploadContactProfilePhoto", "photos.Photo", 8u, kFields2176},
+	{0xb304a621u, "upload.saveFilePart", "Bool", 3u, kFields2177},
+	{0xbe5335beu, "upload.getFile", "upload.File", 6u, kFields2178},
+	{0xde7b673du, "upload.saveBigFilePart", "Bool", 4u, kFields2179},
+	{0x24e6818du, "upload.getWebFile", "upload.WebFile", 3u, kFields2180},
+	{0x395f69dau, "upload.getCdnFile", "upload.CdnFile", 3u, kFields2181},
+	{0x9b2754a8u, "upload.reuploadCdnFile", "Vector<FileHash>", 2u, kFields2182},
+	{0x91dc3f31u, "upload.getCdnFileHashes", "Vector<FileHash>", 2u, kFields2183},
+	{0x9156982au, "upload.getFileHashes", "Vector<FileHash>", 2u, kFields2184},
 	{0xc4f9186bu, "help.getConfig", "Config", 0u, nullptr},
 	{0x1fb33026u, "help.getNearestDc", "NearestDc", 0u, nullptr},
-	{0x522d5a7du, "help.getAppUpdate", "help.AppUpdate", 1u, kFields2164},
+	{0x522d5a7du, "help.getAppUpdate", "help.AppUpdate", 1u, kFields2187},
 	{0x4d392343u, "help.getInviteText", "help.InviteText", 0u, nullptr},
 	{0x9cdf08cdu, "help.getSupport", "help.Support", 0u, nullptr},
-	{0xec22cfcdu, "help.setBotUpdatesStatus", "Bool", 2u, kFields2167},
+	{0xec22cfcdu, "help.setBotUpdatesStatus", "Bool", 2u, kFields2190},
 	{0x52029342u, "help.getCdnConfig", "CdnConfig", 0u, nullptr},
-	{0x3dc0f114u, "help.getRecentMeUrls", "help.RecentMeUrls", 1u, kFields2169},
+	{0x3dc0f114u, "help.getRecentMeUrls", "help.RecentMeUrls", 1u, kFields2192},
 	{0x2ca51fd1u, "help.getTermsOfServiceUpdate", "help.TermsOfServiceUpdate", 0u, nullptr},
-	{0xee72f79au, "help.acceptTermsOfService", "Bool", 1u, kFields2171},
-	{0x3fedc75fu, "help.getDeepLinkInfo", "help.DeepLinkInfo", 1u, kFields2172},
-	{0x61e3f854u, "help.getAppConfig", "help.AppConfig", 1u, kFields2173},
-	{0x6f02f748u, "help.saveAppLog", "Bool", 1u, kFields2174},
-	{0xc661ad08u, "help.getPassportConfig", "help.PassportConfig", 1u, kFields2175},
+	{0xee72f79au, "help.acceptTermsOfService", "Bool", 1u, kFields2194},
+	{0x3fedc75fu, "help.getDeepLinkInfo", "help.DeepLinkInfo", 1u, kFields2195},
+	{0x61e3f854u, "help.getAppConfig", "help.AppConfig", 1u, kFields2196},
+	{0x6f02f748u, "help.saveAppLog", "Bool", 1u, kFields2197},
+	{0xc661ad08u, "help.getPassportConfig", "help.PassportConfig", 1u, kFields2198},
 	{0xd360e72cu, "help.getSupportName", "help.SupportName", 0u, nullptr},
-	{0x038a08d3u, "help.getUserInfo", "help.UserInfo", 1u, kFields2177},
-	{0x66b91b70u, "help.editUserInfo", "help.UserInfo", 3u, kFields2178},
+	{0x038a08d3u, "help.getUserInfo", "help.UserInfo", 1u, kFields2200},
+	{0x66b91b70u, "help.editUserInfo", "help.UserInfo", 3u, kFields2201},
 	{0xc0977421u, "help.getPromoData", "help.PromoData", 0u, nullptr},
-	{0x1e251c95u, "help.hidePromoData", "Bool", 1u, kFields2180},
-	{0xf50dbaa1u, "help.dismissSuggestion", "Bool", 2u, kFields2181},
-	{0x735787a8u, "help.getCountriesList", "help.CountriesList", 2u, kFields2182},
+	{0x1e251c95u, "help.hidePromoData", "Bool", 1u, kFields2203},
+	{0xf50dbaa1u, "help.dismissSuggestion", "Bool", 2u, kFields2204},
+	{0x735787a8u, "help.getCountriesList", "help.CountriesList", 2u, kFields2205},
 	{0xb81b93d4u, "help.getPremiumPromo", "help.PremiumPromo", 0u, nullptr},
-	{0xda80f42fu, "help.getPeerColors", "help.PeerColors", 1u, kFields2184},
-	{0xabcfa9fdu, "help.getPeerProfileColors", "help.PeerColors", 1u, kFields2185},
-	{0x49b30240u, "help.getTimezonesList", "help.TimezonesList", 1u, kFields2186},
-	{0xcc104937u, "channels.readHistory", "Bool", 2u, kFields2187},
-	{0x84c1fd4eu, "channels.deleteMessages", "messages.AffectedMessages", 2u, kFields2188},
-	{0xf44a8315u, "channels.reportSpam", "Bool", 3u, kFields2189},
-	{0xad8c9a23u, "channels.getMessages", "messages.Messages", 2u, kFields2190},
-	{0x77ced9d0u, "channels.getParticipants", "channels.ChannelParticipants", 5u, kFields2191},
-	{0xa0ab6cc6u, "channels.getParticipant", "channels.ChannelParticipant", 2u, kFields2192},
-	{0x0a7f6bbbu, "channels.getChannels", "messages.Chats", 1u, kFields2193},
-	{0x08736a09u, "channels.getFullChannel", "messages.ChatFull", 1u, kFields2194},
-	{0x91006707u, "channels.createChannel", "Updates", 10u, kFields2195},
-	{0x9a98ad68u, "channels.editAdmin", "Updates", 5u, kFields2196},
-	{0x566decd0u, "channels.editTitle", "Updates", 2u, kFields2197},
-	{0xf12e57c9u, "channels.editPhoto", "Updates", 2u, kFields2198},
-	{0x10e6bd2cu, "channels.checkUsername", "Bool", 2u, kFields2199},
-	{0x3514b3deu, "channels.updateUsername", "Bool", 2u, kFields2200},
-	{0x7f6a1e22u, "channels.joinChannel", "messages.ChatInviteJoinResult", 1u, kFields2201},
-	{0xf836aa95u, "channels.leaveChannel", "Updates", 1u, kFields2202},
-	{0xc9e33d54u, "channels.inviteToChannel", "messages.InvitedUsers", 2u, kFields2203},
-	{0xc0111fe3u, "channels.deleteChannel", "Updates", 1u, kFields2204},
-	{0xe63fadebu, "channels.exportMessageLink", "ExportedMessageLink", 5u, kFields2205},
-	{0x418d549cu, "channels.toggleSignatures", "Updates", 4u, kFields2206},
-	{0xf8b036afu, "channels.getAdminedPublicChannels", "messages.Chats", 5u, kFields2207},
-	{0x96e6cd81u, "channels.editBanned", "Updates", 3u, kFields2208},
-	{0x33ddf480u, "channels.getAdminLog", "channels.AdminLogResults", 8u, kFields2209},
-	{0xea8ca4f9u, "channels.setStickers", "Bool", 2u, kFields2210},
-	{0xeab5dc38u, "channels.readMessageContents", "Bool", 2u, kFields2211},
-	{0x9baa9647u, "channels.deleteHistory", "Updates", 4u, kFields2212},
-	{0xeabbb94cu, "channels.togglePreHistoryHidden", "Updates", 2u, kFields2213},
-	{0x8341ecc0u, "channels.getLeftChannels", "messages.Chats", 1u, kFields2214},
+	{0xda80f42fu, "help.getPeerColors", "help.PeerColors", 1u, kFields2207},
+	{0xabcfa9fdu, "help.getPeerProfileColors", "help.PeerColors", 1u, kFields2208},
+	{0x49b30240u, "help.getTimezonesList", "help.TimezonesList", 1u, kFields2209},
+	{0xcc104937u, "channels.readHistory", "Bool", 2u, kFields2210},
+	{0x84c1fd4eu, "channels.deleteMessages", "messages.AffectedMessages", 2u, kFields2211},
+	{0xf44a8315u, "channels.reportSpam", "Bool", 3u, kFields2212},
+	{0xad8c9a23u, "channels.getMessages", "messages.Messages", 2u, kFields2213},
+	{0x77ced9d0u, "channels.getParticipants", "channels.ChannelParticipants", 5u, kFields2214},
+	{0xa0ab6cc6u, "channels.getParticipant", "channels.ChannelParticipant", 2u, kFields2215},
+	{0x0a7f6bbbu, "channels.getChannels", "messages.Chats", 1u, kFields2216},
+	{0x08736a09u, "channels.getFullChannel", "messages.ChatFull", 1u, kFields2217},
+	{0x91006707u, "channels.createChannel", "Updates", 10u, kFields2218},
+	{0x9a98ad68u, "channels.editAdmin", "Updates", 5u, kFields2219},
+	{0x566decd0u, "channels.editTitle", "Updates", 2u, kFields2220},
+	{0xf12e57c9u, "channels.editPhoto", "Updates", 2u, kFields2221},
+	{0x10e6bd2cu, "channels.checkUsername", "Bool", 2u, kFields2222},
+	{0x3514b3deu, "channels.updateUsername", "Bool", 2u, kFields2223},
+	{0x7f6a1e22u, "channels.joinChannel", "messages.ChatInviteJoinResult", 1u, kFields2224},
+	{0xf836aa95u, "channels.leaveChannel", "Updates", 1u, kFields2225},
+	{0xc9e33d54u, "channels.inviteToChannel", "messages.InvitedUsers", 2u, kFields2226},
+	{0xc0111fe3u, "channels.deleteChannel", "Updates", 1u, kFields2227},
+	{0xe63fadebu, "channels.exportMessageLink", "ExportedMessageLink", 5u, kFields2228},
+	{0x418d549cu, "channels.toggleSignatures", "Updates", 4u, kFields2229},
+	{0xf8b036afu, "channels.getAdminedPublicChannels", "messages.Chats", 5u, kFields2230},
+	{0x96e6cd81u, "channels.editBanned", "Updates", 3u, kFields2231},
+	{0x33ddf480u, "channels.getAdminLog", "channels.AdminLogResults", 8u, kFields2232},
+	{0xea8ca4f9u, "channels.setStickers", "Bool", 2u, kFields2233},
+	{0xeab5dc38u, "channels.readMessageContents", "Bool", 2u, kFields2234},
+	{0x9baa9647u, "channels.deleteHistory", "Updates", 4u, kFields2235},
+	{0xeabbb94cu, "channels.togglePreHistoryHidden", "Updates", 2u, kFields2236},
+	{0x8341ecc0u, "channels.getLeftChannels", "messages.Chats", 1u, kFields2237},
 	{0xf5dad378u, "channels.getGroupsForDiscussion", "messages.Chats", 0u, nullptr},
-	{0x40582bb2u, "channels.setDiscussionGroup", "Bool", 2u, kFields2216},
-	{0x58e63f6du, "channels.editLocation", "Bool", 3u, kFields2217},
-	{0xedd49ef0u, "channels.toggleSlowMode", "Updates", 2u, kFields2218},
+	{0x40582bb2u, "channels.setDiscussionGroup", "Bool", 2u, kFields2239},
+	{0x58e63f6du, "channels.editLocation", "Bool", 3u, kFields2240},
+	{0xedd49ef0u, "channels.toggleSlowMode", "Updates", 2u, kFields2241},
 	{0x11e831eeu, "channels.getInactiveChannels", "messages.InactiveChats", 0u, nullptr},
-	{0x0b290c69u, "channels.convertToGigagroup", "Updates", 1u, kFields2220},
-	{0xe785a43fu, "channels.getSendAs", "channels.SendAsPeers", 4u, kFields2221},
-	{0x367544dbu, "channels.deleteParticipantHistory", "messages.AffectedHistory", 2u, kFields2222},
-	{0xe4cb9580u, "channels.toggleJoinToSend", "Updates", 2u, kFields2223},
-	{0x0ecc2618u, "channels.toggleJoinRequest", "Updates", 5u, kFields2224},
-	{0xb45ced1du, "channels.reorderUsernames", "Bool", 2u, kFields2225},
-	{0x50f24105u, "channels.toggleUsername", "Bool", 3u, kFields2226},
-	{0x0a245dd3u, "channels.deactivateAllUsernames", "Bool", 1u, kFields2227},
-	{0x3ff75734u, "channels.toggleForum", "Updates", 3u, kFields2228},
-	{0x68f3e4ebu, "channels.toggleAntiSpam", "Updates", 2u, kFields2229},
-	{0xa850a693u, "channels.reportAntiSpamFalsePositive", "Bool", 2u, kFields2230},
-	{0x6a6e7854u, "channels.toggleParticipantsHidden", "Updates", 2u, kFields2231},
-	{0xd8aa3671u, "channels.updateColor", "Updates", 5u, kFields2232},
-	{0x9738bb15u, "channels.toggleViewForumAsMessages", "Updates", 2u, kFields2233},
-	{0x25a71742u, "channels.getChannelRecommendations", "messages.Chats", 2u, kFields2234},
-	{0xf0d3e6a8u, "channels.updateEmojiStatus", "Updates", 2u, kFields2235},
-	{0xad399ceeu, "channels.setBoostsToUnblockRestrictions", "Updates", 2u, kFields2236},
-	{0x3cd930b7u, "channels.setEmojiStickers", "Bool", 2u, kFields2237},
-	{0x9ae91519u, "channels.restrictSponsoredMessages", "Updates", 2u, kFields2238},
-	{0xf2c4f24du, "channels.searchPosts", "messages.Messages", 8u, kFields2239},
-	{0x4b12327bu, "channels.updatePaidMessagesPrice", "Updates", 4u, kFields2240},
-	{0x167fc0a1u, "channels.toggleAutotranslation", "Updates", 2u, kFields2241},
-	{0xece2a0e6u, "channels.getMessageAuthor", "User", 2u, kFields2242},
-	{0x22567115u, "channels.checkSearchPostsFlood", "SearchPostsFlood", 2u, kFields2243},
-	{0x3583fcb1u, "channels.setMainProfileTab", "Bool", 2u, kFields2244},
-	{0xaa2769edu, "bots.sendCustomRequest", "DataJSON", 2u, kFields2245},
-	{0xe6213f4du, "bots.answerWebhookJSONQuery", "Bool", 2u, kFields2246},
-	{0x0517165au, "bots.setBotCommands", "Bool", 3u, kFields2247},
-	{0x3d8de0f9u, "bots.resetBotCommands", "Bool", 2u, kFields2248},
-	{0x4504d54fu, "bots.setBotMenuButton", "Bool", 2u, kFields2249},
-	{0x9c60eb28u, "bots.getBotMenuButton", "BotMenuButton", 1u, kFields2250},
-	{0x788464e1u, "bots.setBotBroadcastDefaultAdminRights", "Bool", 1u, kFields2251},
-	{0x925ec9eau, "bots.setBotGroupDefaultAdminRights", "Bool", 1u, kFields2252},
-	{0x10cf3123u, "bots.setBotInfo", "Bool", 6u, kFields2253},
-	{0xdcd914fdu, "bots.getBotInfo", "bots.BotInfo", 3u, kFields2254},
-	{0x9709b1c2u, "bots.reorderUsernames", "Bool", 2u, kFields2255},
-	{0x053ca973u, "bots.toggleUsername", "Bool", 3u, kFields2256},
-	{0x1359f4e6u, "bots.canSendMessage", "Bool", 1u, kFields2257},
-	{0xf132e3efu, "bots.allowSendMessage", "Updates", 1u, kFields2258},
-	{0x087fc5e7u, "bots.invokeWebViewCustomMethod", "DataJSON", 3u, kFields2259},
-	{0xc2510192u, "bots.getPopularAppBots", "bots.PopularAppBots", 2u, kFields2260},
-	{0x17aeb75au, "bots.addPreviewMedia", "BotPreviewMedia", 3u, kFields2261},
-	{0x8525606fu, "bots.editPreviewMedia", "BotPreviewMedia", 4u, kFields2262},
-	{0x2d0135b3u, "bots.deletePreviewMedia", "Bool", 3u, kFields2263},
-	{0xb627f3aau, "bots.reorderPreviewMedias", "Bool", 3u, kFields2264},
-	{0x423ab3adu, "bots.getPreviewInfo", "bots.PreviewInfo", 2u, kFields2265},
-	{0xed9f30c5u, "bots.updateUserEmojiStatus", "Bool", 2u, kFields2266},
-	{0x06de6392u, "bots.toggleUserEmojiStatusPermission", "Bool", 2u, kFields2267},
-	{0x50077589u, "bots.checkDownloadFileParams", "Bool", 3u, kFields2268},
-	{0x778b5ab3u, "bots.updateStarRefProgram", "StarRefProgram", 4u, kFields2269},
-	{0x8b89dfbdu, "bots.setCustomVerification", "Bool", 5u, kFields2270},
-	{0xa1b70815u, "bots.getBotRecommendations", "users.Users", 1u, kFields2271},
-	{0x87f2219bu, "bots.checkUsername", "Bool", 1u, kFields2272},
-	{0xe5b17f2bu, "bots.createBot", "User", 5u, kFields2273},
-	{0xbd0d99ebu, "bots.exportBotToken", "bots.ExportedBotToken", 2u, kFields2274},
-	{0x31a2a35eu, "bots.requestWebViewButton", "bots.RequestedButton", 2u, kFields2275},
-	{0xbf25b7f3u, "bots.getRequestedWebViewButton", "KeyboardButton", 2u, kFields2276},
-	{0x213853a3u, "bots.getAccessSettings", "bots.AccessSettings", 1u, kFields2277},
-	{0x31813cd8u, "bots.editAccessSettings", "Bool", 4u, kFields2278},
-	{0xe71a4810u, "bots.setJoinChatResults", "Bool", 2u, kFields2279},
-	{0x37148dbbu, "payments.getPaymentForm", "payments.PaymentForm", 3u, kFields2280},
-	{0x2478d1ccu, "payments.getPaymentReceipt", "payments.PaymentReceipt", 2u, kFields2281},
-	{0xb6c8f12bu, "payments.validateRequestedInfo", "payments.ValidatedRequestedInfo", 4u, kFields2282},
-	{0x2d03522fu, "payments.sendPaymentForm", "payments.PaymentResult", 7u, kFields2283},
+	{0x0b290c69u, "channels.convertToGigagroup", "Updates", 1u, kFields2243},
+	{0xe785a43fu, "channels.getSendAs", "channels.SendAsPeers", 4u, kFields2244},
+	{0x367544dbu, "channels.deleteParticipantHistory", "messages.AffectedHistory", 2u, kFields2245},
+	{0xe4cb9580u, "channels.toggleJoinToSend", "Updates", 2u, kFields2246},
+	{0x0ecc2618u, "channels.toggleJoinRequest", "Updates", 5u, kFields2247},
+	{0xb45ced1du, "channels.reorderUsernames", "Bool", 2u, kFields2248},
+	{0x50f24105u, "channels.toggleUsername", "Bool", 3u, kFields2249},
+	{0x0a245dd3u, "channels.deactivateAllUsernames", "Bool", 1u, kFields2250},
+	{0x3ff75734u, "channels.toggleForum", "Updates", 3u, kFields2251},
+	{0x68f3e4ebu, "channels.toggleAntiSpam", "Updates", 2u, kFields2252},
+	{0xa850a693u, "channels.reportAntiSpamFalsePositive", "Bool", 2u, kFields2253},
+	{0x6a6e7854u, "channels.toggleParticipantsHidden", "Updates", 2u, kFields2254},
+	{0xd8aa3671u, "channels.updateColor", "Updates", 5u, kFields2255},
+	{0x9738bb15u, "channels.toggleViewForumAsMessages", "Updates", 2u, kFields2256},
+	{0x25a71742u, "channels.getChannelRecommendations", "messages.Chats", 2u, kFields2257},
+	{0xf0d3e6a8u, "channels.updateEmojiStatus", "Updates", 2u, kFields2258},
+	{0xad399ceeu, "channels.setBoostsToUnblockRestrictions", "Updates", 2u, kFields2259},
+	{0x3cd930b7u, "channels.setEmojiStickers", "Bool", 2u, kFields2260},
+	{0x9ae91519u, "channels.restrictSponsoredMessages", "Updates", 2u, kFields2261},
+	{0xf2c4f24du, "channels.searchPosts", "messages.Messages", 8u, kFields2262},
+	{0x4b12327bu, "channels.updatePaidMessagesPrice", "Updates", 4u, kFields2263},
+	{0x167fc0a1u, "channels.toggleAutotranslation", "Updates", 2u, kFields2264},
+	{0xece2a0e6u, "channels.getMessageAuthor", "User", 2u, kFields2265},
+	{0x22567115u, "channels.checkSearchPostsFlood", "SearchPostsFlood", 2u, kFields2266},
+	{0x3583fcb1u, "channels.setMainProfileTab", "Bool", 2u, kFields2267},
+	{0xaa2769edu, "bots.sendCustomRequest", "DataJSON", 2u, kFields2268},
+	{0xe6213f4du, "bots.answerWebhookJSONQuery", "Bool", 2u, kFields2269},
+	{0x0517165au, "bots.setBotCommands", "Bool", 3u, kFields2270},
+	{0x3d8de0f9u, "bots.resetBotCommands", "Bool", 2u, kFields2271},
+	{0xe34c0dd6u, "bots.getBotCommands", "Vector<BotCommand>", 2u, kFields2272},
+	{0x4504d54fu, "bots.setBotMenuButton", "Bool", 2u, kFields2273},
+	{0x9c60eb28u, "bots.getBotMenuButton", "BotMenuButton", 1u, kFields2274},
+	{0x788464e1u, "bots.setBotBroadcastDefaultAdminRights", "Bool", 1u, kFields2275},
+	{0x925ec9eau, "bots.setBotGroupDefaultAdminRights", "Bool", 1u, kFields2276},
+	{0x10cf3123u, "bots.setBotInfo", "Bool", 6u, kFields2277},
+	{0xdcd914fdu, "bots.getBotInfo", "bots.BotInfo", 3u, kFields2278},
+	{0x9709b1c2u, "bots.reorderUsernames", "Bool", 2u, kFields2279},
+	{0x053ca973u, "bots.toggleUsername", "Bool", 3u, kFields2280},
+	{0x1359f4e6u, "bots.canSendMessage", "Bool", 1u, kFields2281},
+	{0xf132e3efu, "bots.allowSendMessage", "Updates", 1u, kFields2282},
+	{0x087fc5e7u, "bots.invokeWebViewCustomMethod", "DataJSON", 3u, kFields2283},
+	{0xc2510192u, "bots.getPopularAppBots", "bots.PopularAppBots", 2u, kFields2284},
+	{0x17aeb75au, "bots.addPreviewMedia", "BotPreviewMedia", 3u, kFields2285},
+	{0x8525606fu, "bots.editPreviewMedia", "BotPreviewMedia", 4u, kFields2286},
+	{0x2d0135b3u, "bots.deletePreviewMedia", "Bool", 3u, kFields2287},
+	{0xb627f3aau, "bots.reorderPreviewMedias", "Bool", 3u, kFields2288},
+	{0x423ab3adu, "bots.getPreviewInfo", "bots.PreviewInfo", 2u, kFields2289},
+	{0xa2a5594du, "bots.getPreviewMedias", "Vector<BotPreviewMedia>", 1u, kFields2290},
+	{0xed9f30c5u, "bots.updateUserEmojiStatus", "Bool", 2u, kFields2291},
+	{0x06de6392u, "bots.toggleUserEmojiStatusPermission", "Bool", 2u, kFields2292},
+	{0x50077589u, "bots.checkDownloadFileParams", "Bool", 3u, kFields2293},
+	{0xb0711d83u, "bots.getAdminedBots", "Vector<User>", 0u, nullptr},
+	{0x778b5ab3u, "bots.updateStarRefProgram", "StarRefProgram", 4u, kFields2295},
+	{0x8b89dfbdu, "bots.setCustomVerification", "Bool", 5u, kFields2296},
+	{0xa1b70815u, "bots.getBotRecommendations", "users.Users", 1u, kFields2297},
+	{0x87f2219bu, "bots.checkUsername", "Bool", 1u, kFields2298},
+	{0xe5b17f2bu, "bots.createBot", "User", 5u, kFields2299},
+	{0xbd0d99ebu, "bots.exportBotToken", "bots.ExportedBotToken", 2u, kFields2300},
+	{0x31a2a35eu, "bots.requestWebViewButton", "bots.RequestedButton", 2u, kFields2301},
+	{0xbf25b7f3u, "bots.getRequestedWebViewButton", "KeyboardButton", 2u, kFields2302},
+	{0x213853a3u, "bots.getAccessSettings", "bots.AccessSettings", 1u, kFields2303},
+	{0x31813cd8u, "bots.editAccessSettings", "Bool", 4u, kFields2304},
+	{0xe71a4810u, "bots.setJoinChatResults", "Bool", 2u, kFields2305},
+	{0x37148dbbu, "payments.getPaymentForm", "payments.PaymentForm", 3u, kFields2306},
+	{0x2478d1ccu, "payments.getPaymentReceipt", "payments.PaymentReceipt", 2u, kFields2307},
+	{0xb6c8f12bu, "payments.validateRequestedInfo", "payments.ValidatedRequestedInfo", 4u, kFields2308},
+	{0x2d03522fu, "payments.sendPaymentForm", "payments.PaymentResult", 7u, kFields2309},
 	{0x227d824bu, "payments.getSavedInfo", "payments.SavedInfo", 0u, nullptr},
-	{0xd83d70c1u, "payments.clearSavedInfo", "Bool", 3u, kFields2285},
-	{0x2e79d779u, "payments.getBankCardData", "payments.BankCardData", 1u, kFields2286},
-	{0x0f91b065u, "payments.exportInvoice", "payments.ExportedInvoice", 1u, kFields2287},
-	{0x80ed747du, "payments.assignAppStoreTransaction", "Updates", 2u, kFields2288},
-	{0xdffd50d3u, "payments.assignPlayMarketTransaction", "Updates", 2u, kFields2289},
-	{0x8e51b4c1u, "payments.checkGiftCode", "payments.CheckedGiftCode", 1u, kFields2290},
-	{0xf6e26854u, "payments.applyGiftCode", "Updates", 1u, kFields2291},
-	{0xf4239425u, "payments.getGiveawayInfo", "payments.GiveawayInfo", 2u, kFields2292},
-	{0x5ff58f20u, "payments.launchPrepaidGiveaway", "Updates", 3u, kFields2293},
-	{0x4ea9b3bfu, "payments.getStarsStatus", "payments.StarsStatus", 3u, kFields2294},
-	{0x69da4557u, "payments.getStarsTransactions", "payments.StarsStatus", 9u, kFields2295},
-	{0x7998c914u, "payments.sendStarsForm", "payments.PaymentResult", 2u, kFields2296},
-	{0x25ae8f4au, "payments.refundStarsCharge", "Updates", 2u, kFields2297},
-	{0xd91ffad6u, "payments.getStarsRevenueStats", "payments.StarsRevenueStats", 4u, kFields2298},
-	{0x2433dc92u, "payments.getStarsRevenueWithdrawalUrl", "payments.StarsRevenueWithdrawalUrl", 5u, kFields2299},
-	{0xd1d7efc5u, "payments.getStarsRevenueAdsAccountUrl", "payments.StarsRevenueAdsAccountUrl", 1u, kFields2300},
-	{0x2dca16b8u, "payments.getStarsTransactionsByID", "payments.StarsStatus", 4u, kFields2301},
-	{0x032512c5u, "payments.getStarsSubscriptions", "payments.StarsStatus", 4u, kFields2302},
-	{0xc7770878u, "payments.changeStarsSubscription", "Bool", 4u, kFields2303},
-	{0xcc5bebb3u, "payments.fulfillStarsSubscription", "Bool", 2u, kFields2304},
-	{0xc4563590u, "payments.getStarGifts", "payments.StarGifts", 1u, kFields2305},
-	{0x2a2a697cu, "payments.saveStarGift", "Bool", 3u, kFields2306},
-	{0x74bf076bu, "payments.convertStarGift", "Bool", 1u, kFields2307},
-	{0x6dfa0622u, "payments.botCancelStarsSubscription", "Bool", 4u, kFields2308},
-	{0x5869a553u, "payments.getConnectedStarRefBots", "payments.ConnectedStarRefBots", 5u, kFields2309},
-	{0xb7d998f0u, "payments.getConnectedStarRefBot", "payments.ConnectedStarRefBots", 2u, kFields2310},
-	{0x0d6b48f7u, "payments.getSuggestedStarRefBots", "payments.SuggestedStarRefBots", 6u, kFields2311},
-	{0x7ed5348au, "payments.connectStarRefBot", "payments.ConnectedStarRefBots", 2u, kFields2312},
-	{0xe4fca4a3u, "payments.editConnectedStarRefBot", "payments.ConnectedStarRefBots", 4u, kFields2313},
-	{0x9c9abcb1u, "payments.getStarGiftUpgradePreview", "payments.StarGiftUpgradePreview", 1u, kFields2314},
-	{0xaed6e4f5u, "payments.upgradeStarGift", "Updates", 3u, kFields2315},
-	{0x7f18176au, "payments.transferStarGift", "Updates", 2u, kFields2316},
-	{0xa1974d72u, "payments.getUniqueStarGift", "payments.UniqueStarGift", 1u, kFields2317},
-	{0xa319e569u, "payments.getSavedStarGifts", "payments.SavedStarGifts", 14u, kFields2318},
-	{0xb455a106u, "payments.getSavedStarGift", "payments.SavedStarGifts", 1u, kFields2319},
-	{0xd06e93a8u, "payments.getStarGiftWithdrawalUrl", "payments.StarGiftWithdrawalUrl", 2u, kFields2320},
-	{0x60eaefa1u, "payments.toggleChatStarGiftNotifications", "Bool", 3u, kFields2321},
-	{0x1513e7b0u, "payments.toggleStarGiftsPinnedToTop", "Bool", 2u, kFields2322},
-	{0x4fdc5ea7u, "payments.canPurchaseStore", "Bool", 1u, kFields2323},
-	{0x7a5fa236u, "payments.getResaleStarGifts", "payments.ResaleStarGifts", 10u, kFields2324},
-	{0xedbe6ccbu, "payments.updateStarGiftPrice", "Updates", 2u, kFields2325},
-	{0x1f4a0e87u, "payments.createStarGiftCollection", "StarGiftCollection", 3u, kFields2326},
-	{0x4fddbee7u, "payments.updateStarGiftCollection", "StarGiftCollection", 7u, kFields2327},
-	{0xc32af4ccu, "payments.reorderStarGiftCollections", "Bool", 2u, kFields2328},
-	{0xad5648e8u, "payments.deleteStarGiftCollection", "Bool", 2u, kFields2329},
-	{0x981b91ddu, "payments.getStarGiftCollections", "payments.StarGiftCollections", 2u, kFields2330},
-	{0x4365af6bu, "payments.getUniqueStarGiftValueInfo", "payments.UniqueStarGiftValueInfo", 1u, kFields2331},
-	{0xc0c4edc9u, "payments.checkCanSendGift", "payments.CheckCanSendGiftResult", 1u, kFields2332},
-	{0x5c9ff4d6u, "payments.getStarGiftAuctionState", "payments.StarGiftAuctionState", 2u, kFields2333},
-	{0x6ba2cbecu, "payments.getStarGiftAuctionAcquiredGifts", "payments.StarGiftAuctionAcquiredGifts", 1u, kFields2334},
-	{0xa5d0514du, "payments.getStarGiftActiveAuctions", "payments.StarGiftActiveAuctions", 1u, kFields2335},
-	{0xe9ce781cu, "payments.resolveStarGiftOffer", "Updates", 3u, kFields2336},
-	{0x8fb86b41u, "payments.sendStarGiftOffer", "Updates", 7u, kFields2337},
-	{0x6d038b58u, "payments.getStarGiftUpgradeAttributes", "payments.StarGiftUpgradeAttributes", 1u, kFields2338},
-	{0xfd05dd00u, "payments.getCraftStarGifts", "payments.SavedStarGifts", 3u, kFields2339},
-	{0xb0f9684fu, "payments.craftStarGift", "Updates", 1u, kFields2340},
-	{0x9021ab67u, "stickers.createStickerSet", "messages.StickerSet", 10u, kFields2341},
-	{0xf7760f51u, "stickers.removeStickerFromSet", "messages.StickerSet", 1u, kFields2342},
-	{0xffb6d4cau, "stickers.changeStickerPosition", "messages.StickerSet", 2u, kFields2343},
-	{0x8653febeu, "stickers.addStickerToSet", "messages.StickerSet", 2u, kFields2344},
-	{0xa76a5392u, "stickers.setStickerSetThumb", "messages.StickerSet", 4u, kFields2345},
-	{0x284b3639u, "stickers.checkShortName", "Bool", 1u, kFields2346},
-	{0x4dafc503u, "stickers.suggestShortName", "stickers.SuggestedShortName", 1u, kFields2347},
-	{0xf5537ebcu, "stickers.changeSticker", "messages.StickerSet", 5u, kFields2348},
-	{0x124b1c00u, "stickers.renameStickerSet", "messages.StickerSet", 2u, kFields2349},
-	{0x87704394u, "stickers.deleteStickerSet", "Bool", 1u, kFields2350},
-	{0x4696459au, "stickers.replaceSticker", "messages.StickerSet", 2u, kFields2351},
+	{0xd83d70c1u, "payments.clearSavedInfo", "Bool", 3u, kFields2311},
+	{0x2e79d779u, "payments.getBankCardData", "payments.BankCardData", 1u, kFields2312},
+	{0x0f91b065u, "payments.exportInvoice", "payments.ExportedInvoice", 1u, kFields2313},
+	{0x80ed747du, "payments.assignAppStoreTransaction", "Updates", 2u, kFields2314},
+	{0xdffd50d3u, "payments.assignPlayMarketTransaction", "Updates", 2u, kFields2315},
+	{0x2757ba54u, "payments.getPremiumGiftCodeOptions", "Vector<PremiumGiftCodeOption>", 2u, kFields2316},
+	{0x8e51b4c1u, "payments.checkGiftCode", "payments.CheckedGiftCode", 1u, kFields2317},
+	{0xf6e26854u, "payments.applyGiftCode", "Updates", 1u, kFields2318},
+	{0xf4239425u, "payments.getGiveawayInfo", "payments.GiveawayInfo", 2u, kFields2319},
+	{0x5ff58f20u, "payments.launchPrepaidGiveaway", "Updates", 3u, kFields2320},
+	{0xc00ec7d3u, "payments.getStarsTopupOptions", "Vector<StarsTopupOption>", 0u, nullptr},
+	{0x4ea9b3bfu, "payments.getStarsStatus", "payments.StarsStatus", 3u, kFields2322},
+	{0x69da4557u, "payments.getStarsTransactions", "payments.StarsStatus", 9u, kFields2323},
+	{0x7998c914u, "payments.sendStarsForm", "payments.PaymentResult", 2u, kFields2324},
+	{0x25ae8f4au, "payments.refundStarsCharge", "Updates", 2u, kFields2325},
+	{0xd91ffad6u, "payments.getStarsRevenueStats", "payments.StarsRevenueStats", 4u, kFields2326},
+	{0x2433dc92u, "payments.getStarsRevenueWithdrawalUrl", "payments.StarsRevenueWithdrawalUrl", 5u, kFields2327},
+	{0xd1d7efc5u, "payments.getStarsRevenueAdsAccountUrl", "payments.StarsRevenueAdsAccountUrl", 1u, kFields2328},
+	{0x2dca16b8u, "payments.getStarsTransactionsByID", "payments.StarsStatus", 4u, kFields2329},
+	{0xd3c96bc8u, "payments.getStarsGiftOptions", "Vector<StarsGiftOption>", 2u, kFields2330},
+	{0x032512c5u, "payments.getStarsSubscriptions", "payments.StarsStatus", 4u, kFields2331},
+	{0xc7770878u, "payments.changeStarsSubscription", "Bool", 4u, kFields2332},
+	{0xcc5bebb3u, "payments.fulfillStarsSubscription", "Bool", 2u, kFields2333},
+	{0xbd1efd3eu, "payments.getStarsGiveawayOptions", "Vector<StarsGiveawayOption>", 0u, nullptr},
+	{0xc4563590u, "payments.getStarGifts", "payments.StarGifts", 1u, kFields2335},
+	{0x2a2a697cu, "payments.saveStarGift", "Bool", 3u, kFields2336},
+	{0x74bf076bu, "payments.convertStarGift", "Bool", 1u, kFields2337},
+	{0x6dfa0622u, "payments.botCancelStarsSubscription", "Bool", 4u, kFields2338},
+	{0x5869a553u, "payments.getConnectedStarRefBots", "payments.ConnectedStarRefBots", 5u, kFields2339},
+	{0xb7d998f0u, "payments.getConnectedStarRefBot", "payments.ConnectedStarRefBots", 2u, kFields2340},
+	{0x0d6b48f7u, "payments.getSuggestedStarRefBots", "payments.SuggestedStarRefBots", 6u, kFields2341},
+	{0x7ed5348au, "payments.connectStarRefBot", "payments.ConnectedStarRefBots", 2u, kFields2342},
+	{0xe4fca4a3u, "payments.editConnectedStarRefBot", "payments.ConnectedStarRefBots", 4u, kFields2343},
+	{0x9c9abcb1u, "payments.getStarGiftUpgradePreview", "payments.StarGiftUpgradePreview", 1u, kFields2344},
+	{0xaed6e4f5u, "payments.upgradeStarGift", "Updates", 3u, kFields2345},
+	{0x7f18176au, "payments.transferStarGift", "Updates", 2u, kFields2346},
+	{0xa1974d72u, "payments.getUniqueStarGift", "payments.UniqueStarGift", 1u, kFields2347},
+	{0xa319e569u, "payments.getSavedStarGifts", "payments.SavedStarGifts", 14u, kFields2348},
+	{0xb455a106u, "payments.getSavedStarGift", "payments.SavedStarGifts", 1u, kFields2349},
+	{0xd06e93a8u, "payments.getStarGiftWithdrawalUrl", "payments.StarGiftWithdrawalUrl", 2u, kFields2350},
+	{0x60eaefa1u, "payments.toggleChatStarGiftNotifications", "Bool", 3u, kFields2351},
+	{0x1513e7b0u, "payments.toggleStarGiftsPinnedToTop", "Bool", 2u, kFields2352},
+	{0x4fdc5ea7u, "payments.canPurchaseStore", "Bool", 1u, kFields2353},
+	{0x7a5fa236u, "payments.getResaleStarGifts", "payments.ResaleStarGifts", 10u, kFields2354},
+	{0xedbe6ccbu, "payments.updateStarGiftPrice", "Updates", 2u, kFields2355},
+	{0x1f4a0e87u, "payments.createStarGiftCollection", "StarGiftCollection", 3u, kFields2356},
+	{0x4fddbee7u, "payments.updateStarGiftCollection", "StarGiftCollection", 7u, kFields2357},
+	{0xc32af4ccu, "payments.reorderStarGiftCollections", "Bool", 2u, kFields2358},
+	{0xad5648e8u, "payments.deleteStarGiftCollection", "Bool", 2u, kFields2359},
+	{0x981b91ddu, "payments.getStarGiftCollections", "payments.StarGiftCollections", 2u, kFields2360},
+	{0x4365af6bu, "payments.getUniqueStarGiftValueInfo", "payments.UniqueStarGiftValueInfo", 1u, kFields2361},
+	{0xc0c4edc9u, "payments.checkCanSendGift", "payments.CheckCanSendGiftResult", 1u, kFields2362},
+	{0x5c9ff4d6u, "payments.getStarGiftAuctionState", "payments.StarGiftAuctionState", 2u, kFields2363},
+	{0x6ba2cbecu, "payments.getStarGiftAuctionAcquiredGifts", "payments.StarGiftAuctionAcquiredGifts", 1u, kFields2364},
+	{0xa5d0514du, "payments.getStarGiftActiveAuctions", "payments.StarGiftActiveAuctions", 1u, kFields2365},
+	{0xe9ce781cu, "payments.resolveStarGiftOffer", "Updates", 3u, kFields2366},
+	{0x8fb86b41u, "payments.sendStarGiftOffer", "Updates", 7u, kFields2367},
+	{0x6d038b58u, "payments.getStarGiftUpgradeAttributes", "payments.StarGiftUpgradeAttributes", 1u, kFields2368},
+	{0xfd05dd00u, "payments.getCraftStarGifts", "payments.SavedStarGifts", 3u, kFields2369},
+	{0xb0f9684fu, "payments.craftStarGift", "Updates", 1u, kFields2370},
+	{0x9021ab67u, "stickers.createStickerSet", "messages.StickerSet", 10u, kFields2371},
+	{0xf7760f51u, "stickers.removeStickerFromSet", "messages.StickerSet", 1u, kFields2372},
+	{0xffb6d4cau, "stickers.changeStickerPosition", "messages.StickerSet", 2u, kFields2373},
+	{0x8653febeu, "stickers.addStickerToSet", "messages.StickerSet", 2u, kFields2374},
+	{0xa76a5392u, "stickers.setStickerSetThumb", "messages.StickerSet", 4u, kFields2375},
+	{0x284b3639u, "stickers.checkShortName", "Bool", 1u, kFields2376},
+	{0x4dafc503u, "stickers.suggestShortName", "stickers.SuggestedShortName", 1u, kFields2377},
+	{0xf5537ebcu, "stickers.changeSticker", "messages.StickerSet", 5u, kFields2378},
+	{0x124b1c00u, "stickers.renameStickerSet", "messages.StickerSet", 2u, kFields2379},
+	{0x87704394u, "stickers.deleteStickerSet", "Bool", 1u, kFields2380},
+	{0x4696459au, "stickers.replaceSticker", "messages.StickerSet", 2u, kFields2381},
 	{0x55451fa9u, "phone.getCallConfig", "DataJSON", 0u, nullptr},
-	{0x42ff96edu, "phone.requestCall", "phone.PhoneCall", 6u, kFields2353},
-	{0x3bd2b4a0u, "phone.acceptCall", "phone.PhoneCall", 3u, kFields2354},
-	{0x2efe1722u, "phone.confirmCall", "phone.PhoneCall", 4u, kFields2355},
-	{0x17d54f61u, "phone.receivedCall", "Bool", 1u, kFields2356},
-	{0xb2cbc1c0u, "phone.discardCall", "Updates", 6u, kFields2357},
-	{0x59ead627u, "phone.setCallRating", "Updates", 5u, kFields2358},
-	{0x277add7eu, "phone.saveCallDebug", "Bool", 2u, kFields2359},
-	{0xff7a9383u, "phone.sendSignalingData", "Bool", 2u, kFields2360},
-	{0x48cdc6d8u, "phone.createGroupCall", "Updates", 6u, kFields2361},
-	{0x8fb53057u, "phone.joinGroupCall", "Updates", 9u, kFields2362},
-	{0x500377f9u, "phone.leaveGroupCall", "Updates", 2u, kFields2363},
-	{0x7b393160u, "phone.inviteToGroupCall", "Updates", 2u, kFields2364},
-	{0x7a777135u, "phone.discardGroupCall", "Updates", 1u, kFields2365},
-	{0x974392f2u, "phone.toggleGroupCallSettings", "Updates", 6u, kFields2366},
-	{0x041845dbu, "phone.getGroupCall", "phone.GroupCall", 2u, kFields2367},
-	{0xc558d8abu, "phone.getGroupParticipants", "phone.GroupParticipants", 5u, kFields2368},
-	{0xf128c708u, "phone.toggleGroupCallRecord", "Updates", 6u, kFields2369},
-	{0xa5273abfu, "phone.editGroupCallParticipant", "Updates", 9u, kFields2370},
-	{0x1ca6ac0au, "phone.editGroupCallTitle", "Updates", 2u, kFields2371},
-	{0xef7c213au, "phone.getGroupCallJoinAs", "phone.JoinAsPeers", 1u, kFields2372},
-	{0xe6aa647fu, "phone.exportGroupCallInvite", "phone.ExportedGroupCallInvite", 3u, kFields2373},
-	{0x219c34e6u, "phone.toggleGroupCallStartSubscription", "Updates", 2u, kFields2374},
-	{0x5680e342u, "phone.startScheduledGroupCall", "Updates", 1u, kFields2375},
-	{0x575e1f8cu, "phone.saveDefaultGroupCallJoinAs", "Bool", 2u, kFields2376},
-	{0xcbea6bc4u, "phone.joinGroupCallPresentation", "Updates", 2u, kFields2377},
-	{0x1c50d144u, "phone.leaveGroupCallPresentation", "Updates", 1u, kFields2378},
-	{0x1ab21940u, "phone.getGroupCallStreamChannels", "phone.GroupCallStreamChannels", 1u, kFields2379},
-	{0x5af4c73au, "phone.getGroupCallStreamRtmpUrl", "phone.GroupCallStreamRtmpUrl", 4u, kFields2380},
-	{0x41248786u, "phone.saveCallLog", "Bool", 2u, kFields2381},
-	{0x7d0444bbu, "phone.createConferenceCall", "Updates", 8u, kFields2382},
-	{0x8ca60525u, "phone.deleteConferenceCallParticipants", "Updates", 6u, kFields2383},
-	{0xc6701900u, "phone.sendConferenceCallBroadcast", "Updates", 2u, kFields2384},
-	{0xbcf22685u, "phone.inviteConferenceCallParticipant", "Updates", 4u, kFields2385},
-	{0x3c479971u, "phone.declineConferenceCallInvite", "Updates", 1u, kFields2386},
-	{0xee9f88a6u, "phone.getGroupCallChainBlocks", "Updates", 4u, kFields2387},
-	{0xb1d11410u, "phone.sendGroupCallMessage", "Updates", 6u, kFields2388},
-	{0xe5afa56du, "phone.sendGroupCallEncryptedMessage", "Bool", 2u, kFields2389},
-	{0xf64f54f7u, "phone.deleteGroupCallMessages", "Updates", 4u, kFields2390},
-	{0x1dbfeca0u, "phone.deleteGroupCallParticipantMessages", "Updates", 4u, kFields2391},
-	{0x6f636302u, "phone.getGroupCallStars", "phone.GroupCallStars", 1u, kFields2392},
-	{0x4167add1u, "phone.saveDefaultSendAs", "Bool", 2u, kFields2393},
-	{0xf2f2330au, "langpack.getLangPack", "LangPackDifference", 2u, kFields2394},
-	{0xcd984aa5u, "langpack.getDifference", "LangPackDifference", 3u, kFields2395},
-	{0x6a596502u, "langpack.getLanguage", "LangPackLanguage", 2u, kFields2396},
-	{0x6847d0abu, "folders.editPeerFolders", "Updates", 1u, kFields2397},
-	{0xab42441au, "stats.getBroadcastStats", "stats.BroadcastStats", 3u, kFields2398},
-	{0x621d5fa0u, "stats.loadAsyncGraph", "StatsGraph", 3u, kFields2399},
-	{0xdcdf8607u, "stats.getMegagroupStats", "stats.MegagroupStats", 3u, kFields2400},
-	{0x5f150144u, "stats.getMessagePublicForwards", "stats.PublicForwards", 4u, kFields2401},
-	{0xb6e0a3f5u, "stats.getMessageStats", "stats.MessageStats", 4u, kFields2402},
-	{0x374fef40u, "stats.getStoryStats", "stats.StoryStats", 4u, kFields2403},
-	{0xa6437ef6u, "stats.getStoryPublicForwards", "stats.PublicForwards", 4u, kFields2404},
-	{0xc27dfa68u, "stats.getPollStats", "stats.PollStats", 4u, kFields2405},
-	{0x8472478eu, "chatlists.exportChatlistInvite", "chatlists.ExportedChatlistInvite", 3u, kFields2406},
-	{0x719c5c5eu, "chatlists.deleteExportedInvite", "Bool", 2u, kFields2407},
-	{0x653db63du, "chatlists.editExportedInvite", "ExportedChatlistInvite", 5u, kFields2408},
-	{0xce03da83u, "chatlists.getExportedInvites", "chatlists.ExportedInvites", 1u, kFields2409},
-	{0x41c10fffu, "chatlists.checkChatlistInvite", "chatlists.ChatlistInvite", 1u, kFields2410},
-	{0xa6b1e39au, "chatlists.joinChatlistInvite", "Updates", 2u, kFields2411},
-	{0x89419521u, "chatlists.getChatlistUpdates", "chatlists.ChatlistUpdates", 1u, kFields2412},
-	{0xe089f8f5u, "chatlists.joinChatlistUpdates", "Updates", 2u, kFields2413},
-	{0x66e486fbu, "chatlists.hideChatlistUpdates", "Bool", 1u, kFields2414},
-	{0x74fae13au, "chatlists.leaveChatlist", "Updates", 2u, kFields2415},
-	{0x30eb63f0u, "stories.canSendStory", "stories.CanSendStoryCount", 1u, kFields2416},
-	{0x8f9e6898u, "stories.sendStory", "Updates", 16u, kFields2417},
-	{0x2c63a72bu, "stories.editStory", "Updates", 9u, kFields2418},
-	{0xeeb0d625u, "stories.getAllStories", "stories.AllStories", 4u, kFields2419},
-	{0x5821a5dcu, "stories.getPinnedStories", "stories.Stories", 3u, kFields2420},
-	{0xb4352016u, "stories.getStoriesArchive", "stories.Stories", 3u, kFields2421},
-	{0x5774ca74u, "stories.getStoriesByID", "stories.Stories", 2u, kFields2422},
-	{0x7c2557c4u, "stories.toggleAllStoriesHidden", "Bool", 1u, kFields2423},
-	{0xb2028afbu, "stories.incrementStoryViews", "Bool", 2u, kFields2424},
-	{0x7ed23c57u, "stories.getStoryViewsList", "stories.StoryViewsList", 9u, kFields2425},
-	{0x28e16cc8u, "stories.getStoriesViews", "stories.StoryViews", 2u, kFields2426},
-	{0x7b8def20u, "stories.exportStoryLink", "ExportedStoryLink", 2u, kFields2427},
-	{0x19d8eb45u, "stories.report", "ReportResult", 4u, kFields2428},
-	{0x57bbd166u, "stories.activateStealthMode", "Updates", 3u, kFields2429},
-	{0x7fd736b2u, "stories.sendReaction", "Updates", 5u, kFields2430},
-	{0x2c4ada50u, "stories.getPeerStories", "stories.PeerStories", 1u, kFields2431},
+	{0x42ff96edu, "phone.requestCall", "phone.PhoneCall", 6u, kFields2383},
+	{0x3bd2b4a0u, "phone.acceptCall", "phone.PhoneCall", 3u, kFields2384},
+	{0x2efe1722u, "phone.confirmCall", "phone.PhoneCall", 4u, kFields2385},
+	{0x17d54f61u, "phone.receivedCall", "Bool", 1u, kFields2386},
+	{0xb2cbc1c0u, "phone.discardCall", "Updates", 6u, kFields2387},
+	{0x59ead627u, "phone.setCallRating", "Updates", 5u, kFields2388},
+	{0x277add7eu, "phone.saveCallDebug", "Bool", 2u, kFields2389},
+	{0xff7a9383u, "phone.sendSignalingData", "Bool", 2u, kFields2390},
+	{0x48cdc6d8u, "phone.createGroupCall", "Updates", 6u, kFields2391},
+	{0x8fb53057u, "phone.joinGroupCall", "Updates", 9u, kFields2392},
+	{0x500377f9u, "phone.leaveGroupCall", "Updates", 2u, kFields2393},
+	{0x7b393160u, "phone.inviteToGroupCall", "Updates", 2u, kFields2394},
+	{0x7a777135u, "phone.discardGroupCall", "Updates", 1u, kFields2395},
+	{0x974392f2u, "phone.toggleGroupCallSettings", "Updates", 6u, kFields2396},
+	{0x041845dbu, "phone.getGroupCall", "phone.GroupCall", 2u, kFields2397},
+	{0xc558d8abu, "phone.getGroupParticipants", "phone.GroupParticipants", 5u, kFields2398},
+	{0xb59cf977u, "phone.checkGroupCall", "Vector<int>", 2u, kFields2399},
+	{0xf128c708u, "phone.toggleGroupCallRecord", "Updates", 6u, kFields2400},
+	{0xa5273abfu, "phone.editGroupCallParticipant", "Updates", 9u, kFields2401},
+	{0x1ca6ac0au, "phone.editGroupCallTitle", "Updates", 2u, kFields2402},
+	{0xef7c213au, "phone.getGroupCallJoinAs", "phone.JoinAsPeers", 1u, kFields2403},
+	{0xe6aa647fu, "phone.exportGroupCallInvite", "phone.ExportedGroupCallInvite", 3u, kFields2404},
+	{0x219c34e6u, "phone.toggleGroupCallStartSubscription", "Updates", 2u, kFields2405},
+	{0x5680e342u, "phone.startScheduledGroupCall", "Updates", 1u, kFields2406},
+	{0x575e1f8cu, "phone.saveDefaultGroupCallJoinAs", "Bool", 2u, kFields2407},
+	{0xcbea6bc4u, "phone.joinGroupCallPresentation", "Updates", 2u, kFields2408},
+	{0x1c50d144u, "phone.leaveGroupCallPresentation", "Updates", 1u, kFields2409},
+	{0x1ab21940u, "phone.getGroupCallStreamChannels", "phone.GroupCallStreamChannels", 1u, kFields2410},
+	{0x5af4c73au, "phone.getGroupCallStreamRtmpUrl", "phone.GroupCallStreamRtmpUrl", 4u, kFields2411},
+	{0x41248786u, "phone.saveCallLog", "Bool", 2u, kFields2412},
+	{0x7d0444bbu, "phone.createConferenceCall", "Updates", 8u, kFields2413},
+	{0x8ca60525u, "phone.deleteConferenceCallParticipants", "Updates", 6u, kFields2414},
+	{0xc6701900u, "phone.sendConferenceCallBroadcast", "Updates", 2u, kFields2415},
+	{0xbcf22685u, "phone.inviteConferenceCallParticipant", "Updates", 4u, kFields2416},
+	{0x3c479971u, "phone.declineConferenceCallInvite", "Updates", 1u, kFields2417},
+	{0xee9f88a6u, "phone.getGroupCallChainBlocks", "Updates", 4u, kFields2418},
+	{0xb1d11410u, "phone.sendGroupCallMessage", "Updates", 6u, kFields2419},
+	{0xe5afa56du, "phone.sendGroupCallEncryptedMessage", "Bool", 2u, kFields2420},
+	{0xf64f54f7u, "phone.deleteGroupCallMessages", "Updates", 4u, kFields2421},
+	{0x1dbfeca0u, "phone.deleteGroupCallParticipantMessages", "Updates", 4u, kFields2422},
+	{0x6f636302u, "phone.getGroupCallStars", "phone.GroupCallStars", 1u, kFields2423},
+	{0x4167add1u, "phone.saveDefaultSendAs", "Bool", 2u, kFields2424},
+	{0xf2f2330au, "langpack.getLangPack", "LangPackDifference", 2u, kFields2425},
+	{0xefea3803u, "langpack.getStrings", "Vector<LangPackString>", 3u, kFields2426},
+	{0xcd984aa5u, "langpack.getDifference", "LangPackDifference", 3u, kFields2427},
+	{0x42c6978fu, "langpack.getLanguages", "Vector<LangPackLanguage>", 1u, kFields2428},
+	{0x6a596502u, "langpack.getLanguage", "LangPackLanguage", 2u, kFields2429},
+	{0x6847d0abu, "folders.editPeerFolders", "Updates", 1u, kFields2430},
+	{0xab42441au, "stats.getBroadcastStats", "stats.BroadcastStats", 3u, kFields2431},
+	{0x621d5fa0u, "stats.loadAsyncGraph", "StatsGraph", 3u, kFields2432},
+	{0xdcdf8607u, "stats.getMegagroupStats", "stats.MegagroupStats", 3u, kFields2433},
+	{0x5f150144u, "stats.getMessagePublicForwards", "stats.PublicForwards", 4u, kFields2434},
+	{0xb6e0a3f5u, "stats.getMessageStats", "stats.MessageStats", 4u, kFields2435},
+	{0x374fef40u, "stats.getStoryStats", "stats.StoryStats", 4u, kFields2436},
+	{0xa6437ef6u, "stats.getStoryPublicForwards", "stats.PublicForwards", 4u, kFields2437},
+	{0xc27dfa68u, "stats.getPollStats", "stats.PollStats", 4u, kFields2438},
+	{0x8472478eu, "chatlists.exportChatlistInvite", "chatlists.ExportedChatlistInvite", 3u, kFields2439},
+	{0x719c5c5eu, "chatlists.deleteExportedInvite", "Bool", 2u, kFields2440},
+	{0x653db63du, "chatlists.editExportedInvite", "ExportedChatlistInvite", 5u, kFields2441},
+	{0xce03da83u, "chatlists.getExportedInvites", "chatlists.ExportedInvites", 1u, kFields2442},
+	{0x41c10fffu, "chatlists.checkChatlistInvite", "chatlists.ChatlistInvite", 1u, kFields2443},
+	{0xa6b1e39au, "chatlists.joinChatlistInvite", "Updates", 2u, kFields2444},
+	{0x89419521u, "chatlists.getChatlistUpdates", "chatlists.ChatlistUpdates", 1u, kFields2445},
+	{0xe089f8f5u, "chatlists.joinChatlistUpdates", "Updates", 2u, kFields2446},
+	{0x66e486fbu, "chatlists.hideChatlistUpdates", "Bool", 1u, kFields2447},
+	{0xfdbcd714u, "chatlists.getLeaveChatlistSuggestions", "Vector<Peer>", 1u, kFields2448},
+	{0x74fae13au, "chatlists.leaveChatlist", "Updates", 2u, kFields2449},
+	{0x30eb63f0u, "stories.canSendStory", "stories.CanSendStoryCount", 1u, kFields2450},
+	{0x8f9e6898u, "stories.sendStory", "Updates", 16u, kFields2451},
+	{0x2c63a72bu, "stories.editStory", "Updates", 9u, kFields2452},
+	{0xae59db5fu, "stories.deleteStories", "Vector<int>", 2u, kFields2453},
+	{0x9a75a1efu, "stories.togglePinned", "Vector<int>", 3u, kFields2454},
+	{0xeeb0d625u, "stories.getAllStories", "stories.AllStories", 4u, kFields2455},
+	{0x5821a5dcu, "stories.getPinnedStories", "stories.Stories", 3u, kFields2456},
+	{0xb4352016u, "stories.getStoriesArchive", "stories.Stories", 3u, kFields2457},
+	{0x5774ca74u, "stories.getStoriesByID", "stories.Stories", 2u, kFields2458},
+	{0x7c2557c4u, "stories.toggleAllStoriesHidden", "Bool", 1u, kFields2459},
+	{0xa556dac8u, "stories.readStories", "Vector<int>", 2u, kFields2460},
+	{0xb2028afbu, "stories.incrementStoryViews", "Bool", 2u, kFields2461},
+	{0x7ed23c57u, "stories.getStoryViewsList", "stories.StoryViewsList", 9u, kFields2462},
+	{0x28e16cc8u, "stories.getStoriesViews", "stories.StoryViews", 2u, kFields2463},
+	{0x7b8def20u, "stories.exportStoryLink", "ExportedStoryLink", 2u, kFields2464},
+	{0x19d8eb45u, "stories.report", "ReportResult", 4u, kFields2465},
+	{0x57bbd166u, "stories.activateStealthMode", "Updates", 3u, kFields2466},
+	{0x7fd736b2u, "stories.sendReaction", "Updates", 5u, kFields2467},
+	{0x2c4ada50u, "stories.getPeerStories", "stories.PeerStories", 1u, kFields2468},
 	{0x9b5ae7f9u, "stories.getAllReadPeerStories", "Updates", 0u, nullptr},
+	{0x78499170u, "stories.getPeerMaxIDs", "Vector<RecentStory>", 1u, kFields2470},
 	{0xa56a8b60u, "stories.getChatsToSend", "messages.Chats", 0u, nullptr},
-	{0xbd0415c4u, "stories.togglePeerStoriesHidden", "Bool", 2u, kFields2434},
-	{0xb9b2881fu, "stories.getStoryReactionsList", "stories.StoryReactionsList", 7u, kFields2435},
-	{0x0b297e9bu, "stories.togglePinnedToTop", "Bool", 2u, kFields2436},
-	{0xd1810907u, "stories.searchPosts", "stories.FoundStories", 6u, kFields2437},
-	{0xa36396e5u, "stories.createAlbum", "StoryAlbum", 3u, kFields2438},
-	{0x5e5259b6u, "stories.updateAlbum", "StoryAlbum", 7u, kFields2439},
-	{0x8535fbd9u, "stories.reorderAlbums", "Bool", 2u, kFields2440},
-	{0x8d3456d0u, "stories.deleteAlbum", "Bool", 2u, kFields2441},
-	{0x25b3eac7u, "stories.getAlbums", "stories.Albums", 2u, kFields2442},
-	{0xac806d61u, "stories.getAlbumStories", "stories.Stories", 4u, kFields2443},
-	{0xd069ccdeu, "stories.startLive", "Updates", 11u, kFields2444},
-	{0x60f67660u, "premium.getBoostsList", "premium.BoostsList", 5u, kFields2445},
+	{0xbd0415c4u, "stories.togglePeerStoriesHidden", "Bool", 2u, kFields2472},
+	{0xb9b2881fu, "stories.getStoryReactionsList", "stories.StoryReactionsList", 7u, kFields2473},
+	{0x0b297e9bu, "stories.togglePinnedToTop", "Bool", 2u, kFields2474},
+	{0xd1810907u, "stories.searchPosts", "stories.FoundStories", 6u, kFields2475},
+	{0xa36396e5u, "stories.createAlbum", "StoryAlbum", 3u, kFields2476},
+	{0x5e5259b6u, "stories.updateAlbum", "StoryAlbum", 7u, kFields2477},
+	{0x8535fbd9u, "stories.reorderAlbums", "Bool", 2u, kFields2478},
+	{0x8d3456d0u, "stories.deleteAlbum", "Bool", 2u, kFields2479},
+	{0x25b3eac7u, "stories.getAlbums", "stories.Albums", 2u, kFields2480},
+	{0xac806d61u, "stories.getAlbumStories", "stories.Stories", 4u, kFields2481},
+	{0xd069ccdeu, "stories.startLive", "Updates", 11u, kFields2482},
+	{0x60f67660u, "premium.getBoostsList", "premium.BoostsList", 5u, kFields2483},
 	{0x0be77b4au, "premium.getMyBoosts", "premium.MyBoosts", 0u, nullptr},
-	{0x6b7da746u, "premium.applyBoost", "premium.MyBoosts", 3u, kFields2447},
-	{0x042f1f61u, "premium.getBoostsStatus", "premium.BoostsStatus", 1u, kFields2448},
-	{0x39854d1fu, "premium.getUserBoosts", "premium.BoostsList", 2u, kFields2449},
+	{0x6b7da746u, "premium.applyBoost", "premium.MyBoosts", 3u, kFields2485},
+	{0x042f1f61u, "premium.getBoostsStatus", "premium.BoostsStatus", 1u, kFields2486},
+	{0x39854d1fu, "premium.getUserBoosts", "premium.BoostsList", 2u, kFields2487},
 	{0x0edc39d0u, "smsjobs.isEligibleToJoin", "smsjobs.EligibilityToJoin", 0u, nullptr},
 	{0xa74ece2du, "smsjobs.join", "Bool", 0u, nullptr},
 	{0x9898ad73u, "smsjobs.leave", "Bool", 0u, nullptr},
-	{0x093fa0bfu, "smsjobs.updateSettings", "Bool", 2u, kFields2453},
+	{0x093fa0bfu, "smsjobs.updateSettings", "Bool", 2u, kFields2491},
 	{0x10a698e8u, "smsjobs.getStatus", "smsjobs.Status", 0u, nullptr},
-	{0x778d902fu, "smsjobs.getSmsJob", "SmsJob", 1u, kFields2455},
-	{0x4f1ebf24u, "smsjobs.finishJob", "Bool", 3u, kFields2456},
-	{0xbe1e85bau, "fragment.getCollectibleInfo", "fragment.CollectibleInfo", 1u, kFields2457},
-	{0x4aa83913u, "aicompose.createTone", "AiComposeTone", 5u, kFields2458},
-	{0x903bcf59u, "aicompose.updateTone", "AiComposeTone", 6u, kFields2459},
-	{0x1782cbb1u, "aicompose.saveTone", "Bool", 2u, kFields2460},
-	{0xdd39316au, "aicompose.deleteTone", "Bool", 1u, kFields2461},
-	{0xb2e8ba03u, "aicompose.getTone", "aicompose.Tones", 1u, kFields2462},
-	{0xabd59201u, "aicompose.getTones", "aicompose.Tones", 1u, kFields2463},
-	{0xd1b4ab14u, "aicompose.getToneExample", "AiComposeToneExample", 2u, kFields2464},
-	{0xa63859ecu, "communities.create", "Updates", 5u, kFields2465},
-	{0x736dcfeau, "communities.togglePeerLink", "Bool", 6u, kFields2466},
+	{0x778d902fu, "smsjobs.getSmsJob", "SmsJob", 1u, kFields2493},
+	{0x4f1ebf24u, "smsjobs.finishJob", "Bool", 3u, kFields2494},
+	{0xbe1e85bau, "fragment.getCollectibleInfo", "fragment.CollectibleInfo", 1u, kFields2495},
+	{0x4aa83913u, "aicompose.createTone", "AiComposeTone", 5u, kFields2496},
+	{0x903bcf59u, "aicompose.updateTone", "AiComposeTone", 6u, kFields2497},
+	{0x1782cbb1u, "aicompose.saveTone", "Bool", 2u, kFields2498},
+	{0xdd39316au, "aicompose.deleteTone", "Bool", 1u, kFields2499},
+	{0xb2e8ba03u, "aicompose.getTone", "aicompose.Tones", 1u, kFields2500},
+	{0xabd59201u, "aicompose.getTones", "aicompose.Tones", 1u, kFields2501},
+	{0xd1b4ab14u, "aicompose.getToneExample", "AiComposeToneExample", 2u, kFields2502},
+	{0xa63859ecu, "communities.create", "Updates", 5u, kFields2503},
+	{0x736dcfeau, "communities.togglePeerLink", "Bool", 6u, kFields2504},
 	{0xa663e830u, "communities.getJoinedCommunities", "messages.Chats", 0u, nullptr},
-	{0xd766e3eau, "communities.toggleCommunityCollapsedInDialogs", "Updates", 3u, kFields2468},
-	{0x93773344u, "communities.getPeerLinkRequests", "communities.PeerLinkRequests", 3u, kFields2469},
-	{0x8c8219a8u, "communities.togglePeerLinkRequestApproval", "Bool", 4u, kFields2470},
-	{0xbfe3dd3du, "communities.toggleAllPeerLinkRequestApproval", "Bool", 3u, kFields2471},
-	{0x9967ad0fu, "communities.toggleParticipantBanned", "Bool", 4u, kFields2472},
-	{0xf87eababu, "communities.getParticipantJoinedChats", "communities.ParticipantJoinedChats", 2u, kFields2473},
-	{0xba8d5f35u, "ephemeral.sendMessage", "Updates", 15u, kFields2474},
-	{0x92f6e797u, "ephemeral.deleteMessage", "Bool", 4u, kFields2475},
-	{0x8704f2bfu, "ephemeral.reportMessage", "ReportResult", 4u, kFields2476},
-	{0x3fa464c8u, "ephemeral.getCallbackAnswer", "messages.BotCallbackAnswer", 4u, kFields2477},
-	{0xcf9c725bu, "ephemeral.editMessage", "Updates", 11u, kFields2478},
-	{0xe882a9e1u, "ephemeral.deleteWelcomeMessage", "Bool", 2u, kFields2479},
-	{0x734f9721u, "ephemeral.deleteAllWelcomeMessages", "Bool", 1u, kFields2480},
-	{0xdb9ac18du, "ephemeral.getWelcomeMessages", "ephemeral.WelcomeMessages", 2u, kFields2481},
+	{0xd766e3eau, "communities.toggleCommunityCollapsedInDialogs", "Updates", 3u, kFields2506},
+	{0x93773344u, "communities.getPeerLinkRequests", "communities.PeerLinkRequests", 3u, kFields2507},
+	{0x8c8219a8u, "communities.togglePeerLinkRequestApproval", "Bool", 4u, kFields2508},
+	{0xbfe3dd3du, "communities.toggleAllPeerLinkRequestApproval", "Bool", 3u, kFields2509},
+	{0x9967ad0fu, "communities.toggleParticipantBanned", "Bool", 4u, kFields2510},
+	{0xf87eababu, "communities.getParticipantJoinedChats", "communities.ParticipantJoinedChats", 2u, kFields2511},
+	{0xba8d5f35u, "ephemeral.sendMessage", "Updates", 15u, kFields2512},
+	{0x92f6e797u, "ephemeral.deleteMessage", "Bool", 4u, kFields2513},
+	{0x8704f2bfu, "ephemeral.reportMessage", "ReportResult", 4u, kFields2514},
+	{0x3fa464c8u, "ephemeral.getCallbackAnswer", "messages.BotCallbackAnswer", 4u, kFields2515},
+	{0xcf9c725bu, "ephemeral.editMessage", "Updates", 11u, kFields2516},
+	{0xe882a9e1u, "ephemeral.deleteWelcomeMessage", "Bool", 2u, kFields2517},
+	{0x734f9721u, "ephemeral.deleteAllWelcomeMessages", "Bool", 1u, kFields2518},
+	{0xdb9ac18du, "ephemeral.getWelcomeMessages", "ephemeral.WelcomeMessages", 2u, kFields2519},
 };
 
-inline constexpr int kCtorsCount = 2482;
+inline constexpr int kCtorsCount = 2520;
 
 } // namespace Ayu::Debug::Scheme

@@ -7,6 +7,7 @@ https://<obf:github-repo-ref>/blob/dev/LEGAL
 */
 #include "ayu/debug/mtp_tl_codec.h"
 
+#include "ayu/debug/mtp_ctor_notes.h"
 #include "ayu/debug/mtp_scheme_docs.h"
 #include "ayu/debug/mtp_scheme_table.h"
 #include "core/application.h"
@@ -19,10 +20,12 @@ https://<obf:github-repo-ref>/blob/dev/LEGAL
 #include "scheme.h"
 
 #include <QtCore/QByteArray>
+#include <QtCore/QDateTime>
 #include <QtCore/QHash>
 #include <QtCore/QStringList>
 #include <QtCore/QVector>
 
+#include <array>
 #include <utility>
 
 namespace Ayu::Debug {
@@ -34,15 +37,63 @@ constexpr auto kVectorCtor = 0x1cb5c415; // vector#1cb5c415
 constexpr auto kMaxRawHexChars = 4096;
 constexpr auto kMaxCtorDepth = 6;
 constexpr auto kMaxTextChars = 24000;
+constexpr auto kMaxFlagGroups = 8;
+constexpr auto kMaxHeuristicDepth = 3;
+constexpr auto kResyncWindow = 256;
+constexpr auto kMediaPayloadBytes = 10 * 1024;
+constexpr auto kMinDateValue = 1'000'000'000;
+constexpr auto kApiLayer = 229; // keep in sync with "// LAYER 229" at the end of api.tl
+constexpr uint32_t kMediaCtorIds[] = {
+	0x2331b22d, // photoEmpty
+	0xfb197a65, // photo
+	0x36f8c871, // documentEmpty
+	0x8fd4c4d8, // document
+	0xe216eb63, // messageMediaPhoto
+	0x52d8ccd9, // messageMediaDocument
+};
+
+// The transport envelope ctors are commented out of mtproto.tl (parsed
+// manually upstream), so they are provided here for decoding only.
+constexpr Scheme::FieldDesc kEnvelopeMessageFields[] = {
+	{"msg_id", "long", 0xFFFF},
+	{"seqno", "int", 0xFFFF},
+	{"bytes", "int", 0xFFFF},
+	{"body", "Object", 0xFFFF},
+};
+constexpr Scheme::FieldDesc kEnvelopeContainerFields[] = {
+	{"messages", "Vector<message>", 0xFFFF},
+};
+constexpr Scheme::FieldDesc kEnvelopeCopyFields[] = {
+	{"orig_message", "Message", 0xFFFF},
+};
+constexpr Scheme::FieldDesc kEnvelopeGzipFields[] = {
+	{"packed_data", "string", 0xFFFF},
+};
+constexpr Scheme::FieldDesc kEnvelopeRpcResultFields[] = {
+	{"req_msg_id", "long", 0xFFFF},
+	{"result", "Object", 0xFFFF},
+};
+constexpr Scheme::CtorDesc kEnvelopeCtors[] = {
+	{0x5bb8e5a5, "message", "Message", 4u, kEnvelopeMessageFields},
+	{0x73f1f8dc, "msg_container", "MessageContainer", 1u, kEnvelopeContainerFields},
+	{0xe06046b2, "msg_copy", "MessageCopy", 1u, kEnvelopeCopyFields},
+	{0x3072cfa1, "gzip_packed", "Object", 1u, kEnvelopeGzipFields},
+	{0xf35c6d01, "rpc_result", "RpcResult", 2u, kEnvelopeRpcResultFields},
+};
 
 [[nodiscard]] const CtorDesc *FindCtor(uint32_t id) {
 	static const auto index = [] {
 		auto hash = QHash<uint32_t, const CtorDesc *>();
-		hash.reserve(Scheme::kCtorsCount);
+		hash.reserve(Scheme::kCtorsCount + 5);
 		for (auto i = 0; i != Scheme::kCtorsCount; ++i) {
 			// First table entry wins, matching the old linear scan.
 			if (!hash.contains(Scheme::kCtors[i].id)) {
 				hash.insert(Scheme::kCtors[i].id, &Scheme::kCtors[i]);
+			}
+		}
+		for (const auto &envelope : kEnvelopeCtors) {
+			if (!hash.contains(envelope.id)) {
+				hash.insert(envelope.id, &envelope);
 			}
 		}
 		return hash;
@@ -283,11 +334,103 @@ struct Reader {
 	const mtpPrime *from = nullptr;
 	const mtpPrime *end = nullptr;
 	int used = 0;
+	const mtpPrime *base = nullptr;
 
 	[[nodiscard]] bool remaining(int count) const {
 		return from && (end - from) >= count;
 	}
 };
+
+[[nodiscard]] int WordOffset(const Reader &reader) {
+	return reader.base ? int(reader.from - reader.base) : 0;
+}
+
+// Multi-flags ctors (user#..., flags + flags2) select bits by group; the
+// generator encodes a flagsN reference as (N << 8) | bit.
+[[nodiscard]] int FlagGroupOf(const QString &name) {
+	if (name == u"flags"_q) {
+		return 0;
+	}
+	if (name.startsWith(u"flags"_q)) {
+		auto ok = false;
+		const auto group = name.mid(5).toInt(&ok);
+		if (ok && group > 0 && group < kMaxFlagGroups) {
+			return group;
+		}
+	}
+	return 0;
+}
+
+[[nodiscard]] bool StringHeaderValid(const Reader &reader) {
+	const auto header = uint32_t(reader.from[0]);
+	const auto lengthLow = int(header & 0xFF);
+	if (lengthLow == 255) {
+		return false;
+	}
+	const auto length = (lengthLow == 254)
+		? int((header >> 8) & 0xFFFFFF)
+		: lengthLow;
+	const auto words = (lengthLow == 254)
+		? 1 + (length + 3) / 4
+		: (length + 4) / 4;
+	return words <= reader.end - reader.from;
+}
+
+[[nodiscard]] bool PrintableUtf8(const QByteArray &bytes) {
+	const auto text = QString::fromUtf8(bytes);
+	if (text.toUtf8() != bytes) {
+		return false;
+	}
+	for (const auto &ch : text) {
+		if (ch.unicode() < 0x20 || ch.unicode() == 0x7F) {
+			return false;
+		}
+	}
+	return true;
+}
+
+// A walk string header must carry content bytes exactly where the short
+// form stores them, so [small int, 0] long pairs are not read as strings.
+[[nodiscard]] bool StringHeaderPlausible(uint32_t header) {
+	const auto lengthLow = int(header & 0xFF);
+	if (lengthLow >= 254) {
+		return lengthLow == 254;
+	}
+	for (auto k = 0; k != 3; ++k) {
+		const auto byte = int((header >> (8 + k * 8)) & 0xFF);
+		if (k < qMin(lengthLow, 3) ? byte < 0x20 : byte != 0) {
+			return false;
+		}
+	}
+	return true;
+}
+
+// Validates and consumes a TL string/bytes blob at the reader position.
+[[nodiscard]] bool TryReadString(Reader &reader, QByteArray &out) {
+	if (!reader.remaining(1)) {
+		return false;
+	}
+	const auto header = uint32_t(*reader.from);
+	const auto lengthLow = int(header & 0xFF);
+	if (lengthLow == 255) {
+		return false;
+	}
+	const auto length = (lengthLow == 254)
+		? int((header >> 8) & 0xFFFFFF)
+		: lengthLow;
+	const auto dataWords = (lengthLow == 254)
+		? (length + 3) / 4
+		: qMax((length + 4) / 4 - 1, 0);
+	if (!reader.remaining(1 + dataWords)) {
+		return false;
+	}
+	const auto begin = reinterpret_cast<const char*>(reader.from);
+	reader.from += 1 + dataWords;
+	out = (lengthLow == 254)
+		? QByteArray(begin + 4, length)
+		: QByteArray(begin + 1, length);
+	return true;
+}
 
 [[nodiscard]] QString Counted(Reader &reader, QString text) {
 	reader.used += int(text.size());
@@ -302,7 +445,7 @@ void ReadBytes(Reader &reader, QByteArray &out) {
 	const auto lengthLow = int(first & 0xFF);
 	if (lengthLow == 254) {
 		const auto length = int((first >> 8) & 0xFFFFFF);
-		const auto need = (length + 6) / 4;
+		const auto need = (length + 3) / 4;
 		if (reader.remaining(need)) {
 			out = QByteArray(
 				reinterpret_cast<const char*>(reader.from),
@@ -391,6 +534,11 @@ void PackBytes(const QByteArray &bytes, QVector<mtpPrime> &out) {
 		int depth,
 		const QString &owner);
 
+[[nodiscard]] QString DecodeCtorValue(
+		Reader &reader,
+		const QString &fieldName,
+		int depth);
+
 [[nodiscard]] QString DecodeCtorBody(
 		Reader &reader,
 		const CtorDesc *desc,
@@ -399,23 +547,30 @@ void PackBytes(const QByteArray &bytes, QVector<mtpPrime> &out) {
 	const auto ctorName = QString::fromUtf8(desc->name);
 	const auto utf8Name = ctorName.toUtf8();
 	const auto doc = FindCtorDoc(utf8Name.constData());
+	auto out = pad + ctorName + u" {"_q;
+	const auto ctorNote = FindCtorNote(utf8Name.constData());
+	const auto purpose = ctorNote
+		? QString::fromUtf8(ctorNote->purpose)
+		: (doc ? QString::fromUtf8(doc->purpose) : QString());
+	if (!purpose.isEmpty()) {
+		out += u" // 用途："_q + purpose;
+	}
+	out += u"\n"_q;
 	const auto attachNote = [&](QString &line, const QString &field) {
-		if (!doc) {
-			return;
+		auto note = doc ? FieldDocNote(*doc, field) : QString();
+		if (note.isEmpty()) {
+			const auto utf8 = field.toUtf8();
+			if (const auto known = FindFieldNote(utf8.constData())) {
+				note = QString::fromUtf8(known->note);
+			}
 		}
-		const auto note = FieldDocNote(*doc, field);
 		if (!note.isEmpty()) {
 			const auto nl = line.indexOf(u'\n');
 			line.insert((nl >= 0) ? nl : line.size(), u" // "_q + note);
 		}
 	};
-	auto out = pad + ctorName + u" {"_q;
-	if (doc) {
-		out += u" // "_q + QString::fromUtf8(doc->purpose);
-	}
-	out += u"\n"_q;
-	auto flags = quint32(0);
-	auto flagsRead = false;
+	auto groupFlags = std::array<quint32, kMaxFlagGroups>{};
+	auto groupRead = std::array<bool, kMaxFlagGroups>{};
 	for (auto i = 0; i != int(desc->fieldsCount); ++i) {
 		const auto &field = desc->fields[i];
 		const auto name = QString::fromUtf8(field.name);
@@ -427,17 +582,22 @@ void PackBytes(const QByteArray &bytes, QVector<mtpPrime> &out) {
 				out += pad + u"  // <buffer end>\n"_q;
 				return out;
 			}
-			flags = uint32_t(*reader.from++);
-			flagsRead = true;
+			const auto group = FlagGroupOf(name);
+			groupFlags[group] = uint32_t(*reader.from++);
+			groupRead[group] = true;
 			auto names = QStringList();
 			for (auto j = 0; j != int(desc->fieldsCount); ++j) {
 				const auto &other = desc->fields[j];
 				if (other.flagBit != 0xFFFF
-					&& (flags & (quint32(1) << other.flagBit))) {
+					&& (other.flagBit >> 8) == group
+					&& (groupFlags[group]
+						& (quint32(1) << (other.flagBit & 0xFF)))) {
 					names << QString::fromUtf8(other.name);
 				}
 			}
-			out += pad + u"  flags: 0x%1"_q.arg(flags, 8, 16, QChar(u'0'));
+			out += pad + u"  %1: 0x%2"_q
+				.arg(name)
+				.arg(groupFlags[group], 8, 16, QChar(u'0'));
 			if (!names.isEmpty()) {
 				out += u" // "_q + names.join(QChar(u','));
 			}
@@ -445,13 +605,21 @@ void PackBytes(const QByteArray &bytes, QVector<mtpPrime> &out) {
 			continue;
 		}
 		if (optional) {
-			if (!flagsRead || !(flags & (quint32(1) << field.flagBit))) {
+			const auto group = field.flagBit >> 8;
+			const auto bit = field.flagBit & 0xFF;
+			if (!groupRead[group]
+				|| !(groupFlags[group] & (quint32(1) << bit))) {
 				continue;
 			}
 			if (type == u"true"_q) {
 				// WHY: a set flags.N?true field still carries its boolTrue
 				// word on the wire; not consuming it shifts every later
 				// field by one prime and garbles the rest of the ctor.
+				if (!reader.remaining(1)) {
+					reader.from = reader.end;
+					out += pad + u"  // <buffer end>\n"_q;
+					return out;
+				}
 				const auto marker = uint32_t(*reader.from++);
 				auto line = pad + u"  %1: %2\n"_q.arg(name).arg(
 					marker == mtpc_boolTrue
@@ -516,6 +684,236 @@ void PackBytes(const QByteArray &bytes, QVector<mtpPrime> &out) {
 	return Counted(reader, std::move(out));
 }
 
+[[nodiscard]] bool IsMediaCtor(uint32_t id) {
+	for (const auto media : kMediaCtorIds) {
+		if (media == id) {
+			return true;
+		}
+	}
+	return false;
+}
+
+[[nodiscard]] bool IsDateField(const QString &name) {
+	return name == u"date"_q
+		|| name == u"expires"_q
+		|| name == u"was_online"_q
+		|| name.endsWith(u"_date"_q)
+		|| name.endsWith(u"_at"_q);
+}
+
+// The wire data contradicting the declared field type means an earlier
+// field was decoded at a wrong width. Bool/true/# are exact words.
+[[nodiscard]] bool WireContradicts(
+		const Reader &reader,
+		const QString &expect) {
+	if (expect == u"Bool"_q || expect == u"true"_q || expect == u"#"_q) {
+		return false;
+	}
+	if (expect == u"string"_q || expect == u"bytes"_q) {
+		return !StringHeaderValid(reader);
+	}
+	const auto word = uint32_t(reader.from[0]);
+	return word == kVectorCtor || FindCtor(word) != nullptr;
+}
+
+// A word qualifies as a bare int only when small or date-like; random
+// hashes fall through to resync instead of eating the rest of the payload.
+[[nodiscard]] bool PlausibleInt(qint32 value) {
+	return (value > -0x1000000 && value < 0x1000000)
+		|| value >= kMinDateValue;
+}
+
+// Skips forward to the next known ctor id / vector header and resumes
+// decoding there; the abandoned gap is reported as unparsed words.
+[[nodiscard]] bool TryResync(Reader &reader, int depth, QString &out) {
+	const auto pad = QString(depth * 2, QChar(u' '));
+	const auto limit = qMin(int(reader.end - reader.from), kResyncWindow);
+	auto skipped = 0;
+	while (skipped != limit) {
+		const auto word = uint32_t(reader.from[skipped]);
+		if (word == kVectorCtor || FindCtor(word)) {
+			break;
+		}
+		++skipped;
+	}
+	if (skipped == limit) {
+		return false;
+	}
+	if (skipped > 0) {
+		out += Counted(reader, pad + u"// 未能解析 %1 words\n"_q.arg(skipped));
+		reader.from += skipped;
+	}
+	out += DecodeCtorValue(reader, QString(), depth);
+	return true;
+}
+
+[[nodiscard]] QString HeuristicJunk(Reader &reader, int depth) {
+	const auto pad = QString(depth * 2, QChar(u' '));
+	const auto offset = WordOffset(reader);
+	const auto word = uint32_t(*reader.from++);
+	return Counted(reader, pad + u"%1: raw 0x%2\n"_q
+		.arg(offset)
+		.arg(word, 8, 16, QChar(u'0')));
+}
+
+[[nodiscard]] QString HeuristicVector(Reader &reader, int depth);
+
+// Renders one generic TL value (bool / ctor / vector / string / long /
+// double / int) at the current prime; false means binary junk.
+[[nodiscard]] bool HeuristicScalar(Reader &reader, int depth, QString &out) {
+	const auto pad = QString(depth * 2, QChar(u' '));
+	const auto offset = WordOffset(reader);
+	const auto word = uint32_t(reader.from[0]);
+	if (word == mtpc_boolTrue || word == mtpc_boolFalse) {
+		++reader.from;
+		out = Counted(reader, pad + u"%1: %2\n"_q.arg(offset).arg(
+			(word == mtpc_boolTrue) ? u"true"_q : u"false"_q));
+		return true;
+	}
+	if (word == kVectorCtor) {
+		out = HeuristicVector(reader, depth);
+		return true;
+	}
+	if (FindCtor(word)) {
+		out = pad + u"%1: "_q.arg(offset)
+			+ DecodeCtorValue(reader, QString(), depth).trimmed() + u"\n"_q;
+		return true;
+	}
+	auto bytes = QByteArray();
+	if (StringHeaderPlausible(word) && TryReadString(reader, bytes)) {
+		auto text = PrintableUtf8(bytes)
+			? EscapeBytes(bytes)
+			: (u"hex[%1]: 0x%2%3"_q
+				.arg(bytes.size())
+				.arg(HexBytes(bytes.left(16)))
+				.arg(bytes.size() > 16 ? u"…"_q : QString()));
+		if (text.size() > 512) {
+			text = text.left(512) + u"…"_q;
+		}
+		out = Counted(reader, pad + u"%1: \"%2\"\n"_q.arg(offset).arg(text));
+		return true;
+	}
+	if (reader.remaining(2)
+		&& word != 0
+		&& word < 0x01000000
+		&& uint32_t(reader.from[1]) == 0) {
+		reader.from += 2;
+		out = Counted(reader, pad + u"%1: long %2\n"_q
+			.arg(offset)
+			.arg(qint64(word)));
+		return true;
+	}
+	if (reader.remaining(2)) {
+		const auto exponent = int((uint32_t(reader.from[1]) >> 20) & 0x7FF);
+		if (exponent >= 0x3F5 && exponent <= 0x412) {
+			const auto bits = quint64(word)
+				| (quint64(uint32_t(reader.from[1])) << 32);
+			auto value = 0.0;
+			memcpy(&value, &bits, sizeof(value));
+			reader.from += 2;
+			out = Counted(reader, pad + u"%1: double %2\n"_q
+				.arg(offset)
+				.arg(QString::number(value, 'g', 17)));
+			return true;
+		}
+	}
+	if (PlausibleInt(qint32(word))) {
+		++reader.from;
+		auto line = u"%1: %2"_q.arg(offset).arg(qint32(word));
+		if (qint32(word) >= kMinDateValue) {
+			line += u" // %1"_q.arg(QDateTime::fromSecsSinceEpoch(
+				qint64(qint32(word)),
+				Qt::UTC).toString(u"yyyy-MM-dd hh:mm"_q));
+		}
+		out = Counted(reader, pad + line + u"\n"_q);
+		return true;
+	}
+	return false;
+}
+
+[[nodiscard]] QString HeuristicVector(Reader &reader, int depth) {
+	const auto pad = QString(depth * 2, QChar(u' '));
+	if (depth > kMaxCtorDepth) {
+		return pad + u"vector // <depth limit>\n"_q;
+	}
+	const auto offset = WordOffset(reader);
+	const auto count = int32_t(*reader.from++);
+	if (count < 0 || count > reader.end - reader.from) {
+		return Counted(reader, pad
+			+ u"%1: vector // <bad count %2, skipped>\n"_q
+				.arg(offset)
+				.arg(count));
+	}
+	auto out = Counted(reader, pad + u"%1: vector[%2] {\n"_q
+		.arg(offset)
+		.arg(count));
+	for (auto i = 0; i != count; ++i) {
+		if (!reader.remaining(1)) {
+			out += pad + u"  // <buffer end at item %1>\n"_q.arg(i);
+			break;
+		}
+		auto piece = QString();
+		if (!HeuristicScalar(reader, depth + 1, piece)) {
+			auto resync = QString();
+			piece = TryResync(reader, depth + 1, resync)
+				? std::move(resync)
+				: HeuristicJunk(reader, depth + 1);
+		}
+		out += piece;
+		if (reader.used > kMaxTextChars) {
+			out += pad + u"  // <output limit>\n"_q;
+			break;
+		}
+	}
+	out += pad + u"}\n"_q;
+	return out;
+}
+
+[[nodiscard]] QString HeuristicWalk(Reader &reader, int depth) {
+	const auto pad = QString(depth * 2, QChar(u' '));
+	auto out = QString();
+	while (reader.remaining(1)) {
+		if (reader.used > kMaxTextChars) {
+			out += pad + u"// <output limit>\n"_q;
+			break;
+		}
+		auto piece = QString();
+		if (!HeuristicScalar(reader, depth, piece)) {
+			auto resync = QString();
+			piece = TryResync(reader, depth, resync)
+				? std::move(resync)
+				: HeuristicJunk(reader, depth);
+		}
+		out += piece;
+	}
+	return out;
+}
+
+// Unknown ctor: walk the payload as generic TL values, not bare hex.
+[[nodiscard]] QString UnknownCtorValue(
+		Reader &reader,
+		uint32_t id,
+		const QString &fieldName,
+		int depth) {
+	const auto pad = QString(depth * 2, QChar(u' '));
+	if (depth > kMaxHeuristicDepth) {
+		return RawCtorValue(reader, id, fieldName, depth);
+	}
+	auto out = Counted(reader, pad + (fieldName.isEmpty()
+		? u"ctor_0x%1 {\n"_q.arg(id, 8, 16, QChar(u'0'))
+		: u"%1: ctor_0x%2 {\n"_q.arg(fieldName).arg(id, 8, 16, QChar(u'0'))));
+	const auto words = int(reader.end - reader.from);
+	if (IsMediaCtor(id) || words * 4 > kMediaPayloadBytes) {
+		reader.from = reader.end;
+		out += Counted(reader, pad
+			+ u"  // media omitted (%1 bytes)\n"_q.arg(words * 4 + 4));
+	} else {
+		out += HeuristicWalk(reader, depth + 1);
+	}
+	out += pad + u"}\n"_q;
+	return out;
+}
+
 // Element type is unknown here: ctor elements recurse, rest stay words.
 [[nodiscard]] QString DecodeUnknownVector(
 		Reader &reader,
@@ -572,6 +970,9 @@ void PackBytes(const QByteArray &bytes, QVector<mtpPrime> &out) {
 		return pad + u"// <buffer end>\n"_q;
 	}
 	const auto id = uint32_t(*reader.from++);
+	if (id == kVectorCtor) {
+		return DecodeUnknownVector(reader, fieldName, depth);
+	}
 	if (depth > kMaxCtorDepth) {
 		return RawCtorValue(reader, id, fieldName, depth);
 	}
@@ -582,10 +983,7 @@ void PackBytes(const QByteArray &bytes, QVector<mtpPrime> &out) {
 		}
 		return DecodeCtorBody(reader, desc, depth);
 	}
-	if (id == kVectorCtor) {
-		return DecodeUnknownVector(reader, fieldName, depth);
-	}
-	return RawCtorValue(reader, id, fieldName, depth);
+	return UnknownCtorValue(reader, id, fieldName, depth);
 }
 
 [[nodiscard]] QString DecodeValue(
@@ -598,7 +996,7 @@ void PackBytes(const QByteArray &bytes, QVector<mtpPrime> &out) {
 	const auto prefix = fieldName.isEmpty()
 		? QString()
 		: fieldName + u": "_q;
-	if (expect.startsWith(u"Vector<"_q)) {
+	if (expect.startsWith(u"Vector<"_q) || expect.startsWith(u"vector<"_q)) {
 		const auto element = expect.mid(7, expect.size() - 8);
 		if (!reader.remaining(2)) {
 			reader.from = reader.end;
@@ -648,6 +1046,15 @@ void PackBytes(const QByteArray &bytes, QVector<mtpPrime> &out) {
 		if (!reader.remaining(1)) {
 			reader.from = reader.end;
 			return pad + u"%1// <buffer end>\n"_q.arg(prefix);
+		}
+		if (WireContradicts(reader, expect)) {
+			const auto offset = WordOffset(reader);
+			auto resync = QString();
+			if (TryResync(reader, depth, resync)) {
+				return Counted(reader, pad + prefix
+					+ u"// ⚠ 字段错位自上一字段（offset %1）\n"_q.arg(offset))
+					+ resync;
+			}
 		}
 		if (expect == u"string"_q) {
 			auto bytes = QByteArray();
@@ -738,10 +1145,14 @@ void PackBytes(const QByteArray &bytes, QVector<mtpPrime> &out) {
 				.arg(prefix)
 				.arg(uint32_t(value), 8, 16, QChar(u'0')));
 		}
-		return Counted(reader, pad + u"%1%2%3\n"_q
-			.arg(prefix)
-			.arg(value)
-			.arg(PeerAnnotation(fieldName, value, owner)));
+		auto line = pad + u"%1%2"_q.arg(prefix).arg(value)
+			+ PeerAnnotation(fieldName, value, owner);
+		if (IsDateField(fieldName) && value >= kMinDateValue) {
+			line += u" // %1"_q.arg(QDateTime::fromSecsSinceEpoch(
+				qint64(value),
+				Qt::UTC).toString(u"yyyy-MM-dd hh:mm"_q));
+		}
+		return Counted(reader, line + u"\n"_q);
 	}
 	return DecodeCtorValue(reader, fieldName, depth);
 }
@@ -772,11 +1183,28 @@ public:
 			if (!ok) {
 				return fail(u"bad unknown ctor id"_q);
 			}
-			out.push_back(mtpPrime(id));
 			const auto raw = nextLine();
 			if (!raw.startsWith(u"raw: "_q)) {
-				return fail(u"expected raw primes line"_q);
+				// WHY: heuristic unknown-ctor blocks show structure but
+				// carry no raw primes; skip to the block end and continue.
+				--_pos;
+				auto depth = 1;
+				auto guard = 0;
+				while (depth != 0 && ++guard != 10'000) {
+					const auto line = nextLine();
+					if (line.isEmpty()) {
+						return fail(u"unterminated ctor_0x block"_q);
+					}
+					const auto trimmed = line.trimmed();
+					depth += (trimmed.endsWith(u'{') ? 1 : 0)
+						- (trimmed == u"}" ? 1 : 0);
+				}
+				if (depth != 0) {
+					return fail(u"unterminated ctor_0x block"_q);
+				}
+				return true;
 			}
+			out.push_back(mtpPrime(id));
 			for (const auto &token : raw.mid(5).split(u' ', Qt::SkipEmptyParts)) {
 				const auto value = token.toUInt(&ok, 16);
 				if (!ok) {
@@ -926,7 +1354,7 @@ private:
 		if (IsPrimitive(type)) {
 			return parsePrimitive(type, value, out);
 		}
-		if (type.startsWith(u"Vector<"_q)) {
+		if (type.startsWith(u"Vector<"_q) || type.startsWith(u"vector<"_q)) {
 			if (!value.endsWith(u" {"_q)
 				|| value.left(value.size() - 1).trimmed() != u"vector") {
 				return fail(u"expected vector block"_q);
@@ -974,21 +1402,18 @@ private:
 	}
 
 	bool parseCtor(const CtorDesc *desc, QVector<mtpPrime> &out) {
-		const auto flagsSlot = (desc->fieldsCount > 0
-			&& QString::fromUtf8(desc->fields[0].type) == u"#"_q)
-			? int(out.size())
-			: -1;
 		out.push_back(mtpPrime(desc->id));
-		if (flagsSlot >= 0) {
-			out.push_back(mtpPrime(0));
-		}
-		auto flags = quint32(0);
+		auto groupSlots = std::array<int, kMaxFlagGroups>{};
+		auto groupFlags = std::array<quint32, kMaxFlagGroups>{};
+		groupSlots.fill(-1);
 		for (auto i = 0; i != int(desc->fieldsCount); ++i) {
 			const auto &field = desc->fields[i];
 			const auto name = QString::fromUtf8(field.name);
 			const auto type = QString::fromUtf8(field.type);
 			const auto optional = (field.flagBit != 0xFFFF);
 			if (type == u"#"_q) {
+				groupSlots[FlagGroupOf(name)] = int(out.size());
+				out.push_back(mtpPrime(0));
 				const auto line = nextLine();
 				if (!line.isEmpty() && !line.startsWith(u"flags"_q)) {
 					--_pos;
@@ -1023,7 +1448,8 @@ private:
 				continue;
 			}
 			if (optional) {
-				flags |= (quint32(1) << field.flagBit);
+				groupFlags[field.flagBit >> 8]
+					|= (quint32(1) << (field.flagBit & 0xFF));
 				if (type == u"true"_q) {
 					continue;
 				}
@@ -1041,8 +1467,10 @@ private:
 		}
 		// WHY: flags are the first wire field, so they are recomputed
 		// only after every optional field's presence is known.
-		if (flagsSlot >= 0) {
-			out[flagsSlot] = mtpPrime(flags);
+		for (auto g = 0; g != kMaxFlagGroups; ++g) {
+			if (groupSlots[g] >= 0) {
+				out[groupSlots[g]] = mtpPrime(groupFlags[g]);
+			}
 		}
 		const auto closer = nextLine();
 		if (closer != u"}"_q && !closer.isEmpty()) {
@@ -1086,11 +1514,12 @@ void StripTlEnvelope(const mtpPrime *&from, const mtpPrime *&end) {
 }
 
 QString DecodeTlBody(const mtpPrime *from, const mtpPrime *end) {
-	auto reader = Reader{ from, end };
+	auto reader = Reader{ from, end, 0, from };
 	if (!reader.remaining(1)) {
 		return u"// empty body\n"_q;
 	}
-	return DecodeValue(reader, QString(), QString(), 0, QString());
+	return u"// layer=%1\n"_q.arg(kApiLayer)
+		+ DecodeValue(reader, QString(), QString(), 0, QString());
 }
 
 QString DecodeTlRowName(const QVector<mtpPrime> &body) {
