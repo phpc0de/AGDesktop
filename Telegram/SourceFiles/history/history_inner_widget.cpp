@@ -140,7 +140,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ayu/ayu_settings.h"
 #include "ayu/features/filters/filters_cache_controller.h"
 #include "ayu/sexcat/sexcat_save_hook.h"
-#include "platform/platform_file_utilities.h"
 #include "ayu/ui/context_menu/context_menu.h"
 #include "ayu/ui/settings/filters/edit_filter.h"
 #include "ayu/utils/telegram_helpers.h"
@@ -3286,7 +3285,7 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 					: tr::lng_context_show_in_folder(tr::now),
 				[=] {
 					if (!ownPath && !recordedPath.isEmpty()) {
-						Platform::File::ShowInFolder(recordedPath);
+						File::ShowInFolder(recordedPath);
 					} else {
 						showContextInFolder(document);
 					}

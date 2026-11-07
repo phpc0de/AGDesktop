@@ -655,6 +655,7 @@ private:
 	rpl::variable<bool> _saveForBots = false;
 	std::unordered_set<int64> _shadowBanIds;
 	std::map<uint64, uint8> _chatGroupMarks;
+	std::map<uint64, QString> _chatGroupMarkLabels;
 	rpl::variable<bool> _filtersEnabled = false;
 	rpl::variable<bool> _filtersEnabledInChats = false;
 	rpl::variable<bool> _folderTagsForce = false;
