@@ -566,14 +566,19 @@ void GroupedMedia::draw(Painter &p, const PaintContext &context) const {
 	if (!inWebPage
 		&& _parent->media() == this
 		&& !AyuFeatures::MessageShot::isTakingShot()) {
-		const auto fullId = _parent->data()->fullId();
-		SexCat::Badge::PaintBadge(
-			p,
-			fullId.peer,
-			fullId.msg,
-			QRect(0, 0, width(), height()),
-			fullSelection,
-			crl::guard(_parent, [parent = _parent] { parent->repaint(); }));
+		const auto refresh = crl::guard(_parent, [parent = _parent] {
+			parent->repaint();
+		});
+		for (const auto &part : _parts) {
+			const auto fullId = part.item->fullId();
+			SexCat::Badge::PaintBadge(
+				p,
+				fullId.peer,
+				fullId.msg,
+				part.geometry.translated(0, groupPadding.top()),
+				fullSelection,
+				refresh);
+		}
 	}
 
 	// date

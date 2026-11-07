@@ -872,7 +872,7 @@ void RecordResponseForced(
 	entry.body = QVector<mtpPrime>(from, end);
 	entry.text = DecodeTlBody(from, end);
 	if (truncated) {
-		entry.text += u"\n…(truncated %1 primes)"_q.arg(total - kMaxDumpPrimes);
+		entry.text += u"\n…(truncated %1 primes — use Copy ALL / Ctrl+Shift+C for the full text)"_q.arg(total - kMaxDumpPrimes);
 	}
 	entry.name = DecodeTlRowName(entry.body);
 	if (entry.name.isEmpty()) {

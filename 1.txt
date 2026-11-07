@@ -437,3 +437,16 @@ data_chat_filters.cpp:477/451 直接覆盖本地 _tagsEnabled → 设置被吞�
 ================ 2025-11-06 清账轮二收尾（21项全清，用户令全部修好才push，复审0问题） ================
 [本轮新增] Q73 下载历史窗口行右键 Jump to message(lng_context_to_msg,无源行不显示);QQ57 移出目录修复:SHCNE_DELETE 后台预算扫描(同名+同size,旧父目录+桌面同级+下载/桌面/文档,≤5000文件/深度2/2秒)命中即 RelinkMovedEntry(ADS/sidecar 迁移),未命中保留 missing+历史窗口 missing 行 Relocate... 目录选择框(QDirIterator 20000/深度4/10秒)手动重定位。
 [六 commits 累计 51 → push+移 tag] 21 项清账:Q4✓ QQ1✓ QQ2✓ QQ3✓(重绘+序列化v4) QQ4✓ QQ49✓ QQ50✓ QQ57✓(自动+手动重定位) QQ59✓ QQ60✓ Q52全✓(含retro-tag/改名/删标) Q51✓ Q70✓ Q71✓ Q72✓ Q73✓(母猪+下载历史双入口) Q80✓ Q81✓(接口+孤儿行清理) Q82✓ QQ7✓ QQ9✓。协议边界不变项:禁止复制与转发同源;webpage纯webDocument无时长/分辨率;旧标签记录 src_tag 空。
+
+================ 第八轮反馈（6路并行核查 + 修复，1 commit → tag v7.2.9-ayu.14） ================
+[Q1实锤] "NRFAD"=聊天列表 AG 检查点标记：旧文本 U+23F1(秒表符号)不在对话框字体栈→fallback 位图字形与 10px 基线错位成乱码；几何 right 算式本身正确(=日期左缘-5px)但长名时整标记静默消失。修=纯文本 "AG %1/%2"+画名前预留宽度(rectForName 先收缩)+去 isBroadcast 门禁(群聊也显示,仅排除 Saved Messages)。
+[Q3.2✓] 列表名字限制色：TopBarTitleTintOf/Fg 提取为 ayu/ui/peer_tint(共享),dialogs_layout 普通行+hiddenSender 行五态着色(active/selected 保持原色),顶栏改用共享实现行为不变。已知限制:频道/群服务器noforwards 与本地限制同为 AyuNoForwards 位→统一紫;不恢复上游 NoForwards 位以免复活上游保存限制。
+[Q5.2✓] ApplyLookup 跳过 saved_path 空的 pending 行(下载开始瞬间误亮徽章+清空 LastSavedPath 根因)；GroupedMedia::draw 逐 part 画已下载徽章(各按自己 fullId 查询,不再只画 lead)。
+[Q6/Q7✓] 新增 SexCat::HasRecordedSource(不看盘上存在)→有库记录但文件丢了也显示"显示文件夹"(禁用态),用户可见"记录在/文件没了"。
+[Q10✓] shell watch 原只监听 Desktop 树→下载目录移动无事件;RegisterShellWatch 注册 Desktop+settings().downloadPath()(SHParseDisplayName 解析,大小写去重,同 Desktop 跳过);手动 Relocate 仍在下载历史窗口 missing 行右键。
+[Q11✓] 下载历史窗口 3 过滤控件:文本类(txt/md/pdf/epub/mobi/azw3/fb2/doc/docx/rtf/xlsx/pptx/csv)/图片类(jpg/jpeg/png/webp/gif/bmp/heic/heif/tif/tiff/svg/avif)/自定义后缀输入;并集过滤,未勾选无影响。
+[Q52入口✓] 主聊天 HistoryInner 右键此前未接 AddSowTagMenuActions(只有媒体列表 surface 有,用户在主聊天右键看不到=返厂主因)→接入 addItemActions(选中文本一并传入=选中文字保存)。
+[Q199答] truncated N primes=显示上限 kMaxDumpPrimes(8192字)截断,非解析失败本身;提示行加 Copy ALL/Ctrl+Shift+C 全文指引。Q200 垃圾 ctor_0x=失步+截断复合;keyboardInlineButtonRow id 出现在 buttons 元素位=错位产物。entities skip=vector 防御分支。
+[QQ60✓] kFieldNotes +15: mime_type/file_name/title/username/first_name/last_name/about/size/duration/dc_id/views/forwards/reply_to_msg_id/via_bot_id。
+[未动如实] Q8 自定义文字(方案:mark 值扩 {color,label}+JSON 追加+名字线 pill,下轮)、Q4 消息种类徽章(方案:BottomInfo Kind 位+时间旁小图标,下轮)、Q12(上游右下角下拉按钮自带未读徽章即跳未读,待用户按步骤验收确认是否真缺)。
+[Q2/Q81/Q52.3/Q52.4] 无代码改动,答复内说明(Q2=folderTagsForce 链路已实现含验收步骤;Q81=GlobalMsgId 整组删已修+内容寻址可利用;Q52.3=记录链统一派生 tag 已做;Q52.4=batchTag 传批内每文件=支持)。

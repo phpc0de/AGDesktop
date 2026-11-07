@@ -139,6 +139,8 @@ set(ayugram_files
         ayu/utils/rc_manager.h
         ayu/ui/ayu_logo.cpp
         ayu/ui/ayu_logo.h
+        ayu/ui/peer_tint.cpp
+        ayu/ui/peer_tint.h
         ayu/ui/toasts.cpp
         ayu/ui/toasts.h
         ayu/ui/ayu_userpic.cpp

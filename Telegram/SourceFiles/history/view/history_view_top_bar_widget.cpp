@@ -78,6 +78,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ayu/data/messages_storage.h"
 #include "ayu/sexcat/sexcat_history_window.h"
 #include "ayu/ui/lists_window.h"
+#include "ayu/ui/peer_tint.h"
 #include "ayu/ui/toasts.h"
 #include "ayu/utils/ayu_log.h"
 #include "boxes/peers/edit_participants_box.h"
@@ -111,57 +112,6 @@ QString TopBarNameText(
 		}
 	}
 	return peer->topBarNameText();
-}
-
-enum class TopBarTitleTint {
-	None,
-	Protected,
-	Banned,
-	AyuRestricted,
-	UserPeerNoForwards,
-	UserSelfNoForwards,
-};
-
-[[nodiscard]] TopBarTitleTint TopBarTitleTintOf(not_null<PeerData*> peer) {
-	if (const auto channel = peer->asChannel()) {
-		if (channel->isForbidden() && channel->date != 0) {
-			// freshly created channels default to Forbidden until loaded
-			return TopBarTitleTint::Banned;
-		} else if (channel->flags() & ChannelDataFlag::NoForwards) {
-			return TopBarTitleTint::Protected;
-		} else if (channel->isAyuNoForwards()) {
-			return TopBarTitleTint::AyuRestricted;
-		}
-	} else if (const auto chat = peer->asChat()) {
-		if (chat->flags() & ChatDataFlag::NoForwards) {
-			return TopBarTitleTint::Protected;
-		} else if (chat->isAyuNoForwards()) {
-			return TopBarTitleTint::AyuRestricted;
-		}
-	} else if (const auto user = peer->asUser()) {
-		if (user->flags() & UserDataFlag::NoForwardsPeerEnabled) {
-			return TopBarTitleTint::UserPeerNoForwards;
-		} else if (user->flags() & UserDataFlag::NoForwardsMyEnabled) {
-			return TopBarTitleTint::UserSelfNoForwards;
-		}
-	}
-	return TopBarTitleTint::None;
-}
-
-[[nodiscard]] const style::color &TopBarTitleTintFg(TopBarTitleTint tint) {
-	switch (tint) {
-	case TopBarTitleTint::None: break;
-	case TopBarTitleTint::Banned: return st::topBarTitleAyuBanned.textFg;
-	case TopBarTitleTint::Protected:
-		return st::topBarTitleAyuProtected.textFg;
-	case TopBarTitleTint::AyuRestricted:
-		return st::topBarTitleAyuRestricted.textFg;
-	case TopBarTitleTint::UserPeerNoForwards:
-		return st::topBarTitleAyuUserPeer.textFg;
-	case TopBarTitleTint::UserSelfNoForwards:
-		return st::topBarTitleAyuUserSelf.textFg;
-	}
-	return st::dialogsNameFg;
 }
 
 } // namespace
@@ -794,20 +744,20 @@ void TopBarWidget::paintTopBar(Painter &p) {
 		});
 		namewidth -= badgeWidth;
 
-		const auto tint = TopBarTitleTintOf(namePeer);
-		p.setPen(TopBarTitleTintFg(tint));
+		const auto tint = Ayu::PeerTintOf(namePeer);
+		p.setPen(Ayu::PeerTintFg(tint));
 		_title.draw(p, {
 			.position = { nameleft, nametop },
 			.availableWidth = namewidth,
 			.elisionLines = 1,
 		});
-		if (tint != TopBarTitleTint::None) {
+		if (tint != Ayu::PeerTint::None) {
 			p.fillRect(
 				0,
 				height() - st::topBarAyuTintStrip,
 				width(),
 				st::topBarAyuTintStrip,
-				TopBarTitleTintFg(tint));
+				Ayu::PeerTintFg(tint));
 		}
 
 		p.setFont(st::dialogsTextFont);

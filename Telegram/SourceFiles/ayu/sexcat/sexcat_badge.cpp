@@ -124,6 +124,9 @@ void ApplyLookup(
 	auto best = BadgeEntry();
 	auto bestAt = int64(0);
 	for (const auto &record : records) {
+		if (record.saved_path.isEmpty()) {
+			continue;
+		}
 		if (record.saved_at > bestAt) {
 			bestAt = record.saved_at;
 			best.saved = true;

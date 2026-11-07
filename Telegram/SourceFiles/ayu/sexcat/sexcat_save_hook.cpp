@@ -709,6 +709,29 @@ QString RecordedDocumentPath(
 	return hit->saved_path;
 }
 
+bool HasRecordedSource(
+		not_null<DocumentData*> document,
+		FullMsgId contextId) {
+	if (!Enabled() || !Database::instance().Enabled()) {
+		return false;
+	}
+	const auto item = contextId
+		? document->owner().message(contextId)
+		: nullptr;
+	if (!item || !item->isRegular()) {
+		return false;
+	}
+	const auto peer = item->history()->peer;
+	if (!peer) {
+		return false;
+	}
+	return Database::instance().FindSavedSource(
+		peer->id,
+		item->id,
+		ResolveAttachIndex(item),
+		document->size).has_value();
+}
+
 bool ShouldTrackDownloadHash() {
 	return Enabled() && Database::instance().Enabled();
 }

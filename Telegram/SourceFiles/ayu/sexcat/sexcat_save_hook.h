@@ -53,6 +53,12 @@ void ForgetDoctrineSaveAs(not_null<DocumentData*> document);
 	not_null<DocumentData*> document,
 	FullMsgId contextId);
 
+// True when the library has a source row for this attachment, even if
+// the recorded file no longer exists at its path.
+[[nodiscard]] bool HasRecordedSource(
+	not_null<DocumentData*> document,
+	FullMsgId contextId);
+
 // Hash of a finished download, already computed by the loader.
 void NoteDownloadedSha(const QString &path, const QByteArray &sha256);
 [[nodiscard]] bool ShouldTrackDownloadHash();

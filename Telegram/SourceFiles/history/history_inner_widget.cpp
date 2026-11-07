@@ -3222,6 +3222,10 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 			});
 		AyuUi::AddMessageDetailsAction(_menu, item);
 		AyuUi::AddCheckpointAction(_menu, item);
+		SexCat::AddSowTagMenuActions(
+			_menu,
+			item,
+			getSelectedText().expanded);
 	};
 	const auto addPhotoActions = [&](not_null<PhotoData*> photo, HistoryItem *item) {
 		const auto media = photo->activeMediaView();

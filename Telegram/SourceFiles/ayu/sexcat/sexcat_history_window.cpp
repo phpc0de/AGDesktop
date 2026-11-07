@@ -37,6 +37,7 @@
 #include <QFileInfo>
 #include <QHBoxLayout>
 #include <QHeaderView>
+#include <QCheckBox>
 #include <QLineEdit>
 #include <QMenu>
 #include <QSet>
@@ -139,8 +140,16 @@ public:
 		auto *selectAll = new QPushButton(
 			tr::lng_sexcat_select_all(tr::now),
 			this);
+		_textExt = new QCheckBox(u"文本类 (txt/pdf/epub…)"_q, this);
+		_imageExt = new QCheckBox(u"图片类 (jpg/png/webp…)"_q, this);
+		_customExt = new QLineEdit(this);
+		_customExt->setPlaceholderText(u"自定义后缀 (逗号分隔)"_q);
+		_customExt->setFixedWidth(150);
 		top->addWidget(_filter, 1);
 		top->addWidget(_search, 2);
+		top->addWidget(_textExt);
+		top->addWidget(_imageExt);
+		top->addWidget(_customExt);
 		top->addWidget(verify);
 		top->addWidget(scan);
 		top->addWidget(selectAll);
@@ -182,6 +191,17 @@ public:
 			qOverload<int>(&QComboBox::currentIndexChanged),
 			this,
 			[=](int) { applyFilter(); });
+		connect(_textExt, &QCheckBox::toggled, this, [=](bool) {
+			applyFilter();
+		});
+		connect(_imageExt, &QCheckBox::toggled, this, [=](bool) {
+			applyFilter();
+		});
+		connect(
+			_customExt,
+			&QLineEdit::textChanged,
+			this,
+			[=](const QString &) { applyFilter(); });
 		connect(verify, &QPushButton::clicked, this, [=] {
 			verifySelected();
 		});
@@ -332,9 +352,41 @@ private:
 			: PeerId(0);
 	}
 
+	[[nodiscard]] static const QStringList &TextExtensions() {
+		static const auto value = QStringList{
+			u"txt"_q, u"md"_q, u"pdf"_q, u"epub"_q, u"mobi"_q,
+			u"azw3"_q, u"fb2"_q, u"doc"_q, u"docx"_q, u"rtf"_q,
+			u"xlsx"_q, u"pptx"_q, u"csv"_q };
+		return value;
+	}
+
+	[[nodiscard]] static const QStringList &ImageExtensions() {
+		static const auto value = QStringList{
+			u"jpg"_q, u"jpeg"_q, u"png"_q, u"webp"_q, u"gif"_q,
+			u"bmp"_q, u"heic"_q, u"heif"_q, u"tif"_q, u"tiff"_q,
+			u"svg"_q, u"avif"_q };
+		return value;
+	}
+
+	[[nodiscard]] QString rowExtension(const QString &fileName) const {
+		const auto dot = fileName.lastIndexOf(QChar(u'.'));
+		return (dot >= 0) ? fileName.mid(dot + 1).toLower() : QString();
+	}
+
 	void applyFilter() {
 		const auto query = _search->text().trimmed().toLower();
 		const auto peerId = filterPeerId();
+		const auto textOn = _textExt->isChecked();
+		const auto imageOn = _imageExt->isChecked();
+		auto custom = QStringList();
+		for (const auto &part
+			: _customExt->text().split(',', Qt::SkipEmptyParts)) {
+			const auto trimmed = part.trimmed().toLower();
+			if (!trimmed.isEmpty()) {
+				custom << trimmed;
+			}
+		}
+		const auto filtering = textOn || imageOn || !custom.isEmpty();
 		_tree->clear();
 		for (const auto &row : _rows) {
 			if (peerId != PeerId(0) && row.srcPeerId != peerId) {
@@ -344,6 +396,14 @@ private:
 				&& !row.fileName.toLower().contains(query)
 				&& !row.srcTitle.toLower().contains(query)) {
 				continue;
+			}
+			if (filtering) {
+				const auto ext = rowExtension(row.fileName);
+				if (!((textOn && TextExtensions().contains(ext))
+					|| (imageOn && ImageExtensions().contains(ext))
+					|| custom.contains(ext))) {
+					continue;
+				}
 			}
 			auto *item = new QTreeWidgetItem(_tree);
 			fillItem(item, row);
@@ -674,6 +734,9 @@ private:
 
 	QComboBox *_filter = nullptr;
 	QLineEdit *_search = nullptr;
+	QCheckBox *_textExt = nullptr;
+	QCheckBox *_imageExt = nullptr;
+	QLineEdit *_customExt = nullptr;
 	QTreeWidget *_tree = nullptr;
 	std::vector<Row> _rows;
 	std::vector<PeerId> _filterPeerIds;

@@ -513,7 +513,8 @@ void AddDocumentActions(
 	// badge uses the same registry, so mirror it instead of hiding.
 	const auto downloaded = hasPath
 		|| document->loadedInMediaCache()
-		|| Ayu::SexCat::IsDownloadedDocument(document);
+		|| Ayu::SexCat::IsDownloadedDocument(document)
+		|| SexCat::HasRecordedSource(document, contextId);
 	if (downloaded) {
 		const auto action = menu->addAction(
 			(Platform::IsMac()

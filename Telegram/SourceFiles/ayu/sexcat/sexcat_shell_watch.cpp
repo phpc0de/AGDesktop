@@ -9,6 +9,8 @@
 #include "ayu/sexcat/sexcat_database.h"
 #include "ayu/sexcat/sexcat_hash_store.h"
 #include "ayu/utils/ayu_log.h"
+#include "core/application.h"
+#include "core/core_settings.h"
 #include "data/data_msg_id.h"
 #include "data/data_peer_id.h"
 
@@ -428,23 +430,70 @@ protected:
 
 void RegisterShellWatch() {
 	auto window = new ShellWatchWindow();
-	auto pidl = static_cast<PIDLIST_ABSOLUTE>(nullptr);
-	if (FAILED(SHGetKnownFolderIDList(FOLDERID_Desktop, 0, nullptr, &pidl))) {
+	auto pidls = std::vector<PIDLIST_ABSOLUTE>();
+	auto entries = std::vector<SHChangeNotifyEntry>();
+	auto seen = std::set<QString>();
+	const auto addPidl = [&](PIDLIST_ABSOLUTE pidl) {
+		if (!pidl) {
+			return;
+		}
+		pidls.push_back(pidl);
+		auto entry = SHChangeNotifyEntry();
+		entry.pidl = pidl;
+		entry.fRecursive = TRUE;
+		entries.push_back(entry);
+	};
+	auto desktopPidl = static_cast<PIDLIST_ABSOLUTE>(nullptr);
+	if (SUCCEEDED(
+			SHGetKnownFolderIDList(
+				FOLDERID_Desktop,
+				0,
+				nullptr,
+				&desktopPidl))) {
+		addPidl(desktopPidl);
+	} else {
 		LogFailure(u"shell watch failed to resolve the desktop pidl"_q);
+	}
+	// the download folder sits outside the desktop tree, so moves out of it raised no events
+	const auto desktopPath = QDir::toNativeSeparators(
+		QStandardPaths::writableLocation(
+			QStandardPaths::DesktopLocation)).toLower();
+	const auto watch = [&](const QString &path) {
+		const auto native = QDir::toNativeSeparators(path);
+		if (native.isEmpty()
+			|| native.toLower() == desktopPath
+			|| !seen.insert(native.toLower()).second) {
+			return;
+		}
+		auto pidl = static_cast<PIDLIST_ABSOLUTE>(nullptr);
+		if (FAILED(
+				SHParseDisplayName(
+					reinterpret_cast<LPCWSTR>(native.utf16()),
+					nullptr,
+					&pidl,
+					0,
+					nullptr))) {
+			LogFailure(u"shell watch failed to resolve %1"_q.arg(native));
+			return;
+		}
+		addPidl(pidl);
+	};
+	watch(Core::App().settings().downloadPath());
+	if (entries.empty()) {
+		LogFailure(u"shell watch has no folders to watch"_q);
 		return;
 	}
-	auto entry = SHChangeNotifyEntry();
-	entry.pidl = pidl;
-	entry.fRecursive = TRUE;
 	const auto registered = SHChangeNotifyRegister(
 		reinterpret_cast<HWND>(window->winId()),
 		SHCNRF_NewDelivery | SHCNRF_InterruptLevel | SHCNRF_ShellLevel,
 		SHCNE_RENAMEITEM | SHCNE_RENAMEFOLDER | SHCNE_UPDATEITEM
 			| SHCNE_DELETE,
 		kShellChangeMessage,
-		1,
-		&entry);
-	ILFree(pidl);
+		int(entries.size()),
+		entries.data());
+	for (const auto pidl : pidls) {
+		ILFree(pidl);
+	}
 	if (!registered) {
 		LogFailure(u"shell watch failed to register change notifications"_q);
 	}

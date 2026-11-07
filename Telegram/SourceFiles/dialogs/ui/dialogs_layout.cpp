@@ -54,6 +54,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 // AyuGram includes
 #include "ayu/data/messages_storage.h"
 #include "ayu/features/filters/filters_controller.h"
+#include "ayu/ui/peer_tint.h"
 #include "base/flat_map.h"
 #include "styles/style_ayu_icons.h"
 
@@ -146,7 +147,7 @@ CheckpointMark ResolveCheckpointMark(not_null<History*> history, crl::time now) 
 	}
 	auto result = CheckpointMark();
 	if (entry.checkpointId) {
-		result.text = u"\u23F1%1/%2"_q.arg(history->maxMsgId().bare).arg(
+		result.text = u"AG %1/%2"_q.arg(history->maxMsgId().bare).arg(
 			entry.checkpointId);
 		result.width = st::dialogsCheckpointMarkFont->width(result.text);
 	}
@@ -1013,11 +1014,34 @@ void PaintRow(
 			paintPeerBadge(rowName.maxWidth());
 			badgeWidth = widthBefore - rectForName.width();
 		}
+		auto checkpointMark = CheckpointMark();
+		if (history && history->maxMsgId() > 0 && !from->isSelf()) {
+			checkpointMark = ResolveCheckpointMark(history, context.now);
+		}
+		const auto markSkip = st::dialogsCheckpointMarkSkip;
+		// WHY: reserving the mark width up front keeps it visible on
+		// long names instead of silently failing the fits-check.
+		const auto drawCheckpointMark = !checkpointMark.text.isEmpty()
+			&& (checkpointMark.width + markSkip) * 2
+				<= rectForName.width();
+		if (drawCheckpointMark) {
+			rectForName.setWidth(
+				rectForName.width()
+					- checkpointMark.width
+					- markSkip);
+		}
+		PeerData *tintPeer = nullptr;
+		if (history) {
+			tintPeer = history->peer;
+		}
+		const auto tint = Ayu::PeerTintOf(tintPeer);
 		p.setPen(context.active
 			? st::dialogsNameFgActive
 			: context.selected
 			? st::dialogsNameFgOver
-			: st::dialogsNameFg);
+			: tint == Ayu::PeerTint::None
+			? st::dialogsNameFg
+			: Ayu::PeerTintFg(tint));
 		rowName.draw(p, {
 			.position = rectForName.topLeft(),
 			.availableWidth = rectForName.width(),
@@ -1039,49 +1063,46 @@ void PaintRow(
 				+ (st::semiboldFont->height - muteIcon.height()) / 2;
 			muteIcon.paint(p, muteLeft, muteTop, context.width);
 		}
-		if (from->isBroadcast() && history && history->maxMsgId() > 0) {
-			const auto mark = ResolveCheckpointMark(history, context.now);
-			if (!mark.text.isEmpty()) {
-				const auto nameW = std::min(
-					rowName.maxWidth(),
-					rectForName.width());
-				const auto muteTaken = drawMuteIcon
-					? (ThreeStateIcon(
-						st::dialogsMuteIcon,
-						context.active,
-						context.selected).width()
-						+ st::dialogsMuteIconSkip)
-					: 0;
-				const auto left = rectForName.left()
+		if (drawCheckpointMark) {
+			const auto nameW = std::min(
+				rowName.maxWidth(),
+				rectForName.width());
+			const auto muteTaken = drawMuteIcon
+				? (ThreeStateIcon(
+					st::dialogsMuteIcon,
+					context.active,
+					context.selected).width()
+					+ st::dialogsMuteIconSkip)
+				: 0;
+			p.setFont(st::dialogsCheckpointMarkFont);
+			p.setPen(context.active
+				? st::dialogsTextFgActive
+				: context.selected
+				? st::dialogsTextFgOver
+				: st::dialogsCheckpointMarkFg);
+			p.drawText(
+				rectForName.left()
 					+ nameW
 					+ badgeWidth
 					+ muteTaken
-					+ st::dialogsCheckpointMarkSkip;
-				const auto right = rectForName.left()
-					+ rectForName.width()
-					+ badgeWidth
-					+ muteTaken;
-				if (left + mark.width <= right) {
-					p.setFont(st::dialogsCheckpointMarkFont);
-					p.setPen(context.active
-						? st::dialogsTextFgActive
-						: context.selected
-						? st::dialogsTextFgOver
-						: st::dialogsCheckpointMarkFg);
-					p.drawText(
-						left,
-						rectForName.top() + st::semiboldFont->height
-							- st::normalFont->descent,
-						mark.text);
-				}
-			}
+					+ markSkip,
+				rectForName.top() + st::semiboldFont->height
+					- st::normalFont->descent,
+				checkpointMark.text);
 		}
 	} else if (hiddenSenderInfo) {
+		PeerData *tintPeer = nullptr;
+		if (history) {
+			tintPeer = history->peer;
+		}
+		const auto tint = Ayu::PeerTintOf(tintPeer);
 		p.setPen(context.active
 			? st::dialogsNameFgActive
 			: context.selected
 			? st::dialogsNameFgOver
-			: st::dialogsNameFg);
+			: tint == Ayu::PeerTint::None
+			? st::dialogsNameFg
+			: Ayu::PeerTintFg(tint));
 		hiddenSenderInfo->nameText().draw(p, {
 			.position = rectForName.topLeft(),
 			.availableWidth = rectForName.width(),

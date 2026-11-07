@@ -300,6 +300,20 @@ constexpr FieldNote kFieldNotes[] = {
 	{ "limit", "最多返回条数" },
 	{ "hash", "本地缓存校验值（相等返回空）" },
 	{ "offset", "分页偏移" },
+	{ "mime_type", "MIME 类型字符串" },
+	{ "file_name", "文件名字符串" },
+	{ "title", "标题字符串" },
+	{ "username", "用户名字符串" },
+	{ "first_name", "名字字符串" },
+	{ "last_name", "姓氏字符串" },
+	{ "about", "简介字符串" },
+	{ "size", "文件字节数" },
+	{ "duration", "时长（秒）" },
+	{ "dc_id", "数据中心编号" },
+	{ "views", "浏览次数" },
+	{ "forwards", "转发次数" },
+	{ "reply_to_msg_id", "被回复消息 id" },
+	{ "via_bot_id", "内联机器人 id" },
 };
 
 } // namespace
