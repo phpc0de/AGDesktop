@@ -1,4 +1,4 @@
-import os, sys, pprint, re, json, pathlib, hashlib, subprocess, glob, tempfile
+import os, sys, pprint, re, json, pathlib, hashlib, subprocess, glob, tempfile, time
 
 executePath = os.getcwd()
 sys.dont_write_bytecode = True
@@ -431,9 +431,17 @@ def runStages():
         clearCacheKey(stage)
         print('BUILDING:')
         os.chdir(stage['directory'])
-        if not run(commands):
-            print(prefix + ': FAILED')
-            finish(1)
+        for attempt in range(3):
+            if run(commands):
+                break
+            # WHY: a stage that never created its directory died while
+            # fetching (clone/download) - transient on CI, so retry it;
+            # a tree that exists but fails to build is deterministic.
+            if attempt == 2 or os.path.exists(os.path.join(stage['directory'], stage['name'])):
+                print(prefix + ': FAILED')
+                finish(1)
+            print(prefix + ': fetch failed, retrying in 15s...', flush=True)
+            time.sleep(15)
         writeCacheKey(stage)
 
 if customRunCommand:
