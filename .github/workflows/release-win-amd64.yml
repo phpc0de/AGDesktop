@@ -50,14 +50,21 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: ${{ runner.workspace }}/ThirdParty
-          key: thirdparty-win64-full-${{ hashFiles('.gitmodules', 'Telegram/build/prepare/prepare.py', 'Telegram/build/qt_version.py') }}
+          # WHY: an existing cache entry can never be overwritten, so the save
+          # key carries run_id; a resumed partial cache must land under a new
+          # key or its newly built stages are lost with the ephemeral runner.
+          key: thirdparty-win64-full-${{ github.run_id }}-${{ hashFiles('.gitmodules', 'Telegram/build/prepare/prepare.py', 'Telegram/build/qt_version.py') }}
+          restore-keys: |
+            thirdparty-win64-full-${{ hashFiles('.gitmodules', 'Telegram/build/prepare/prepare.py', 'Telegram/build/qt_version.py') }}
 
       - name: Restore Libraries cache
         id: cache-libs
         uses: actions/cache/restore@v4
         with:
           path: ${{ runner.workspace }}/Libraries/win64
-          key: libs-win64-full-${{ hashFiles('.gitmodules', 'Telegram/build/prepare/prepare.py', 'Telegram/build/qt_version.py', 'Telegram/CMakeLists.txt') }}
+          key: libs-win64-full-${{ github.run_id }}-${{ hashFiles('.gitmodules', 'Telegram/build/prepare/prepare.py', 'Telegram/build/qt_version.py', 'Telegram/CMakeLists.txt') }}
+          restore-keys: |
+            libs-win64-full-${{ hashFiles('.gitmodules', 'Telegram/build/prepare/prepare.py', 'Telegram/build/qt_version.py', 'Telegram/CMakeLists.txt') }}
 
       - name: Prepare libraries
         id: prepare
@@ -71,8 +78,24 @@ jobs:
           Copy-Item "$env:RUNNER_TEMP/prepare.log" "$env:GITHUB_WORKSPACE/prepare.log" -ErrorAction SilentlyContinue
           exit $code
 
+      - name: Detect rebuilt stage classes
+        if: always()
+        id: rebuilt
+        shell: pwsh
+        # A resumed run must re-save: the restored cache may be partial.
+        run: |
+          $log = "$env:RUNNER_TEMP/prepare.log"
+          $libs = $false
+          $thirdparty = $false
+          if (Test-Path $log) {
+            $thirdparty = @(Select-String -Path $log -Pattern '\(ThirdParty/[^)]*\): .*BUILDING:').Count -gt 0
+            $libs = @(Select-String -Path $log -Pattern '\(Libraries/[^)]*\): .*BUILDING:').Count -gt 0
+          }
+          "libs=$($libs.ToString().ToLower())" | Out-File -Append -Encoding UTF8 $env:GITHUB_OUTPUT
+          "thirdparty=$($thirdparty.ToString().ToLower())" | Out-File -Append -Encoding UTF8 $env:GITHUB_OUTPUT
+
       - name: Save ThirdParty cache
-        if: always() && steps.cache-thirdparty.outputs.cache-hit != 'true'
+        if: always() && steps.rebuilt.outputs.thirdparty == 'true'
         continue-on-error: true
         uses: actions/cache/save@v4
         with:
@@ -80,7 +103,7 @@ jobs:
           key: ${{ steps.cache-thirdparty.outputs.cache-primary-key }}
 
       - name: Save Libraries cache
-        if: always() && steps.cache-libs.outputs.cache-hit != 'true'
+        if: always() && steps.rebuilt.outputs.libs == 'true'
         continue-on-error: true
         uses: actions/cache/save@v4
         with:
@@ -185,6 +208,12 @@ jobs:
               Out-File -Append -Encoding UTF8 $env:GITHUB_STEP_SUMMARY
             '```' | Out-File -Append -Encoding UTF8 $env:GITHUB_STEP_SUMMARY
             throw "Libraries 缓存缺失：prepare-libs job 失败。摘要见本页 Summary，完整日志见 prepare-log artifact。"
+          }
+          if (!(Get-ChildItem "${{ runner.workspace }}/Libraries/win64/Qt-*" -Directory -ErrorAction SilentlyContinue)) {
+            "### Libraries 缓存缺 Qt" | Out-File -Append -Encoding UTF8 $env:GITHUB_STEP_SUMMARY
+            "缓存是旧的部分缓存（prepare 续跑补全的结果没有入缓存），configure 必然失败；用新 workflow 重跑 prepare-libs 保存完整缓存后重试。" |
+              Out-File -Append -Encoding UTF8 $env:GITHUB_STEP_SUMMARY
+            throw "Libraries 缓存缺 Qt-*，configure 必然失败。"
           }
 
       - name: Compute version
