@@ -16,6 +16,7 @@ enum class PeerTint {
 	None,
 	Protected,
 	Banned,
+	RegionRestricted,
 	AyuRestricted,
 	UserPeerNoForwards,
 	UserSelfNoForwards,

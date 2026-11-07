@@ -495,6 +495,24 @@ void BottomInfo::layoutDateText() {
 	const auto editedPrimary = !updated
 		&& (_data.flags & Data::Flag::EditedPrimary)
 		&& !(_data.flags & Data::Flag::ForwardedDate);
+	const auto kindEmoji = [&] {
+		if (_data.flags & Data::Flag::KindRound) {
+			return QString::fromUtf8("\xf0\x9f\x8e\xa5 ");
+		} else if (_data.flags & Data::Flag::KindVideo) {
+			return QString::fromUtf8("\xf0\x9f\x8e\xac ");
+		} else if (_data.flags & Data::Flag::KindGif) {
+			return QString::fromUtf8("\xf0\x9f\x8c\x80 ");
+		} else if (_data.flags & Data::Flag::KindVoice) {
+			return QString::fromUtf8("\xf0\x9f\x8e\x99 ");
+		} else if (_data.flags & Data::Flag::KindAudio) {
+			return QString::fromUtf8("\xf0\x9f\x8e\xb5 ");
+		} else if (_data.flags & Data::Flag::KindFile) {
+			return QString::fromUtf8("\xf0\x9f\x93\x8e ");
+		} else if (_data.flags & Data::Flag::KindPhoto) {
+			return QString::fromUtf8("\xf0\x9f\x93\xb7 ");
+		}
+		return QString();
+	}();
 
 	if (!settings.replaceBottomInfoWithIcons()) {
 		const auto deleted = (_data.flags & Data::Flag::AyuDeleted)
@@ -513,11 +531,12 @@ void BottomInfo::layoutDateText() {
 			: QString();
 		const auto author = settings.filterZalgo() ? filterZalgo(_data.author) : _data.author;
 		const auto prefix = !author.isEmpty() ? u", "_q : QString();
-		const auto date = editedPrimary
-			? FormatEditedDate(_data.date, _data.editedDate)
-			: edited + ((_data.flags & Data::Flag::ForwardedDate)
-			? Ui::FormatDateTimeSavedFrom(_data.date)
-			: formatMessageTime(_data.date.time()));
+		const auto date = kindEmoji
+			+ (editedPrimary
+				? FormatEditedDate(_data.date, _data.editedDate)
+				: edited + ((_data.flags & Data::Flag::ForwardedDate)
+				? Ui::FormatDateTimeSavedFrom(_data.date)
+				: formatMessageTime(_data.date.time())));
 		const auto afterAuthor = prefix + date;
 		const auto afterAuthorWidth = st::msgDateFont->width(afterAuthor);
 		const auto authorWidth = st::msgDateFont->width(author);
@@ -610,6 +629,7 @@ void BottomInfo::layoutDateText() {
 
 		const auto date = TextWithEntities{}
 			.append(edited)
+			.append(kindEmoji)
 			.append(dateStr);
 
 		const auto afterAuthor = TextWithEntities{}.append(prefix).append(date);
@@ -846,6 +866,23 @@ BottomInfo::Data BottomInfoDataFromMessage(not_null<Message*> message) {
 	if (const auto media = item->media()) {
 		if (const auto outcome = media->diceGameOutcome()) {
 			result.tonStake = outcome.stakeNanoTon;
+		}
+		if (const auto document = media->getDocument()) {
+			if (document->isVideoMessage()) {
+				result.flags |= Flag::KindRound;
+			} else if (document->isGifv()) {
+				result.flags |= Flag::KindGif;
+			} else if (document->isVoiceMessage()) {
+				result.flags |= Flag::KindVoice;
+			} else if (document->isAudioFile()) {
+				result.flags |= Flag::KindAudio;
+			} else if (document->isVideoFile()) {
+				result.flags |= Flag::KindVideo;
+			} else {
+				result.flags |= Flag::KindFile;
+			}
+		} else if (media->getPhoto()) {
+			result.flags |= Flag::KindPhoto;
 		}
 	}
 	const auto forwarded = item->Get<HistoryMessageForwarded>();

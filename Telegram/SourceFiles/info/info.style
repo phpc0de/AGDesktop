@@ -918,6 +918,9 @@ topBarTitleAyuProtected: FlatLabel(defaultFlatLabel) {
 topBarTitleAyuBanned: FlatLabel(defaultFlatLabel) {
 	textFg: boxTextFgError;
 }
+topBarTitleAyuRegionBlocked: FlatLabel(defaultFlatLabel) {
+	textFg: attentionButtonFg;
+}
 topBarTitleAyuRestricted: FlatLabel(defaultFlatLabel) {
 	textFg: statisticsChartLinePurple;
 }
@@ -968,6 +971,11 @@ topBarAyuCheckpoints: IconButton(topBarAyuCheckpoint) {
 topBarAyuSavedSource: IconButton(topBarAyuCheckpoint) {
 	icon: icon {{ "menu/article_rich", menuIconFg }};
 	iconOver: icon {{ "menu/article_rich", menuIconFgOver }};
+	iconPosition: point(8px, 10px);
+}
+topBarAyuJumpUnread: IconButton(topBarAyuCheckpoint) {
+	icon: icon {{ "menu/unread", menuIconFg }};
+	iconOver: icon {{ "menu/unread", menuIconFgOver }};
 	iconPosition: point(8px, 10px);
 }
 topBarCallSkip: -1px;

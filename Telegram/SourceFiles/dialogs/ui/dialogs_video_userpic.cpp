@@ -172,6 +172,9 @@ void PaintUserpic(
 			context.paused);
 		if (const auto mark
 			= AyuSettings::getInstance().chatGroupMarkColor(peer->id.value)) {
+			const auto label
+				= AyuSettings::getInstance().chatGroupMarkLabel(
+					peer->id.value);
 			const auto size = st::dialogsGroupMarkSize;
 			const auto left = context.st->padding.left()
 				+ context.st->photoSize
@@ -181,7 +184,34 @@ void PaintUserpic(
 			p.setPen(Qt::NoPen);
 			p.setBrush(ChatGroupMarkColor(*mark));
 			auto hq = PainterHighQualityEnabler(p);
-			p.drawEllipse(left, top, size, size);
+			if (label && !label->isEmpty()) {
+				const auto &font = st::dialogsGroupMarkLabelFont;
+				const auto &padding = st::dialogsGroupMarkLabelPadding;
+				const auto width = font->width(*label)
+					+ padding.left()
+					+ padding.right();
+				const auto height = font->height
+					+ padding.top()
+					+ padding.bottom();
+				p.drawRoundedRect(
+					left + size - width,
+					top + size - height,
+					width,
+					height,
+					height / 2,
+					height / 2);
+				p.setPen(Qt::white);
+				p.setFont(font);
+				p.drawText(
+					left + size - width + padding.left(),
+					top + size - height + padding.top(),
+					width - padding.left() - padding.right(),
+					font->height,
+					Qt::AlignCenter,
+					*label);
+			} else {
+				p.drawEllipse(left, top, size, size);
+			}
 		}
 	} else {
 		entry->paintUserpic(p, view, context);

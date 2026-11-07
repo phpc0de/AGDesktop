@@ -164,6 +164,8 @@ dialogsCheckpointMarkFg: dialogsTextFgService;
 dialogsCheckpointMarkSkip: 4px;
 dialogsGroupMarkSize: 10px;
 dialogsGroupMarkSkip: 2px;
+dialogsGroupMarkLabelFont: font(8px semibold);
+dialogsGroupMarkLabelPadding: margins(3px, 1px, 3px, 1px);
 dialogsGroupMarkFg1: attentionButtonFg;
 dialogsGroupMarkFg2: dialogsDraftFg;
 dialogsGroupMarkFg3: boxTextFgGood;

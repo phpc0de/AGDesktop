@@ -1161,6 +1161,7 @@ not_null<PeerData*> Session::processChat(const MTPChat &data) {
 				: Flag())
 			| Flag::NoForwards
 			| Flag::AyuNoForwards
+			| Flag::AyuRestrictedContent
 			| Flag::JoinToWrite
 			| Flag::RequestToJoin
 			| Flag::Forum
@@ -1210,6 +1211,7 @@ not_null<PeerData*> Session::processChat(const MTPChat &data) {
 				? ((data.is_left() ? Flag::Left : Flag())
 					| (data.is_creator() ? Flag::Creator : Flag()))
 				: Flag())
+			| (data.is_restricted() ? Flag::AyuRestrictedContent : Flag())
 			| (data.is_noforwards() ? Flag::AyuNoForwards : Flag())
 			| (data.is_join_to_send() ? Flag::JoinToWrite : Flag())
 			| (data.is_join_request() ? Flag::RequestToJoin : Flag())
@@ -4251,7 +4253,7 @@ DocumentData *Session::documentFromWeb(
 		ImageWithLocation{ .location = videoThumbnailLocation },
 		false, // isPremiumSticker
 		session().mainDcId(),
-		int64(0)); // data.vsize().v
+		data.vsize().v);
 	result->setWebLocation(WebFileLocation(
 		data.vurl().v,
 		data.vaccess_hash().v));
@@ -4274,7 +4276,7 @@ DocumentData *Session::documentFromWeb(
 		ImageWithLocation{ .location = videoThumbnailLocation },
 		false, // isPremiumSticker
 		session().mainDcId(),
-		int64(0)); // data.vsize().v
+		data.vsize().v);
 	result->setContentUrl(qs(data.vurl()));
 	return result;
 }

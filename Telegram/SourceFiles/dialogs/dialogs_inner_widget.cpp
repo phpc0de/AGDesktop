@@ -99,6 +99,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_menu_icons.h"
 
 #include <QtWidgets/QApplication>
+#include <QtWidgets/QInputDialog>
+#include <QtWidgets/QLineEdit>
 #include <QtCore/QMimeData>
 #include <unordered_map>
 
@@ -174,6 +176,32 @@ void FillChatGroupMarkMenu(
 				.text = u"Clear mark"_q,
 				.handler = [=] {
 					AyuSettings::getInstance().setChatGroupMarkColor(
+						peer->id.value,
+						std::nullopt);
+				},
+				.icon = &st::menuIconClear,
+			});
+			sub({
+				.text = u"Set mark text…"_q,
+				.handler = [=] {
+					const auto current
+						= AyuSettings::getInstance().chatGroupMarkLabel(
+							peer->id.value);
+					const auto text = QInputDialog::getText(
+						nullptr,
+						u"Set mark text"_q,
+						u"Short label shown on the mark (keep it brief)"_q,
+						QLineEdit::Normal,
+						current ? *current : QString());
+					AyuSettings::getInstance().setChatGroupMarkLabel(
+						peer->id.value,
+						std::optional<QString>(text));
+				},
+			});
+			sub({
+				.text = u"Clear mark text"_q,
+				.handler = [=] {
+					AyuSettings::getInstance().setChatGroupMarkLabel(
 						peer->id.value,
 						std::nullopt);
 				},

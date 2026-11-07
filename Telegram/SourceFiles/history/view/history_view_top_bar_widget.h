@@ -157,6 +157,7 @@ private:
 	void updateSearchVisibility();
 	void ensureSexCatButtonsCreated();
 	void jumpToCheckpoint();
+	void jumpToUnread();
 	void openDownloads();
 	void updateSearchJumpToDateVisibility();
 	[[nodiscard]] bool searchJumpToDateFits() const;

@@ -91,6 +91,7 @@ enum class ChannelDataFlag : uint64 {
 	CommunityCollapsed = (1ULL << 47),
 	HasWelcomeMessages = (1ULL << 48),
 
+	AyuRestrictedContent = (1ULL << 62),
 	AyuNoForwards = (1ULL << 63),
 };
 inline constexpr bool is_flag_type(ChannelDataFlag) { return true; };

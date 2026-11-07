@@ -450,3 +450,13 @@ data_chat_filters.cpp:477/451 直接覆盖本地 _tagsEnabled → 设置被吞�
 [QQ60✓] kFieldNotes +15: mime_type/file_name/title/username/first_name/last_name/about/size/duration/dc_id/views/forwards/reply_to_msg_id/via_bot_id。
 [未动如实] Q8 自定义文字(方案:mark 值扩 {color,label}+JSON 追加+名字线 pill,下轮)、Q4 消息种类徽章(方案:BottomInfo Kind 位+时间旁小图标,下轮)、Q12(上游右下角下拉按钮自带未读徽章即跳未读,待用户按步骤验收确认是否真缺)。
 [Q2/Q81/Q52.3/Q52.4] 无代码改动,答复内说明(Q2=folderTagsForce 链路已实现含验收步骤;Q81=GlobalMsgId 整组删已修+内容寻址可利用;Q52.3=记录链统一派生 tag 已做;Q52.4=batchTag 传批内每文件=支持)。
+
+================ 第九轮反馈（用户炸毛返厂：Q3/Q5/Q6/Q7/Q12/Q200 实修 + Q4/Q8 并发） ================
+[Q6/Q7实锤] 主聊天 addDocumentActions(history_inner_widget.cpp:3277+) 只认 document->filepath(true),而下载管理器落盘不写回 DocumentData location→刚下载完也不显示;修=接 SexCat::RecordedDocumentPath(记录在且文件存在即显示,文件丢失场景仍可从下载历史 Relocate),主聊天/视频/文件三类右键全覆盖。
+[Q3实锤] 用户说的"特殊限制频道"=restricted(flags.9+restriction_reason),五态分类器完全没这态→None 无色(与"从来没显示过"吻合);noforwards 频道其实一直紫。修=ChannelDataFlag::AyuRestrictedContent=(1ULL<<62)(data_channel.h),processChat channel 分支 mask+set(data_session.cpp is_restricted()→置位,持久化 v4 已 64 位自动存活),peer_tint 新增 RegionRestricted(橙=attentionButtonFg,优先于紫色判定),顶栏 setActiveChat 补 PeerFlagValue 订阅+过时注释更新;聊天列表行同色(共享 peer_tint)。注意:UnavailableReason::Extract 是空桩(data_peer.cpp:133-136)不可用。
+[Q5突破] documentFromWeb(data_session.cpp:4238-4280) attributes 本来就传了(时长/分辨率在),唯 size 硬编码 0→改 data.vsize().v(webDocument+NoProxy 两处)→大小徽章亮;无 attributes 的纯链接视频仍无(服务端不下发)。
+[Q200裁定] 位门控代码逐行核过(DecodeCtorBody:617-659 #读词/位门/true零消费全对);api.tl:550 document#8fd4c4d8 的 file_reference:bytes/size:long 就是必填(表 65535=对);你那份 dump 的 ctor id c09acffe 不在 layer229 表=旧构建产物。可选项 bool 修复(52c941d530)已在。显示上限 8192→16384(12737 字包全显示)。若新构建仍有错位:Copy ALL 全文再定位。
+[Q12✓] 顶栏 _jumpUnread 按钮(st::topBarAyuJumpUnread,图标 menu/unread),jumpToUnread()=showPeerHistory/showTopic(ShowAtUnreadMsgId)恒跳未读分隔线,显隐同 checkpoint 按钮,布局 _rightTaken 排在 checkpoint 后。
+[Q4✓] BottomInfo Flag 扩 uint32 加 Kind*7 位(0x10000-0x400000),BottomInfoDataFromMessage 按 media->getDocument()(isVideoMessage/isGifv/isVoiceMessage/isAudioFile/isVideoFile/else文件)+getPhoto 判定,两种渲染分支(text/icon)时间前统一表情前缀。
+[Q8✓] chatGroupMarkLabel 平行 map(ayu_settings 独立顶层 key "chatGroupMarkLabels" 向后兼容,≤16字清洗),FillChatGroupMarkMenu 加 Set/Clear mark text(QInputDialog),dialogs_video_userpic 圆点→带字药丸(dialogs.style 加 LabelFont 8px semibold+Padding),药丸锚头像右下角不遮圆点位。
+[Q2答] 效果=原版服务器文件夹标签同一套 chip 绘制(cacheChatsFilterTag 同源),数据源本地化+folderTagsForce 强制;不是顶部一排 tab,要 tab 版另说。

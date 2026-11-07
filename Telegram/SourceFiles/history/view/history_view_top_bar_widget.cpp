@@ -44,6 +44,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/window_peer_menu.h"
 #include "calls/calls_instance.h"
 #include "data/stickers/data_custom_emoji.h"
+#include "data/data_msg_id.h"
 #include "data/data_peer_values.h"
 #include "data/data_group_call.h" // GroupCall::input.
 #include "data/data_folder.h"
@@ -982,13 +983,18 @@ void TopBarWidget::setActiveChat(
 				updateControlsGeometry();
 			}, _activeChatLifetime);
 
-			// WHY: the peer cache serializes chat/channel flags as 32-bit,
-			// so AyuNoForwards is lost on restart and restored only when a
-			// fresh constructor arrives; the tinted title must repaint then.
+			// cached flags may arrive before the constructor; the tinted
+			// title must repaint when one of the tint bits flips
 			if (const auto channel = peer->asChannel()) {
 				Data::PeerFlagValue(
 					channel,
 					ChannelDataFlag::AyuNoForwards
+				) | rpl::on_next([=] {
+					update();
+				}, _activeChatLifetime);
+				Data::PeerFlagValue(
+					channel,
+					ChannelDataFlag::AyuRestrictedContent
 				) | rpl::on_next([=] {
 					update();
 				}, _activeChatLifetime);
@@ -1201,11 +1207,14 @@ void TopBarWidget::ensureSexCatButtonsCreated() {
 		return;
 	}
 	_jumpCheckpoint.create(this, st::topBarAyuCheckpoint);
+	_jumpUnread.create(this, st::topBarAyuJumpUnread);
 	_openDownloads.create(this, st::topBarAyuDownloads);
 	_openCheckpoints.create(this, st::topBarAyuCheckpoints);
 	_openSavedSource.create(this, st::topBarAyuSavedSource);
 	_jumpCheckpoint->setClickedCallback([=] { jumpToCheckpoint(); });
+	_jumpUnread->setClickedCallback([=] { jumpToUnread(); });
 	_jumpCheckpoint->setToolTip(tr::ayu_JumpToCheckpointMenuText(tr::now));
+	_jumpUnread->setToolTip(u"Jump to unread"_q);
 	_openDownloads->setClickedCallback([=] { openDownloads(); });
 	_openDownloads->setToolTip(tr::lng_sexcat_history_title(tr::now));
 	_openCheckpoints->setClickedCallback([=] {
@@ -1232,6 +1241,9 @@ void TopBarWidget::updateSearchVisibility() {
 	const auto shown = searchAllowedMode && !_chooseForReportReason;
 	if (_jumpCheckpoint) {
 		_jumpCheckpoint->setVisible(shown);
+	}
+	if (_jumpUnread) {
+		_jumpUnread->setVisible(shown);
 	}
 	if (_openDownloads) {
 		_openDownloads->setVisible(shown);
@@ -1280,6 +1292,24 @@ void TopBarWidget::jumpToCheckpoint() {
 			peer,
 			Window::SectionShow::Way::ClearStack,
 			MsgId(checkpoint->messageId));
+	}
+}
+
+void TopBarWidget::jumpToUnread() {
+	const auto peer = _activeChat.key.peer();
+	if (!peer) {
+		return;
+	}
+	if (const auto topic = _activeChat.key.topic()) {
+		_controller->showTopic(
+			topic,
+			ShowAtUnreadMsgId,
+			Window::SectionShow::Way::ClearStack);
+	} else {
+		_controller->showPeerHistory(
+			peer,
+			Window::SectionShow::Way::ClearStack,
+			ShowAtUnreadMsgId);
 	}
 }
 
@@ -1488,6 +1518,12 @@ void TopBarWidget::updateControlsGeometry() {
 		_jumpCheckpoint->moveToRight(_rightTaken, otherButtonsTop);
 		if (!_jumpCheckpoint->isHidden()) {
 			_rightTaken += _jumpCheckpoint->width();
+		}
+	}
+	if (_jumpUnread) {
+		_jumpUnread->moveToRight(_rightTaken, otherButtonsTop);
+		if (!_jumpUnread->isHidden()) {
+			_rightTaken += _jumpUnread->width();
 		}
 	}
 

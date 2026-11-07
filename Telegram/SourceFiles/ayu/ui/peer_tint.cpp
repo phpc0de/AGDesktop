@@ -23,6 +23,8 @@ PeerTint PeerTintOf(PeerData *peer) {
 		if (channel->isForbidden() && channel->date != 0) {
 			// freshly created channels default to Forbidden until loaded
 			return PeerTint::Banned;
+		} else if (channel->flags() & ChannelDataFlag::AyuRestrictedContent) {
+			return PeerTint::RegionRestricted;
 		} else if (channel->flags() & ChannelDataFlag::NoForwards) {
 			return PeerTint::Protected;
 		} else if (channel->isAyuNoForwards()) {
@@ -48,6 +50,8 @@ const style::color &PeerTintFg(PeerTint tint) {
 	switch (tint) {
 	case PeerTint::None: break;
 	case PeerTint::Banned: return st::topBarTitleAyuBanned.textFg;
+	case PeerTint::RegionRestricted:
+		return st::topBarTitleAyuRegionBlocked.textFg;
 	case PeerTint::Protected:
 		return st::topBarTitleAyuProtected.textFg;
 	case PeerTint::AyuRestricted:

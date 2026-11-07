@@ -501,6 +501,26 @@ void AyuSettings::setChatGroupMarkColor(
 	save();
 }
 
+std::optional<QString> AyuSettings::chatGroupMarkLabel(
+		uint64 peerId) const {
+	const auto it = _chatGroupMarkLabels.find(peerId);
+	if (it == end(_chatGroupMarkLabels)) {
+		return std::nullopt;
+	}
+	return it->second;
+}
+
+void AyuSettings::setChatGroupMarkLabel(
+		uint64 peerId,
+		std::optional<QString> label) {
+	if (label && !label->isEmpty()) {
+		_chatGroupMarkLabels[peerId] = label->trimmed().left(16);
+	} else if (_chatGroupMarkLabels.erase(peerId) == 0) {
+		return;
+	}
+	save();
+}
+
 void AyuSettings::validate() {
 	AyuSettings defaults;
 	auto modified = false;
@@ -1132,6 +1152,11 @@ void to_json(nlohmann::json &j, const AyuSettings &s) {
 		chatGroupMarks[std::to_string(key)] = int(value);
 	}
 
+	auto chatGroupMarkLabels = nlohmann::json::object();
+	for (const auto &[key, value] : s._chatGroupMarkLabels) {
+		chatGroupMarkLabels[std::to_string(key)] = value.toStdString();
+	}
+
 	j = nlohmann::json{
 		{"ghostModeSettings", ghostAccounts},
 		{"useGlobalGhostMode", s._useGlobalGhostMode.current()},
@@ -1141,6 +1166,7 @@ void to_json(nlohmann::json &j, const AyuSettings &s) {
 		{"saveForBots", s._saveForBots.current()},
 		{"shadowBanIds", s._shadowBanIds},
 		{"chatGroupMarks", chatGroupMarks},
+		{"chatGroupMarkLabels", chatGroupMarkLabels},
 		{"filtersEnabled", s._filtersEnabled.current()},
 		{"filtersEnabledInChats", s._filtersEnabledInChats.current()},
 		{"folderTagsForce", s._folderTagsForce.current()},
@@ -1259,6 +1285,20 @@ void from_json(const nlohmann::json &j, AyuSettings &s) {
 			const auto color = value.get<int>();
 			if (color >= 0 && color < kChatGroupMarkColorCount) {
 				s._chatGroupMarks[std::stoull(key)] = uint8(color);
+			}
+		}
+	}
+	if (j.contains("chatGroupMarkLabels")
+		&& j["chatGroupMarkLabels"].is_object()) {
+		s._chatGroupMarkLabels.clear();
+		for (const auto &[key, value] : j["chatGroupMarkLabels"].items()) {
+			if (!value.is_string()) {
+				continue;
+			}
+			auto label = QString::fromStdString(value.get<std::string>());
+			label = label.trimmed().left(16);
+			if (!label.isEmpty()) {
+				s._chatGroupMarkLabels[std::stoull(key)] = label;
 			}
 		}
 	}

@@ -57,7 +57,7 @@ namespace Ayu::Debug {
 namespace {
 
 constexpr auto kMaxEntries = 600;
-constexpr auto kMaxDumpPrimes = 8192;
+constexpr auto kMaxDumpPrimes = 16384;
 constexpr auto kMaxTextChars = 24000;
 constexpr auto kRefreshDebounce = 300;
 

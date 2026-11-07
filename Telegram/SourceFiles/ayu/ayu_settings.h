@@ -270,6 +270,9 @@ public:
 
 	[[nodiscard]] std::optional<uint8> chatGroupMarkColor(uint64 peerId) const;
 	void setChatGroupMarkColor(uint64 peerId, std::optional<uint8> colorIndex);
+	[[nodiscard]] std::optional<QString> chatGroupMarkLabel(
+		uint64 peerId) const;
+	void setChatGroupMarkLabel(uint64 peerId, std::optional<QString> label);
 
 	void validate();
 
