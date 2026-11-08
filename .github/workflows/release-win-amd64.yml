@@ -96,7 +96,6 @@ jobs:
 
       - name: Save ThirdParty cache
         if: always() && steps.rebuilt.outputs.thirdparty == 'true'
-        continue-on-error: true
         uses: actions/cache/save@v4
         with:
           path: ${{ runner.workspace }}/ThirdParty
@@ -104,11 +103,28 @@ jobs:
 
       - name: Save Libraries cache
         if: always() && steps.rebuilt.outputs.libs == 'true'
-        continue-on-error: true
         uses: actions/cache/save@v4
         with:
           path: ${{ runner.workspace }}/Libraries/win64
           key: ${{ steps.cache-libs.outputs.cache-primary-key }}
+
+      - name: Report cache state
+        if: always()
+        shell: pwsh
+        run: |
+          $summary = $env:GITHUB_STEP_SUMMARY
+          "### 缓存状态" | Out-File -Append -Encoding UTF8 $summary
+          "- thirdparty rebuild: ``${{ steps.rebuilt.outputs.thirdparty }}``" | Out-File -Append -Encoding UTF8 $summary
+          "- libraries rebuild: ``${{ steps.rebuilt.outputs.libs }}``" | Out-File -Append -Encoding UTF8 $summary
+          "- thirdparty cache hit: ``${{ steps.cache-thirdparty.outputs.cache-hit }}``" | Out-File -Append -Encoding UTF8 $summary
+          "- libraries cache hit: ``${{ steps.cache-libs.outputs.cache-hit }}``" | Out-File -Append -Encoding UTF8 $summary
+          $libs = "${{ runner.workspace }}/Libraries/win64"
+          if (Test-Path $libs) {
+            $qt = @(Get-ChildItem "$libs/Qt-*" -Directory -ErrorAction SilentlyContinue).Count
+            "- Libraries/win64 存在，Qt 目录数：$qt" | Out-File -Append -Encoding UTF8 $summary
+          } else {
+            "- Libraries/win64 不存在" | Out-File -Append -Encoding UTF8 $summary
+          }
 
       - name: Summarize prepare result
         if: always()
