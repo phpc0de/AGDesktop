@@ -82,6 +82,21 @@ if not os.path.isdir(os.path.join(libsDir, keysLoc)):
 if not os.path.isdir(os.path.join(thirdPartyDir, keysLoc)):
     pathlib.Path(os.path.join(thirdPartyDir, keysLoc)).mkdir(parents=True, exist_ok=True)
 
+libsRebuiltMarker = os.path.join(libsDir, keysLoc, '_rebuilt_libs')
+thirdPartyRebuiltMarker = os.path.join(thirdPartyDir, keysLoc, '_rebuilt_thirdparty')
+libsRebuilt = False
+thirdPartyRebuilt = False
+for staleMarker in (libsRebuiltMarker, thirdPartyRebuiltMarker):
+    if os.path.exists(staleMarker):
+        os.remove(staleMarker)
+
+def writeRebuiltMarkers():
+    global libsRebuilt, thirdPartyRebuilt
+    if libsRebuilt:
+        pathlib.Path(libsRebuiltMarker).touch()
+    if thirdPartyRebuilt:
+        pathlib.Path(thirdPartyRebuiltMarker).touch()
+
 pathPrefixes = [
     'ThirdParty\\msys64\\mingw64\\bin',
     'ThirdParty\\jom',
@@ -365,6 +380,7 @@ class _GetchWindows:
 getch = _Getch()
 
 def runStages():
+    global libsRebuilt, thirdPartyRebuilt
     onlyStages = []
     rebuildStale = False
     for arg in sys.argv[1:]:
@@ -428,6 +444,10 @@ def runStages():
         if checkResult == 'Skip':
             print('SKIPPING')
             continue
+        if stage['location'] == 'ThirdParty':
+            thirdPartyRebuilt = True
+        else:
+            libsRebuilt = True
         clearCacheKey(stage)
         print('BUILDING:')
         os.chdir(stage['directory'])
@@ -438,6 +458,7 @@ def runStages():
             # fetching (clone/download) - transient on CI, so retry it;
             # a tree that exists but fails to build is deterministic.
             if attempt == 2 or os.path.exists(os.path.join(stage['directory'], stage['name'])):
+                writeRebuiltMarkers()
                 print(prefix + ': FAILED')
                 finish(1)
             print(prefix + ': fetch failed, retrying in 15s...', flush=True)
@@ -1988,6 +2009,8 @@ if win:
     currentCodePage = subprocess.run('chcp', capture_output=True, shell=True, text=True, env=modifiedEnv).stdout.strip().split()[-1]
     subprocess.run('chcp 65001 > nul', shell=True, env=modifiedEnv)
     runStages()
+    writeRebuiltMarkers()
     subprocess.run('chcp ' + currentCodePage + ' > nul', shell=True, env=modifiedEnv)
 else:
     runStages()
+    writeRebuiltMarkers()

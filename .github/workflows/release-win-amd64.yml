@@ -82,15 +82,10 @@ jobs:
         if: always()
         id: rebuilt
         shell: pwsh
-        # A resumed run must re-save: the restored cache may be partial.
+        # prepare.py drops these markers when it actually rebuilt stages.
         run: |
-          $log = "$env:RUNNER_TEMP/prepare.log"
-          $libs = $false
-          $thirdparty = $false
-          if (Test-Path $log) {
-            $thirdparty = @(Select-String -Path $log -Pattern '\(ThirdParty/[^)]*\): .*BUILDING:').Count -gt 0
-            $libs = @(Select-String -Path $log -Pattern '\(Libraries/[^)]*\): .*BUILDING:').Count -gt 0
-          }
+          $libs = Test-Path "${{ runner.workspace }}/Libraries/win64/cache_keys/_rebuilt_libs"
+          $thirdparty = Test-Path "${{ runner.workspace }}/ThirdParty/cache_keys/_rebuilt_thirdparty"
           "libs=$($libs.ToString().ToLower())" | Out-File -Append -Encoding UTF8 $env:GITHUB_OUTPUT
           "thirdparty=$($thirdparty.ToString().ToLower())" | Out-File -Append -Encoding UTF8 $env:GITHUB_OUTPUT
 
