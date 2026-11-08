@@ -867,7 +867,7 @@ BottomInfo::Data BottomInfoDataFromMessage(not_null<Message*> message) {
 		if (const auto outcome = media->diceGameOutcome()) {
 			result.tonStake = outcome.stakeNanoTon;
 		}
-		if (const auto document = media->getDocument()) {
+		if (const auto document = media->document()) {
 			if (document->isVideoMessage()) {
 				result.flags |= Flag::KindRound;
 			} else if (document->isGifv()) {
@@ -881,7 +881,7 @@ BottomInfo::Data BottomInfoDataFromMessage(not_null<Message*> message) {
 			} else {
 				result.flags |= Flag::KindFile;
 			}
-		} else if (media->getPhoto()) {
+		} else if (media->photo()) {
 			result.flags |= Flag::KindPhoto;
 		}
 	}
