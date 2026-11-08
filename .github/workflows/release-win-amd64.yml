@@ -204,13 +204,20 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: ${{ runner.workspace }}/ThirdParty
-          key: thirdparty-win64-full-${{ hashFiles('.gitmodules', 'Telegram/build/prepare/prepare.py', 'Telegram/build/qt_version.py') }}
+          # WHY: the save key carries run_id, so the exact lookup needs it
+          # too; the hash-only restore-keys prefix matches the entry saved
+          # by prepare-libs of the same or an earlier run.
+          key: thirdparty-win64-full-${{ github.run_id }}-${{ hashFiles('.gitmodules', 'Telegram/build/prepare/prepare.py', 'Telegram/build/qt_version.py') }}
+          restore-keys: |
+            thirdparty-win64-full-${{ hashFiles('.gitmodules', 'Telegram/build/prepare/prepare.py', 'Telegram/build/qt_version.py') }}
 
       - name: Restore Libraries cache
         uses: actions/cache/restore@v4
         with:
           path: ${{ runner.workspace }}/Libraries/win64
-          key: libs-win64-full-${{ hashFiles('.gitmodules', 'Telegram/build/prepare/prepare.py', 'Telegram/build/qt_version.py', 'Telegram/CMakeLists.txt') }}
+          key: libs-win64-full-${{ github.run_id }}-${{ hashFiles('.gitmodules', 'Telegram/build/prepare/prepare.py', 'Telegram/build/qt_version.py', 'Telegram/CMakeLists.txt') }}
+          restore-keys: |
+            libs-win64-full-${{ hashFiles('.gitmodules', 'Telegram/build/prepare/prepare.py', 'Telegram/build/qt_version.py', 'Telegram/CMakeLists.txt') }}
 
       - name: Verify libraries
         shell: pwsh
