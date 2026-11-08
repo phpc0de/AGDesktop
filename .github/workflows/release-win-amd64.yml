@@ -83,13 +83,15 @@ jobs:
         id: rebuilt
         shell: pwsh
         # prepare.py drops these markers when it actually rebuilt stages.
+        # WHY: Out-File emits CRLF and the runner keeps the CR, so every
+        # `== 'true'` gate silently failed; GITHUB_OUTPUT needs LF-only lines.
         run: |
-          $libs = Test-Path "${{ runner.workspace }}/Libraries/win64/cache_keys/_rebuilt_libs"
-          $thirdparty = Test-Path "${{ runner.workspace }}/ThirdParty/cache_keys/_rebuilt_thirdparty"
-          "libs=$($libs.ToString().ToLower())" | Out-File -Append -Encoding UTF8 $env:GITHUB_OUTPUT
-          "thirdparty=$($thirdparty.ToString().ToLower())" | Out-File -Append -Encoding UTF8 $env:GITHUB_OUTPUT
+          $libs = (Test-Path "${{ runner.workspace }}/Libraries/win64/cache_keys/_rebuilt_libs").ToString().ToLower()
+          $thirdparty = (Test-Path "${{ runner.workspace }}/ThirdParty/cache_keys/_rebuilt_thirdparty").ToString().ToLower()
+          [IO.File]::AppendAllText($env:GITHUB_OUTPUT, "libs=$libs`nthirdparty=$thirdparty`n")
 
       - name: Save ThirdParty cache
+        id: save-thirdparty
         if: always() && steps.rebuilt.outputs.thirdparty == 'true'
         uses: actions/cache/save@v4
         with:
@@ -97,6 +99,7 @@ jobs:
           key: ${{ steps.cache-thirdparty.outputs.cache-primary-key }}
 
       - name: Save Libraries cache
+        id: save-libs
         if: always() && steps.rebuilt.outputs.libs == 'true'
         uses: actions/cache/save@v4
         with:
@@ -111,8 +114,10 @@ jobs:
           "### 缓存状态" | Out-File -Append -Encoding UTF8 $summary
           "- thirdparty rebuild: ``${{ steps.rebuilt.outputs.thirdparty }}``" | Out-File -Append -Encoding UTF8 $summary
           "- libraries rebuild: ``${{ steps.rebuilt.outputs.libs }}``" | Out-File -Append -Encoding UTF8 $summary
-          "- thirdparty cache hit: ``${{ steps.cache-thirdparty.outputs.cache-hit }}``" | Out-File -Append -Encoding UTF8 $summary
-          "- libraries cache hit: ``${{ steps.cache-libs.outputs.cache-hit }}``" | Out-File -Append -Encoding UTF8 $summary
+          "- thirdparty cache hit: ``${{ steps.cache-thirdparty.outputs.cache-hit }}``（空 = 未命中）" | Out-File -Append -Encoding UTF8 $summary
+          "- libraries cache hit: ``${{ steps.cache-libs.outputs.cache-hit }}``（空 = 未命中）" | Out-File -Append -Encoding UTF8 $summary
+          "- thirdparty save: ``${{ steps.save-thirdparty.conclusion }}``" | Out-File -Append -Encoding UTF8 $summary
+          "- libraries save: ``${{ steps.save-libs.conclusion }}``" | Out-File -Append -Encoding UTF8 $summary
           $libs = "${{ runner.workspace }}/Libraries/win64"
           if (Test-Path $libs) {
             $qt = @(Get-ChildItem "$libs/Qt-*" -Directory -ErrorAction SilentlyContinue).Count
