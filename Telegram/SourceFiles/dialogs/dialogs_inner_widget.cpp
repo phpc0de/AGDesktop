@@ -212,6 +212,89 @@ void FillChatGroupMarkMenu(
 	});
 }
 
+[[nodiscard]] std::map<QString, QImage> &LocalTagCache() {
+	static std::map<QString, QImage> result;
+	return result;
+}
+
+[[nodiscard]] QImage *CacheLocalTag(
+		not_null<Main::Session*> session,
+		const QString &text,
+		bool active) {
+	auto &cache = LocalTagCache();
+	const auto upper = text.toUpper();
+	const auto key = (active ? QChar('A') : QChar()) + upper;
+	const auto it = cache.find(key);
+	if (it != cache.end()) {
+		return &it->second;
+	}
+	auto roundedText = TextWithEntities{ .text = upper };
+	const auto colorIndex = AyuFallbackFilterColorIndex(
+		int64(qHash(upper)),
+		int(Ui::kSimpleColorIndexCount));
+	const auto color = Ui::EmptyUserpic::UserpicColor(colorIndex).color2;
+	auto context = Ui::ChatsFilterTagContext{
+		.color = color->c,
+		.active = active,
+		.textContext = Core::TextContext({ .session = session }),
+	};
+	cache[key] = Ui::ChatsFilterTag(roundedText, context);
+	return &cache[key];
+}
+
+[[nodiscard]] QString LocalTagsFor(not_null<PeerData*> peer) {
+	return AyuSettings::getInstance()
+		.localPeerTags(peer->id.value)
+		.value_or(QString());
+}
+
+void FillLocalTagsMenu(
+		const Window::PeerMenuCallback &addAction,
+		not_null<PeerData*> peer) {
+	const auto refreshRow = [=] {
+		if (const auto history = peer->owner().history(peer)) {
+			peer->session().changes().entryUpdated(
+				history,
+				Data::EntryUpdate::Flag::Height);
+		}
+	};
+	addAction(Ui::Menu::MenuCallback::Args{
+		.text = u"Set local tags"_q,
+		.handler = nullptr,
+		.icon = &st::menuIconChangeColors,
+		.fillSubmenu = [=](not_null<Ui::PopupMenu*> menu) {
+			const auto sub = Ui::Menu::CreateAddActionCallback(menu);
+			sub({
+				.text = u"Edit tags…"_q,
+				.handler = [=] {
+					const auto current = LocalTagsFor(peer);
+					const auto text = QInputDialog::getText(
+						nullptr,
+						u"Set local tags"_q,
+						u"Space separated chips under the chat name"_q,
+						QLineEdit::Normal,
+						current);
+					AyuSettings::getInstance().setLocalPeerTags(
+						peer->id.value,
+						std::optional<QString>(text));
+					refreshRow();
+				},
+			});
+			sub({
+				.text = u"Clear tags"_q,
+				.handler = [=] {
+					AyuSettings::getInstance().setLocalPeerTags(
+						peer->id.value,
+						std::nullopt);
+					refreshRow();
+				},
+				.icon = &st::menuIconClear,
+			});
+		},
+		.submenuSt = &st::foldersMenu,
+	});
+}
+
 [[nodiscard]] int FixedOnTopDialogsCount(not_null<Dialogs::IndexedList*> list) {
 	auto result = 0;
 	for (const auto &row : *list) {
@@ -1198,6 +1281,11 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 		}
 
 		auto chatsFilterTags = std::vector<QImage*>();
+		const auto localTags = (context.narrow || !history)
+			? QStringList()
+			: LocalTagsFor(history->peer).split(
+				' ',
+				Qt::SkipEmptyParts);
 		if (context.narrow) {
 			context.chatsFilterTags = nullptr;
 		} else if (row->entry()->hasChatsFilterTags(context.filter)) {
@@ -1248,6 +1336,37 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 						chatsFilterTags.push_back(tag);
 					}
 				}
+			}
+			for (const auto &tag : localTags) {
+				const auto image = CacheLocalTag(&session(), tag, active);
+				const auto tagWidth = image->width()
+					/ style::DevicePixelRatio();
+				if (availableWidth < tagWidth) {
+					break;
+				}
+				chatsFilterTags.push_back(image);
+				availableWidth -= tagWidth
+					+ st::dialogRowFilterTagSkip;
+			}
+			context.chatsFilterTags = &chatsFilterTags;
+		} else if (!localTags.isEmpty()) {
+			context.st = (forum || monoforum)
+				? &st::taggedForumDialogRow
+				: &st::taggedDialogRow;
+			auto availableWidth = context.width
+				- context.st->padding.right()
+				- st::dialogsUnreadPadding
+				- context.st->nameLeft;
+			for (const auto &tag : localTags) {
+				const auto image = CacheLocalTag(&session(), tag, active);
+				const auto tagWidth = image->width()
+					/ style::DevicePixelRatio();
+				if (availableWidth < tagWidth) {
+					break;
+				}
+				chatsFilterTags.push_back(image);
+				availableWidth -= tagWidth
+					+ st::dialogRowFilterTagSkip;
 			}
 			context.chatsFilterTags = &chatsFilterTags;
 		} else {
@@ -4162,6 +4281,7 @@ void InnerWidget::contextMenuEvent(QContextMenuEvent *e) {
 			addAction);
 		if (const auto history = row.key.history()) {
 			FillChatGroupMarkMenu(addAction, history->peer);
+			FillLocalTagsMenu(addAction, history->peer);
 		}
 	}
 	QObject::connect(_menu.get(), &QObject::destroyed, [=] {

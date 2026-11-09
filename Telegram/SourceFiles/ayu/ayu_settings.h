@@ -274,6 +274,12 @@ public:
 		uint64 peerId) const;
 	void setChatGroupMarkLabel(uint64 peerId, std::optional<QString> label);
 
+	[[nodiscard]] std::optional<QString> localPeerTags(uint64 peerId) const;
+	void setLocalPeerTags(uint64 peerId, std::optional<QString> tags);
+	[[nodiscard]] rpl::producer<> localPeerTagsChanges() const {
+		return _localPeerTagsChanges.events();
+	}
+
 	void validate();
 
 	[[nodiscard]] bool saveDeletedMessages() const { return _saveDeletedMessages.current(); }
@@ -656,6 +662,8 @@ private:
 	std::unordered_set<int64> _shadowBanIds;
 	std::map<uint64, uint8> _chatGroupMarks;
 	std::map<uint64, QString> _chatGroupMarkLabels;
+	std::map<uint64, QString> _localPeerTags;
+	rpl::event_stream<> _localPeerTagsChanges;
 	rpl::variable<bool> _filtersEnabled = false;
 	rpl::variable<bool> _filtersEnabledInChats = false;
 	rpl::variable<bool> _folderTagsForce = false;

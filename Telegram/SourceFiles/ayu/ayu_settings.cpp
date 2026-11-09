@@ -521,6 +521,26 @@ void AyuSettings::setChatGroupMarkLabel(
 	save();
 }
 
+std::optional<QString> AyuSettings::localPeerTags(uint64 peerId) const {
+	const auto it = _localPeerTags.find(peerId);
+	if (it == end(_localPeerTags)) {
+		return std::nullopt;
+	}
+	return it->second;
+}
+
+void AyuSettings::setLocalPeerTags(
+		uint64 peerId,
+		std::optional<QString> tags) {
+	if (tags && !tags->isEmpty()) {
+		_localPeerTags[peerId] = tags->simplified();
+	} else if (_localPeerTags.erase(peerId) == 0) {
+		return;
+	}
+	save();
+	_localPeerTagsChanges.fire({});
+}
+
 void AyuSettings::validate() {
 	AyuSettings defaults;
 	auto modified = false;
@@ -1157,6 +1177,11 @@ void to_json(nlohmann::json &j, const AyuSettings &s) {
 		chatGroupMarkLabels[std::to_string(key)] = value.toStdString();
 	}
 
+	auto localPeerTags = nlohmann::json::object();
+	for (const auto &[key, value] : s._localPeerTags) {
+		localPeerTags[std::to_string(key)] = value.toStdString();
+	}
+
 	j = nlohmann::json{
 		{"ghostModeSettings", ghostAccounts},
 		{"useGlobalGhostMode", s._useGlobalGhostMode.current()},
@@ -1167,6 +1192,7 @@ void to_json(nlohmann::json &j, const AyuSettings &s) {
 		{"shadowBanIds", s._shadowBanIds},
 		{"chatGroupMarks", chatGroupMarks},
 		{"chatGroupMarkLabels", chatGroupMarkLabels},
+		{"localPeerTags", localPeerTags},
 		{"filtersEnabled", s._filtersEnabled.current()},
 		{"filtersEnabledInChats", s._filtersEnabledInChats.current()},
 		{"folderTagsForce", s._folderTagsForce.current()},
@@ -1299,6 +1325,19 @@ void from_json(const nlohmann::json &j, AyuSettings &s) {
 			label = label.trimmed().left(16);
 			if (!label.isEmpty()) {
 				s._chatGroupMarkLabels[std::stoull(key)] = label;
+			}
+		}
+	}
+	if (j.contains("localPeerTags") && j["localPeerTags"].is_object()) {
+		s._localPeerTags.clear();
+		for (const auto &[key, value] : j["localPeerTags"].items()) {
+			if (!value.is_string()) {
+				continue;
+			}
+			auto tags = QString::fromStdString(value.get<std::string>());
+			tags = tags.simplified();
+			if (!tags.isEmpty()) {
+				s._localPeerTags[std::stoull(key)] = tags;
 			}
 		}
 	}

@@ -1391,10 +1391,21 @@ void Gif::drawCornerStatus(
 	const auto download = downloadInCorner()
 		&& !dataLoaded()
 		&& !_data->loadedInMediaCache();
+	// WHY: the size row exists only while downloading, so a finished
+	// video would lose its disk size from the corner info entirely.
+	const auto showDownload = downloadInCorner()
+		&& !dataLoaded()
+		&& !_data->loadedInMediaCache();
+	const auto rawText = ((own && !own->frozenStatusText.isEmpty())
+		? own->frozenStatusText
+		: _statusText);
+	const auto cornerText = (showDownload || _downloadSize.isEmpty())
+		? rawText
+		: (rawText.isEmpty()
+			? _downloadSize
+			: rawText + ", " + _downloadSize);
 	PaintVideoCornerStatus(p, context, {
-		.text = ((own && !own->frozenStatusText.isEmpty())
-			? own->frozenStatusText
-			: _statusText),
+		.text = cornerText,
 		.downloadSize = _downloadSize,
 		.position = position,
 		.outerWidth = width(),
@@ -2023,6 +2034,13 @@ void Gif::drawGrouped(
 	}
 	if (!_smallGroupPart) {
 		drawCornerStatus(p, context, geometry.topLeft());
+	} else {
+		// WHY: album parts skipped the corner info, so grouped videos
+		// carried no duration or size display at all.
+		p.save();
+		p.setClipRect(geometry);
+		drawCornerStatus(p, context, geometry.topLeft());
+		p.restore();
 	}
 }
 
