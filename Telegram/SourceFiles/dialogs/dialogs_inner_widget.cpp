@@ -233,11 +233,12 @@ void FillChatGroupMarkMenu(
 		int64(qHash(upper)),
 		int(Ui::kSimpleColorIndexCount));
 	const auto color = Ui::EmptyUserpic::UserpicColor(colorIndex).color2;
-	auto context = Ui::ChatsFilterTagContext{
-		.color = color->c,
-		.active = active,
-		.textContext = Core::TextContext({ .session = session }),
-	};
+	auto context = Ui::ChatsFilterTagContext();
+	// WHY: assignments, not designators, because MSVC rejects any order
+	// mismatch with the struct declaration, whose order lib_ui owns.
+	context.color = color->c;
+	context.active = active;
+	context.textContext = Core::TextContext({ .session = session });
 	cache[key] = Ui::ChatsFilterTag(roundedText, context);
 	return &cache[key];
 }
