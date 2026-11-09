@@ -42,8 +42,9 @@ void LogFailure(const QString &message) {
 	Ayu::Log::Write(u"sexcat"_q, message);
 }
 
-constexpr auto kRelocateFiles = 5000;
-constexpr auto kRelocateDepth = 2;
+constexpr auto kRelocateFiles = 20000;
+constexpr auto kRelocateDepth = 4;
+constexpr auto kRelocateScanLimit = 2000;
 constexpr auto kRelocateMs = crl::time(2000);
 constexpr auto kManualRelocateFiles = 20000;
 constexpr auto kManualRelocateDepth = 4;
@@ -222,6 +223,20 @@ void TryAutoRelocate(const Entry &entry) {
 			}
 		});
 	});
+}
+
+void RelocateMissingEntries() {
+	auto missing = std::vector<Entry>();
+	for (const auto &entry
+		: Database::instance().Recent(kRelocateScanLimit, {})) {
+		if (!entry.saved_path.isEmpty()
+			&& !QFileInfo::exists(entry.saved_path)) {
+			missing.push_back(entry);
+		}
+	}
+	for (const auto &entry : missing) {
+		TryAutoRelocate(entry);
+	}
 }
 
 std::optional<QString> LocateByNameSize(
@@ -478,7 +493,14 @@ void RegisterShellWatch() {
 		}
 		addPidl(pidl);
 	};
-	watch(Core::App().settings().downloadPath());
+	auto downloadRoot = Core::App().settings().downloadPath();
+	if (downloadRoot.isEmpty()) {
+		// the default download location is never in the settings, so the
+		// folder moves would stay invisible without this fallback
+		downloadRoot = QStandardPaths::writableLocation(
+			QStandardPaths::DownloadLocation);
+	}
+	watch(downloadRoot);
 	if (entries.empty()) {
 		LogFailure(u"shell watch has no folders to watch"_q);
 		return;

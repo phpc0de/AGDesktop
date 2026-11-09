@@ -21,6 +21,7 @@
 #include "main/main_account.h"
 #include "main/main_domain.h"
 #include "main/main_session.h"
+#include "rpl/rpl.h"
 #include "styles/style_boxes.h"
 #include "styles/style_sexcat.h"
 #include "styles/style_window.h"
@@ -211,6 +212,7 @@ public:
 			this,
 			[=](const QString &) { applyFilter(); });
 		connect(refresh, &QPushButton::clicked, this, [=] {
+			SexCat::RelocateMissingEntries();
 			reload();
 		});
 		connect(verify, &QPushButton::clicked, this, [=] {
@@ -284,6 +286,13 @@ public:
 		});
 		connect(_tree, &QWidget::customContextMenuRequested, this, [=](
 				const QPoint &pos) { showContextMenu(pos); });
+
+		// WHY: shell-watch relinks and rescues fire newSaved, so the
+		// table refreshes itself instead of waiting for a manual pass.
+		Database::instance().newSaved(
+		) | rpl::on_next([=] {
+			reload();
+		}, _lifetime);
 
 		reload();
 	}
@@ -751,6 +760,7 @@ private:
 	QTreeWidget *_tree = nullptr;
 	std::vector<Row> _rows;
 	std::vector<PeerId> _filterPeerIds;
+	rpl::lifetime _lifetime;
 
 };
 

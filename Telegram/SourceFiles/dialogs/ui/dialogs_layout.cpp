@@ -1021,8 +1021,15 @@ void PaintRow(
 		const auto markSkip = st::dialogsCheckpointMarkSkip;
 		// WHY: reserving the mark width up front keeps it visible on
 		// long names instead of silently failing the fits-check.
+		const auto muteTaken = drawMuteIcon
+			? (ThreeStateIcon(
+				st::dialogsMuteIcon,
+				context.active,
+				context.selected).width()
+				+ st::dialogsMuteIconSkip)
+			: 0;
 		const auto drawCheckpointMark = !checkpointMark.text.isEmpty()
-			&& (checkpointMark.width + markSkip) * 2
+			&& (checkpointMark.width + markSkip + muteTaken) * 2
 				<= rectForName.width();
 		if (drawCheckpointMark) {
 			rectForName.setWidth(
@@ -1035,12 +1042,14 @@ void PaintRow(
 			tintPeer = history->peer;
 		}
 		const auto tint = Ayu::PeerTintOf(tintPeer);
-		p.setPen(context.active
-			? st::dialogsNameFgActive
-			: context.selected
-			? st::dialogsNameFgOver
-			: tint == Ayu::PeerTint::None
-			? st::dialogsNameFg
+		// WHY: the tint must stay readable even on the active or hovered
+		// row, that is the whole point of marking restricted peers.
+		p.setPen(tint == Ayu::PeerTint::None
+			? (context.active
+				? st::dialogsNameFgActive
+				: context.selected
+				? st::dialogsNameFgOver
+				: st::dialogsNameFg)
 			: Ayu::PeerTintFg(tint));
 		rowName.draw(p, {
 			.position = rectForName.topLeft(),
@@ -1064,31 +1073,36 @@ void PaintRow(
 			muteIcon.paint(p, muteLeft, muteTop, context.width);
 		}
 		if (drawCheckpointMark) {
+			// WHY: the mark shares the name line with the mute icon and
+			// the unread badge, so it draws only inside the width
+			// reserved for it, elided instead of running under the date.
 			const auto nameW = std::min(
 				rowName.maxWidth(),
 				rectForName.width());
-			const auto muteTaken = drawMuteIcon
-				? (ThreeStateIcon(
-					st::dialogsMuteIcon,
-					context.active,
-					context.selected).width()
-					+ st::dialogsMuteIconSkip)
-				: 0;
-			p.setFont(st::dialogsCheckpointMarkFont);
-			p.setPen(context.active
-				? st::dialogsTextFgActive
-				: context.selected
-				? st::dialogsTextFgOver
-				: st::dialogsCheckpointMarkFg);
-			p.drawText(
-				rectForName.left()
-					+ nameW
-					+ badgeWidth
-					+ muteTaken
-					+ markSkip,
-				rectForName.top() + st::semiboldFont->height
-					- st::normalFont->descent,
-				checkpointMark.text);
+			const auto markLeft = rectForName.left()
+				+ nameW
+				+ badgeWidth
+				+ muteTaken
+				+ markSkip;
+			const auto markLimit = rectForName.left()
+				+ rectForName.width()
+				+ checkpointMark.width
+				+ markSkip;
+			const auto markAvailable = markLimit - markLeft;
+			if (markAvailable > 0) {
+				const auto markFont = st::dialogsCheckpointMarkFont;
+				p.setFont(markFont);
+				p.setPen(context.active
+					? st::dialogsTextFgActive
+					: context.selected
+					? st::dialogsTextFgOver
+					: st::dialogsCheckpointMarkFg);
+				p.drawText(
+					markLeft,
+					rectForName.top() + st::semiboldFont->height
+						- st::normalFont->descent,
+					markFont->elided(checkpointMark.text, markAvailable));
+			}
 		}
 	} else if (hiddenSenderInfo) {
 		PeerData *tintPeer = nullptr;
@@ -1096,12 +1110,12 @@ void PaintRow(
 			tintPeer = history->peer;
 		}
 		const auto tint = Ayu::PeerTintOf(tintPeer);
-		p.setPen(context.active
-			? st::dialogsNameFgActive
-			: context.selected
-			? st::dialogsNameFgOver
-			: tint == Ayu::PeerTint::None
-			? st::dialogsNameFg
+		p.setPen(tint == Ayu::PeerTint::None
+			? (context.active
+				? st::dialogsNameFgActive
+				: context.selected
+				? st::dialogsNameFgOver
+				: st::dialogsNameFg)
 			: Ayu::PeerTintFg(tint));
 		hiddenSenderInfo->nameText().draw(p, {
 			.position = rectForName.topLeft(),

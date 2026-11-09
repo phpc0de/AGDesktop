@@ -404,6 +404,17 @@ bool Database::Relink(int64 id, const QString &newPath) {
 		storage.update_all(
 			set(c(&SavedFileRow::saved_path) = newPath.toStdString()),
 			where(column<SavedFileRow>(&SavedFileRow::id) == id));
+		try {
+			auto rows = storage.get_all<SavedFileRow>(
+				where(column<SavedFileRow>(&SavedFileRow::id) == id));
+			if (!rows.empty()) {
+				auto relinked = EntryFromRow(std::move(rows.front()));
+				crl::on_main([relinked = std::move(relinked)]() mutable {
+					instance()._newSaved.fire_copy(std::move(relinked));
+				});
+			}
+		} catch (...) {
+		}
 		return true;
 	} catch (const std::exception &ex) {
 		LogError(u"Failed to relink saved file: %1"_q.arg(QString::fromUtf8(ex.what())));

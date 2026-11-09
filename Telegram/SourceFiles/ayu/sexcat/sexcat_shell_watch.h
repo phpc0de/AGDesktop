@@ -19,6 +19,10 @@ void StartShellWatch();
 
 void TryAutoRelocate(const Entry &entry);
 
+// Feeds every recent row whose file went missing into the bounded
+// relocate search; used by the manual history refresh.
+void RelocateMissingEntries();
+
 // Bounded same-name-and-size search under one root, for manual relocates.
 [[nodiscard]] std::optional<QString> LocateByNameSize(
 	const QString &root,

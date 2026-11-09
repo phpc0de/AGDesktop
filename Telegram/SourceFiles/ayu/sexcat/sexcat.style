@@ -10,12 +10,14 @@ using "ui/colors.palette";
 
 sexcatBadgeSize: 14px;
 sexcatBadgeShift: margins(6px, 6px, 6px, 6px);
-sexcatBadgeFg: msgOutDateFg;
-sexcatBadgeFgHover: msgOutDateFgSelected;
-sexcatBadgeFgSelected: msgOutDateFgSelected;
-sexcatBadgeBg: msgServiceFg;
-sexcatBadgeBgHover: msgServiceFg;
-sexcatBadgeBgSelected: msgServiceFg;
+// WHY: the badge sits on media, so it needs a service-blue chip with a
+// light glyph; the old white-on-white pairing rendered as a blank box.
+sexcatBadgeFg: msgServiceFg;
+sexcatBadgeFgHover: msgServiceFg;
+sexcatBadgeFgSelected: msgServiceFg;
+sexcatBadgeBg: msgServiceBg;
+sexcatBadgeBgHover: msgServiceBgSelected;
+sexcatBadgeBgSelected: msgServiceBgSelected;
 
 sexcatBadgeIcon: icon{
 	{ size(14px, 14px), sexcatBadgeBg },
