@@ -770,20 +770,11 @@ The `Error` template parameter defaults to `rpl::no_error`: `rpl::producer<Type,
 
 ## Release & Task-Closure Protocol (user-mandated)
 
-1. **NEVER push.** The agent commits locally and creates local tags only.
-   `git push` (branch or tag) is run by the user, never by the agent —
-   pushed state cannot be cancelled by the user. Violating this is a
-   hard protocol breach.
-2. **One-line handoff command**: the final reply of every work batch
-   must end with exactly ONE single copy-paste line (chained with `&&`)
-   containing the commands the user should run (push dev, push the tag,
-   and any remote tag cleanup). No multi-line command blocks.
-3. **Tag numbering**: release tags continue from `v7.2.9-ayu.9` (next:
-   `.10`, `.11`, …). Do not reuse `.8` — it was already pushed.
-4. **Release notes per tag**: before handing off a new tag, write formal
-   release notes at `docs/release-notes/<tag>.md` with sections
-   Added / Changed / Fixed / Known Limits, covering every feature added,
-   changed, or bug fixed in that release. The user pastes these into the
-   GitHub Release description.
-5. All four steps are mandatory parts of "task finished" — skipping any
-   counts as an incomplete task.
+1. **One-pass release**: when the user orders a release, do it in one
+   pass — write `docs/release-notes/<tag>.md`, commit, tag that commit,
+   then push `dev` and the tag together. No separate approval rounds.
+2. **Tag numbering**: release tags continue from `v7.2.9-ayu.*` with the
+   next `.N` number.
+3. **Otherwise never push**: outside an ordered one-pass release, commits
+   stay local and the final reply ends with one handoff line naming the
+   push command for the user.
