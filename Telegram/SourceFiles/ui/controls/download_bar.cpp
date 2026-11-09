@@ -15,6 +15,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "lang/lang_keys.h"
 #include "styles/style_dialogs.h"
 
+// AyuGram includes
+#include <QtWidgets/QApplication>
+
+
 namespace Ui {
 namespace {
 

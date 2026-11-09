@@ -52,7 +52,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/rect.h"
 #include "ui/screen_reader_mode.h"
 #include "ui/ui_utility.h"
-#include "ui/widgets/popup_menu.h"
 #include "lang/lang_keys.h"
 #include "mainwindow.h"
 #include "mainwidget.h"
@@ -101,7 +100,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_chat_helpers.h"
 #include "styles/style_dialogs_widget.h"
 #include "styles/style_info.h"
-#include "styles/style_menu_icons.h"
 #include "styles/style_window.h"
 #include "base/qt/qt_common_adapters.h"
 
@@ -115,6 +113,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ayu/utils/telegram_helpers.h"
 #include "ayu/data/messages_storage.h"
 #include "base/platform/base_platform_haptic.h"
+#include "ui/widgets/popup_menu.h"
+#include "styles/style_menu_icons.h"
 
 
 namespace Dialogs {
