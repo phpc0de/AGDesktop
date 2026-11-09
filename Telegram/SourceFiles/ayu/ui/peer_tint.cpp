@@ -20,8 +20,10 @@ PeerTint PeerTintOf(PeerData *peer) {
 		return PeerTint::None;
 	}
 	if (const auto channel = peer->asChannel()) {
-		if (channel->isForbidden() && channel->date != 0) {
-			// freshly created channels default to Forbidden until loaded
+		if (channel->isForbidden()) {
+			// WHY: the channelForbidden apply path zeroes date on purpose,
+			// so guarding on it made the tint unreachable for exactly the
+			// region-blocked channels this feature is meant to mark.
 			return PeerTint::Banned;
 		} else if (channel->flags() & ChannelDataFlag::AyuRestrictedContent) {
 			return PeerTint::RegionRestricted;
