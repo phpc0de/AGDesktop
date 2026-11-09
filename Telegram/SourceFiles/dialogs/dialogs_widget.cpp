@@ -52,6 +52,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/rect.h"
 #include "ui/screen_reader_mode.h"
 #include "ui/ui_utility.h"
+#include "ui/widgets/popup_menu.h"
 #include "lang/lang_keys.h"
 #include "mainwindow.h"
 #include "mainwidget.h"
@@ -100,6 +101,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_chat_helpers.h"
 #include "styles/style_dialogs_widget.h"
 #include "styles/style_info.h"
+#include "styles/style_menu_icons.h"
 #include "styles/style_window.h"
 #include "base/qt/qt_common_adapters.h"
 
@@ -1679,6 +1681,21 @@ void Widget::setupDownloadBar() {
 						Info::Downloads::Make(
 							controller()->session().user()));
 				}
+			}, _downloadBar->lifetime());
+
+			// Q50: one-click cancel for everything still downloading.
+			_downloadBar->menuRequests(
+			) | rpl::on_next([=](QPoint globalPos) {
+				auto &manager = Core::App().downloadManager();
+				if (!manager.loadingInProgress()) {
+					return;
+				}
+				const auto menu = new Ui::PopupMenu(this, st::popupMenuWithIcons);
+				menu->addAction(
+					tr::ayu_CancelAllDownloading(tr::now),
+					[] { Core::App().downloadManager().cancelAllLoading(); },
+					&st::menuIconCancel);
+				menu->popup(globalPos);
 			}, _downloadBar->lifetime());
 
 			if (_connecting) {

@@ -9180,6 +9180,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "ayu_ContextCopyCallbackData" = "Copy Callback Data";
 "ayu_RepeatMessage" = "Repeat Message";
 "ayu_DownloadAlbumAll" = "Download all album files";
+"ayu_DownloadAlbumAs" = "Save all album files as...";
+"ayu_DownloadFilesAs" = "Save selected as...";
+"ayu_CancelAllDownloading" = "Cancel all downloading";
 "ayu_RegisterURLScheme" = "Register URL Scheme";
 "ayu_PluginVersion" = "Version";
 "ayu_PluginNoDescription" = "No description provided.";

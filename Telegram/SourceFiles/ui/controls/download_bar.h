@@ -11,6 +11,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/effects/radial_animation.h"
 #include "ui/widgets/shadow.h"
 #include "ui/text/text.h"
+#include "rpl/event_stream.h"
+
+#include <memory>
 
 namespace Ui {
 
@@ -45,6 +48,9 @@ public:
 
 	[[nodiscard]] rpl::producer<> clicks() const;
 
+	// Q50: fired with the global position of a right-click on the bar.
+	[[nodiscard]] rpl::producer<QPoint> menuRequests() const;
+
 	[[nodiscard]] rpl::lifetime &lifetime();
 
 private:
@@ -71,6 +77,8 @@ private:
 	Text::String _title;
 	Text::String _info;
 	RadialAnimation _radial;
+	rpl::event_stream<QPoint> _menuRequests;
+	std::unique_ptr<QObject> _menuFilter;
 
 };
 

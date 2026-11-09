@@ -190,3 +190,32 @@
 - `b82f6226b7` 发现上游把 `UnavailableReason::Extract/Compute` 桩成空（限制原因完全不落地）；在 data_session 两处解析点记录服务端原始 restriction_reason（项 3 证据链）。
 - `f423cda581` `processCallback` handleError 落 AyuLog：req id/code/type/desc（项 2/5，服务端拒绝全量留痕）。
 - 待办：push dev + 打 tag（v7.2.9-ayu.6，远端已有 .5）；E&R 二期（经典+新 UI 之外的发送路径）未排期。
+
+## 16. QQQ49 / QQQ50 / QQQ52 审计轮（/grill，代码只读取证；Q52/Q80 重构已提交、工作树干净）
+### 16.1 Q49 命名增补 — 现状与"没修好"的形状
+- 改名本体：`MaybeAugmentedSavePath`（sexcat_save_hook.cpp:568-615），条件 = 原名主干全数字（`IsAllDigitsName` :519）+ 消息有文字；名字 = `CleanSaveNameText(整段caption) + '-' + 原名`（:546-565）。Windows 非法字符已清洗（:138-161），长度上限 240（:516）。
+- **触发面缺口（Q49 一直没修好的根因）**：改名只在 `RecordSaveAttempt` 链触发（:750→:768）。该链只覆盖：显式另存对话框（data_file_click_handler.cpp:111/:137 → NotifyDocumentSaved → data_document.cpp:1118/:1310）、媒体查看器保存（media_view_overlay_widget.cpp:3354）、批量+已选文件夹（menu_item_download_files.cpp:233-234）。
+- **快速保存（askDownloadPath=关，含批量快速保存）不改名**：走 `SaveAndTrack`（menu_item_download_files.cpp:236）→ 下载管理器 → `HandleLoadedDownload`（:617-653）只记 tag、**无改名调用**。单条快速保存同样不改名。
+- 命名格式差异：现状 = 整段拼接（`#抖音 #abc 今天打老虎-516156156.mp4`）；用户示例 = `#抖音 #abc -今天打老虎-516156156.mp4`（tags 段 + `" -"` + 简介 + `-` + 原名）。格式待拍板。
+### 16.2 Q50 批量下载 — 功能在，两缺口确认
+- 批量多选/全选/相册已存在：`AddDownloadFilesAction`（menu_item_download_files.cpp:281/:316；classic history_inner_widget.cpp:3617/:3939，新 UI history_view_context_menu.cpp:1467）+ `AddDownloadAlbumAction`（:348；新 UI :1263）。
+- 缺口①另存为：批量仅一条保存项，路径行为被 `askDownloadPath` 设置控制（:251-275：开=弹文件夹框一次，关=静默丢默认目录）；无独立"另存为…"入口（单文件 Save as 存在）。
+- 缺口②一键取消：全仓无"取消全部在途"。下载条（ui/controls/download_bar.cpp）纯进度 pill 无取消；下载区仅逐条取消 + "Delete all"（info_downloads_widget.cpp:116 → `deleteAll`，data_download_manager.cpp:611-639 **连已完成文件一起删**）。需新增 `cancelAllLoading`（只取消在途、不动已完成）。
+- 附带发现：批量快速保存时已缓存文件（`saveFromData` 直存）完全不产生 sexcat 记录（data_file_click_handler.cpp:109-115 仅 explicitSaveAs 才 Record）。
+### 16.3 Q52.1/52.2/52.3/52.4
+- Q52.1：入口在**消息菜单**（history_inner_widget.cpp:3225 / history_view_context_menu.cpp:1900），非"点在 hashtag 上"判定；tag = 整条正文第一个 hashtag（`SourceTagForItem` :900-921，组内兄弟也扫）。**`ExtractHashtag` 纯 ASCII**（`#([A-Za-z0-9_]{1,64})` :132-136）→ 纯 "#抖音" 提不出：纯中文 tag 消息连菜单项都不出现；"#抖音 #abc" 只提出 "abc"。多 tag 永远取第一个，无光标定位。
+- Q52.2：选中文字保存已存在（:983-988 → `SaveSowTag` :176，只注册标签）。**纯文字标签不自动关联任何作品**；自动关联仅限"下载消息 caption 含同名 ASCII hashtag"；手工关联 = 消息菜单 retro-tag 子菜单（`ApplyRetroTag` :924-941 → `RetagSource`，按 peer+msg 挂已下载记录）。
+- Q52.3：保存自动注册 tag 已做（`RecordTag` :316/:398；批量 `batchTag` menu_item_download_files.cpp:89-107），但同受 ASCII 正则限制，#抖音 提不出 → Unicode 修复后 Q52.3 才成立。
+- Q52.4 答案：**部分**。批量选文件夹路径 = 改名✓+tag✓；批量快速保存 = tag✓+改名✗；已缓存文件快速保存 = 全无记录。Q49 对 Q50 无完整支持。
+### 16.4 本轮三问（已拍板，2025 收敛轮）
+1. Q49 命名格式：**A 按示例 `#tags -简介-原名`** ✓
+2. Q49 覆盖面：**A 所有下载完成路径统一改名** ✓
+3. Q52.2 关联语义：**`#任意字符` 即关联；复用客户端自身 hashtag 识别（实体/ClickHandler），废弃自制 ASCII 正则**（用户原话："肯定是 #任意字符 就关联，客户端是自动识别 #任意字符，复用就好"）✓
+- Q50 拟办未收异议，视为采纳：批量"另存为…"恒弹文件夹选择；`cancelAllLoading`（只取消在途）入口在下载条 + 下载区头部。
+
+## 17. 执行路线图（Q49/Q50/Q52，定稿；细节见 ADR-0006）
+- **R1 hashtag 地基**：✅ 已实现——`SplitHashtags`/`CleanTagToken`（实体 `EntityType::Hashtag` 扫描 + Unicode 兜底正则 `#[^\s#]{1,64}` + 尾部标点修剪）；`AugmentNameParts` 扫 item+组内兄弟（tag 全保留按序、desc 取组内首个非 hashtag 文字）；`TagFromLink` 经 `HashtagClickHandler`（dragText 带 #）取光标下 tag；classic（history_inner_widget.cpp:3225）与新 UI（history_view_context_menu.cpp:1900）均传 link；多 tag 时直项=光标下/首个，其余进子菜单。
+- **R2 Q49 命名**：✅ 已实现——`BuildAugmentedName` 产出 `#tags -简介-原名`（缺段省分隔，240 截断保原名，保留名前缀 `_`）；`AdjustDocumentSaveTarget` 注入两路：`DocumentSaveClickHandler::Save`（!explicitSaveAs 快速保存，data_file_click_handler.cpp:134-138）+ 批量选文件夹分支（menu_item_download_files.cpp:234-238），落盘即终名、零漂移；`HandleLoadedDownload` 兜底改名（绕过链路时，管理器条目路径保留原名）；`MaybeAugmentedSavePath` 换新格式并放宽 `emptyText` 守卫为组级（相册 caption 挂首条消息时视频也能改名）。
+- **R3 Q50 交互**：✅ 已实现——`AddAction` 改 const 引用 + `forceFolderDialog` 参数；多选/相册菜单各新增"Save selected as..."/"Save all album files as..."（恒弹文件夹选择，整批同 tag/改名管线）；`DownloadManager::cancelAllLoading()`（public，包 `loadingStop(nullptr)`，只取消在途）；入口 = 下载区顶栏菜单（loadingInProgress 才出现，menuIconCancel）+ 下载条右键菜单（download_bar 新增 `menuRequests()` producer，ContextMenuFilter 事件过滤器）；lang 新增 ayu_DownloadAlbumAs/ayu_DownloadFilesAs/ayu_CancelAllDownloading。
+- **R4 验证**：静态交叉验证 ✅（声明/定义/调用点/图标 `st::menuIconCancel`/popupMenuWithIcons 经 style_chat、LF 行尾、`git diff --check` 干净、修正 `base/click_handler.h`→`ui/basic_click_handlers.h`）；外部构建机 Debug 编译 + 手测清单见 `docs/delivery-q49-q50-q52-sexcat.md`，未构建未打 tag。
+- grill 冻结保持至用户令下开工；本体代码 0 改动。

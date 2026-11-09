@@ -105,6 +105,13 @@ void Widget::selectionAction(SelectionAction action) {
 
 void Widget::fillTopBarMenu(const Ui::Menu::MenuCallback &addAction) {
 	const auto window = controller()->parentController();
+	auto &manager = Core::App().downloadManager();
+	if (manager.loadingInProgress()) {
+		addAction(
+			tr::ayu_CancelAllDownloading(tr::now),
+			[&manager] { manager.cancelAllLoading(); },
+			&st::menuIconCancel);
+	}
 	const auto deleteAll = [=] {
 		auto &manager = Core::App().downloadManager();
 		const auto phrase = tr::lng_downloads_delete_sure_all(tr::now);

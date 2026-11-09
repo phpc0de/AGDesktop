@@ -6,6 +6,7 @@
 // Copyright @Radolyn, 2026
 #pragma once
 
+#include "ui/basic_click_handlers.h"
 #include "data/data_types.h"
 
 #include <QByteArray>
@@ -69,12 +70,23 @@ void EnsureDownloadListener();
 // First #hashtag of the item text (group caption included), or empty.
 [[nodiscard]] QString SourceTagForItem(HistoryItem *item);
 
-// Sow-list menu: save a #hashtag from the message or the selected text
-// as a tag name. Adds nothing when there is nothing to save.
+// Q49: pre-write save target fix. A quick-saved document whose server
+// name is bare digits gets a captioned name before the loader opens the
+// file, so no post-save rename is needed. Returns targetPath unchanged
+// when the naming rules don't apply.
+[[nodiscard]] QString AdjustDocumentSaveTarget(
+	const QString &targetPath,
+	not_null<DocumentData*> document,
+	FullMsgId contextId);
+
+// Sow-list menu: save a #hashtag from the message, the one under the
+// cursor (link), or the selected text as a tag name. Adds nothing when
+// there is nothing to save.
 void AddSowTagMenuActions(
 	not_null<Ui::PopupMenu*> menu,
 	HistoryItem *item,
-	const QString &selectedText);
+	const QString &selectedText,
+	const ClickHandlerPtr &link = {});
 
 } // namespace SexCat
 

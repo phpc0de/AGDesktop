@@ -68,11 +68,12 @@ using Photos = std::vector<std::pair<not_null<PhotoData*>, FullMsgId>>;
 void AddAction(
 		not_null<Ui::PopupMenu*> menu,
 		not_null<Window::SessionController*> controller,
-		Documents &&documents,
-		Photos &&photos,
+		const Documents &documents,
+		const Photos &photos,
 		Fn<void()> callback,
 		QString overrideText = QString(),
-		const style::icon *overrideIcon = nullptr) {
+		const style::icon *overrideIcon = nullptr,
+		bool forceFolderDialog = false) {
 	const auto text = overrideText.isEmpty()
 		? (documents.empty()
 			? tr::lng_context_save_images_selected(tr::now)
@@ -230,8 +231,12 @@ void AddAction(
 			if (!folderPath.isEmpty()) {
 				const auto name =
 					base::FileNameFromUserString(document->filename());
+				const auto target = SexCat::AdjustDocumentSaveTarget(
+					folderPath + name,
+					document,
+					origin);
 				SexCat::MarkDocumentSaveAs(document, origin, batchTag);
-				document->save(origin, folderPath + name);
+				document->save(origin, target);
 			} else {
 				DocumentSaveClickHandler::SaveAndTrack(origin, document);
 			}
@@ -248,7 +253,7 @@ void AddAction(
 		if (!controller) {
 			return;
 		}
-		if (Core::App().settings().askDownloadPath()) {
+		if (forceFolderDialog || Core::App().settings().askDownloadPath()) {
 			const auto initialPath = [] {
 				const auto path = Core::App().settings().downloadPath();
 				if (!path.isEmpty() && path != FileDialog::Tmp()) {
@@ -310,7 +315,16 @@ void AddDownloadFilesAction(
 			strong->cancelSelection();
 		}
 	};
-	AddAction(menu, window, std::move(docs), std::move(photos), done);
+	AddAction(menu, window, docs, photos, done);
+	AddAction(
+		menu,
+		window,
+		docs,
+		photos,
+		done,
+		tr::ayu_DownloadFilesAs(tr::now),
+		nullptr,
+		true);
 }
 
 void AddDownloadFilesAction(
@@ -342,7 +356,16 @@ void AddDownloadFilesAction(
 			strong->clearSelected();
 		}
 	};
-	AddAction(menu, window, std::move(docs), std::move(photos), done);
+	AddAction(menu, window, docs, photos, done);
+	AddAction(
+		menu,
+		window,
+		docs,
+		photos,
+		done,
+		tr::ayu_DownloadFilesAs(tr::now),
+		nullptr,
+		true);
 }
 
 void AddDownloadAlbumAction(
@@ -369,11 +392,20 @@ void AddDownloadAlbumAction(
 	AddAction(
 		menu,
 		window,
-		std::move(docs),
-		std::move(photos),
+		docs,
+		photos,
 		[] {},
 		tr::ayu_DownloadAlbumAll(tr::now),
 		&st::menuIconDownload);
+	AddAction(
+		menu,
+		window,
+		docs,
+		photos,
+		[] {},
+		tr::ayu_DownloadAlbumAs(tr::now),
+		&st::menuIconDownload,
+		true);
 }
 
 } // namespace Menu

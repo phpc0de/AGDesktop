@@ -3225,7 +3225,8 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 		SexCat::AddSowTagMenuActions(
 			_menu,
 			item,
-			getSelectedText().expanded);
+			getSelectedText().expanded,
+			link);
 	};
 	const auto addPhotoActions = [&](not_null<PhotoData*> photo, HistoryItem *item) {
 		const auto media = photo->activeMediaView();

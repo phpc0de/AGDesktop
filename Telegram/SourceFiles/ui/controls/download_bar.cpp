@@ -29,6 +29,31 @@ namespace {
 	return result;
 }
 
+class ContextMenuFilter final : public QObject {
+public:
+	ContextMenuFilter(
+		not_null<QWidget*> watched,
+		Fn<void(QPoint)> callback)
+	: QObject(nullptr)
+	, _callback(std::move(callback)) {
+		watched->installEventFilter(this);
+	}
+
+protected:
+	bool eventFilter(QObject *obj, QEvent *event) override {
+		if (event->type() == QEvent::ContextMenu) {
+			const auto e = static_cast<QContextMenuEvent*>(event);
+			_callback(e->globalPos());
+			return true;
+		}
+		return QObject::eventFilter(obj, event);
+	}
+
+private:
+	Fn<void(QPoint)> _callback;
+
+};
+
 } // namespace
 
 DownloadBar::DownloadBar(
@@ -39,7 +64,13 @@ DownloadBar::DownloadBar(
 	object_ptr<RippleButton>(parent, st::dialogsMenuToggle.ripple))
 , _shadow(parent)
 , _progress(std::move(progress))
-, _radial([=](crl::time now) { radialAnimationCallback(now); }) {
+, _radial([=](crl::time now) { radialAnimationCallback(now); })
+, _menuFilter(
+	std::make_unique<ContextMenuFilter>(
+		_button.entity(),
+		[=](QPoint globalPos) {
+			_menuRequests.fire_copy(std::move(globalPos));
+		})) {
 	_button.hide(anim::type::instant);
 	_shadow.showOn(_button.shownValue());
 	_button.setDirectionUp(false);
@@ -63,6 +94,10 @@ DownloadBar::DownloadBar(
 }
 
 DownloadBar::~DownloadBar() = default;
+
+rpl::producer<QPoint> DownloadBar::menuRequests() const {
+	return _menuRequests.events();
+}
 
 void DownloadBar::show(DownloadBarContent &&content) {
 	_button.toggle(content.count > 0, anim::type::normal);

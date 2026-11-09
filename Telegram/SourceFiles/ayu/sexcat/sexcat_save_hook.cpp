@@ -129,12 +129,6 @@ void ShowSavedToast() {
 constexpr auto kMaxSowTagLength = 64;
 constexpr auto kMaxRetroTagChoices = 32;
 
-[[nodiscard]] QString ExtractHashtag(const QString &text) {
-	static const QRegularExpression pattern(u"#([A-Za-z0-9_]{1,64})"_q);
-	const auto match = pattern.match(text);
-	return match.hasMatch() ? match.captured(1) : QString();
-}
-
 [[nodiscard]] QString CleanSaveNameText(const QString &raw) {
 	static const auto illegal = u"\\/:*?\"<>|"_q;
 	auto cleaned = QString();
@@ -171,6 +165,122 @@ constexpr auto kMaxRetroTagChoices = 32;
 
 void ShowSowTagToast(const QString &tag) {
 	ShowToastText(u"Saved to sow list: #%1"_q.arg(tag));
+}
+
+// WHY: the client's own hashtag parsing (message entities, and the
+// HashtagClickHandler built from them) already accepts any script, so
+// entities are the primary source; the unicode regex only covers texts
+// that carry no entities at all.
+[[nodiscard]] QString CleanTagToken(const QString &raw) {
+	auto text = raw;
+	while (!text.isEmpty() && text.at(0) == u'#') {
+		text.remove(0, 1);
+	}
+	while (!text.isEmpty()) {
+		const auto cat = text.back().category();
+		if (text.back() == u'#'
+			|| cat == QChar::Punctuation_Close
+			|| cat == QChar::Punctuation_FinalQuote
+			|| cat == QChar::Punctuation_Other) {
+			text.chop(1);
+		} else {
+			break;
+		}
+	}
+	return CleanSaveNameText(text).left(kMaxSowTagLength);
+}
+
+struct HashtagParts {
+	QStringList tags;
+	QString description;
+};
+
+// Tags in order plus the caption text with every hashtag span removed.
+[[nodiscard]] HashtagParts SplitHashtags(const TextWithEntities &text) {
+	auto spans = std::vector<std::pair<int, int>>();
+	auto tags = QStringList();
+	const auto push = [&](int offset, int length) {
+		const auto token = CleanTagToken(text.text.mid(offset, length));
+		if (token.isEmpty() || tags.contains(token)) {
+			return;
+		}
+		tags.push_back(token);
+		spans.emplace_back(offset, length);
+	};
+	for (const auto &entity : text.entities) {
+		if (entity.type() == EntityType::Hashtag) {
+			push(entity.offset(), entity.length());
+		}
+	}
+	if (spans.empty()) {
+		static const QRegularExpression pattern(u"#([^\\s#]{1,64})"_q);
+		auto match = pattern.match(text.text);
+		while (match.hasMatch()) {
+			push(match.capturedStart(), match.capturedLength());
+			match = pattern.match(text.text, match.capturedEnd());
+		}
+	}
+	if (tags.isEmpty()) {
+		return {};
+	}
+	auto raw = QString();
+	auto last = 0;
+	for (const auto &[offset, length] : spans) {
+		raw += text.text.mid(last, offset - last);
+		last = offset + length;
+	}
+	raw += text.text.mid(last);
+	auto squeezed = QString();
+	auto pendingSpace = false;
+	for (const auto ch : raw) {
+		if (ch.isSpace()) {
+			pendingSpace = true;
+		} else {
+			if (pendingSpace && !squeezed.isEmpty()) {
+				squeezed += u' ';
+			}
+			pendingSpace = false;
+			squeezed += ch;
+		}
+	}
+	return { .tags = std::move(tags), .description = CleanSaveNameText(squeezed) };
+}
+
+// Tags of the item and its album siblings; the description is the first
+// caption text left after hashtag removal (album captions sit on the
+// first item, videos alone carry none).
+[[nodiscard]] HashtagParts AugmentNameParts(HistoryItem *item) {
+	auto result = HashtagParts{};
+	if (!item || !item->isRegular()) {
+		return result;
+	}
+	const auto collect = [&](HistoryItem *groupItem) {
+		auto parts = SplitHashtags(groupItem->originalText());
+		for (const auto &tag : parts.tags) {
+			if (!result.tags.contains(tag)) {
+				result.tags.push_back(tag);
+			}
+		}
+		if (result.description.isEmpty() && !parts.description.isEmpty()) {
+			result.description = parts.description;
+		}
+	};
+	collect(item);
+	if (const auto group = item->history()->owner().groups().find(item)) {
+		for (const auto &groupItem : group->items) {
+			if (&*groupItem != item) {
+				collect(groupItem.get());
+			}
+		}
+	}
+	return result;
+}
+
+[[nodiscard]] QString TagFromLink(const ClickHandlerPtr &link) {
+	if (!link || link->getTextEntity().type != EntityType::Hashtag) {
+		return {};
+	}
+	return CleanSowTag(link->dragText());
 }
 
 void SaveSowTag(const QString &raw) {
@@ -543,25 +653,52 @@ constexpr auto kAugmentedNameTries = 100;
 	return false;
 }
 
+// Q49 naming: "#tags -description-original" with absent segments and
+// their separators dropped.
 [[nodiscard]] QString BuildAugmentedName(
 		const QString &original,
-		const QString &text) {
-	auto cleaned = CleanSaveNameText(text);
-	if (cleaned.isEmpty()) {
+		const HashtagParts &parts) {
+	auto segments = QStringList();
+	if (!parts.tags.isEmpty()) {
+		auto tags = QStringList();
+		for (const auto &tag : parts.tags) {
+			tags.push_back(u"#%1"_q.arg(tag));
+		}
+		segments.push_back(tags.join(u' '));
+	}
+	if (!parts.description.isEmpty()) {
+		segments.push_back(parts.description);
+	}
+	if (segments.isEmpty()) {
 		return {};
 	}
-	if (IsReservedWindowsName(cleaned)) {
-		cleaned = u"_"_q + cleaned;
+	auto text = segments.join(u" -"_q);
+	if (IsReservedWindowsName(text)) {
+		text = u"_"_q + text;
 	}
-	auto name = cleaned + u'-' + original;
+	auto name = text + u'-' + original;
 	if (name.size() > kMaxAugmentedNameLength) {
 		const auto keep = kMaxAugmentedNameLength - original.size() - 1;
 		if (keep <= 0) {
 			return {};
 		}
-		name = cleaned.left(keep) + u'-' + original;
+		name = text.left(keep) + u'-' + original;
 	}
 	return name;
+}
+
+[[nodiscard]] QString UniqueAugmentedTarget(
+		const QFileInfo &info,
+		const QString &candidate) {
+	const auto dir = info.dir();
+	const auto dot = candidate.lastIndexOf(u'.');
+	const auto stem = (dot > 0) ? candidate.left(dot) : candidate;
+	const auto ext = (dot > 0) ? candidate.mid(dot) : QString();
+	auto target = dir.filePath(candidate);
+	for (auto i = 2; QFileInfo::exists(target) && i < kAugmentedNameTries; ++i) {
+		target = dir.filePath(stem + u" (%1)"_q.arg(i) + ext);
+	}
+	return target;
 }
 
 // The server names captioned videos by bare numeric ids.
@@ -569,7 +706,7 @@ constexpr auto kAugmentedNameTries = 100;
 		const QString &savedPath,
 		not_null<DocumentData*> document,
 		HistoryItem *item) {
-	if (!item) {
+	if (!item || !item->isRegular()) {
 		return savedPath;
 	}
 	const auto info = QFileInfo(savedPath);
@@ -579,28 +716,12 @@ constexpr auto kAugmentedNameTries = 100;
 	if (!IsAllDigitsName(stem)) {
 		return savedPath;
 	}
-	if (item->emptyText()) {
-		return savedPath;
-	}
-	const auto candidate = BuildAugmentedName(original, extractText(item).text);
+	const auto candidate = BuildAugmentedName(original, AugmentNameParts(item));
 	if (candidate.isEmpty()) {
 		return savedPath;
 	}
-	const auto dir = info.dir();
-	auto target = dir.filePath(candidate);
-	const auto dotCandidate = candidate.lastIndexOf(u'.');
-	const auto candidateStem = (dotCandidate > 0)
-		? candidate.left(dotCandidate)
-		: candidate;
-	const auto candidateExt = (dotCandidate > 0)
-		? candidate.mid(dotCandidate)
-		: QString();
-	auto available = !QFileInfo::exists(target);
-	for (auto i = 2; !available && i < kAugmentedNameTries; ++i) {
-		target = dir.filePath(candidateStem + u" (%1)"_q.arg(i) + candidateExt);
-		available = !QFileInfo::exists(target);
-	}
-	if (!available || !QFile::rename(savedPath, target)) {
+	const auto target = UniqueAugmentedTarget(info, candidate);
+	if (target == savedPath || !QFile::rename(savedPath, target)) {
 		LogFailure(u"failed to rename saved file to %1"_q.arg(target));
 		return savedPath;
 	}
@@ -621,16 +742,23 @@ void HandleLoadedDownload(not_null<const Data::DownloadedId*> id) {
 	if (!Enabled()) {
 		return;
 	}
-	const auto info = QFileInfo(id->path);
-	if (id->path.isEmpty() || !info.exists() || info.isDir()) {
+	auto path = id->path;
+	if (id->object && id->object->document) {
+		path = MaybeAugmentedSavePath(
+			path,
+			id->object->document,
+			id->object->item.get());
+	}
+	const auto info = QFileInfo(path);
+	if (path.isEmpty() || !info.exists() || info.isDir()) {
 		return;
 	}
 	if (!Database::instance().Enabled()) {
-		LogFailure(u"database unavailable, download not recorded: "_q + id->path);
+		LogFailure(u"database unavailable, download not recorded: "_q + path);
 		return;
 	}
 	auto existingRowId = int64(0);
-	if (const auto hit = Database::instance().FindByPath(id->path, id->size)) {
+	if (const auto hit = Database::instance().FindByPath(path, id->size)) {
 		if (hit->sha256.size() == 32) {
 			return;
 		}
@@ -645,7 +773,7 @@ void HandleLoadedDownload(not_null<const Data::DownloadedId*> id) {
 		}
 	}
 	ResolveHashAndPersist(
-		id->path,
+		path,
 		id->size,
 		std::move(origin),
 		false,
@@ -898,26 +1026,36 @@ void EnsureDownloadListener() {
 }
 
 QString SourceTagForItem(HistoryItem *item) {
+	return AugmentNameParts(item).tags.value(0);
+}
+
+QString AdjustDocumentSaveTarget(
+		const QString &targetPath,
+		not_null<DocumentData*> document,
+		FullMsgId contextId) {
+	if (!Enabled() || targetPath.isEmpty()) {
+		return targetPath;
+	}
+	const auto item = contextId
+		? document->owner().message(contextId)
+		: nullptr;
 	if (!item || !item->isRegular()) {
-		return {};
+		return targetPath;
 	}
-	if (const auto tag = ExtractHashtag(item->originalText().text);
-		!tag.isEmpty()) {
-		return tag;
+	const auto info = QFileInfo(targetPath);
+	const auto original = info.fileName();
+	const auto dot = original.lastIndexOf(u'.');
+	const auto stem = (dot > 0) ? original.left(dot) : original;
+	if (!IsAllDigitsName(stem)) {
+		return targetPath;
 	}
-	if (const auto group = item->history()->owner().groups().find(item)) {
-		for (const auto &groupItem : group->items) {
-			if (&*groupItem == item) {
-				continue;
-			}
-			if (const auto tag
-				= ExtractHashtag(groupItem->originalText().text);
-				!tag.isEmpty()) {
-				return tag;
-			}
-		}
+	const auto candidate = BuildAugmentedName(original, AugmentNameParts(item));
+	if (candidate.isEmpty()) {
+		return targetPath;
 	}
-	return {};
+	const auto target = UniqueAugmentedTarget(info, candidate);
+	LogFailure(u"save target augmented: %1 -> %2"_q.arg(original, target));
+	return target;
 }
 
 // Retro-tag: hang already downloaded records of this message on a tag.
@@ -976,7 +1114,8 @@ void AddRetroTagMenuActions(
 void AddSowTagMenuActions(
 		not_null<Ui::PopupMenu*> menu,
 		HistoryItem *item,
-		const QString &selectedText) {
+		const QString &selectedText,
+		const ClickHandlerPtr &link) {
 	if (!Enabled() || !Database::instance().Enabled()) {
 		return;
 	}
@@ -986,11 +1125,44 @@ void AddSowTagMenuActions(
 			[=] { SaveSowTag(selectedText); },
 			&st::menuIconDownload);
 	}
-	if (const auto tag = SourceTagForItem(item); !tag.isEmpty()) {
+	// Q52.1: the hashtag under the cursor wins over the first one.
+	const auto parts = AugmentNameParts(item);
+	const auto cursorTag = TagFromLink(link);
+	auto tags = parts.tags;
+	if (!cursorTag.isEmpty() && !tags.contains(cursorTag)) {
+		tags.push_front(cursorTag);
+	}
+	const auto direct = cursorTag.isEmpty()
+		? (tags.isEmpty() ? QString() : tags.front())
+		: cursorTag;
+	if (!direct.isEmpty()) {
 		menu->addAction(
-			u"Save #%1 to sow list"_q.arg(tag),
-			[=] { SaveSowTag(tag); },
+			u"Save #%1 to sow list"_q.arg(direct),
+			[=] { SaveSowTag(direct); },
 			&st::menuIconDownload);
+	}
+	if (tags.size() > 1) {
+		const auto anchor = menu->addAction(
+			base::make_unique_q<Ui::Menu::Action>(
+				menu->menu(),
+				menu->menu()->st(),
+				Ui::Menu::CreateAction(
+					menu->menu().get(),
+					u"Save hashtag to sow list"_q,
+					nullptr),
+				&st::menuIconDownload,
+				&st::menuIconDownload));
+		anchor->setMenu(new QMenu(menu->menu().get()));
+		const auto sub = menu->ensureSubmenu(anchor, st::popupMenuWithIcons);
+		for (const auto &tag : tags) {
+			if (tag == direct) {
+				continue;
+			}
+			sub->addAction(
+				u"#%1"_q.arg(tag),
+				[=] { SaveSowTag(tag); },
+				&st::menuIconDownload);
+		}
 	}
 	AddRetroTagMenuActions(menu, item);
 }

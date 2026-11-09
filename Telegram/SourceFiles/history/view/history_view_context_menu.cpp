@@ -1904,7 +1904,8 @@ void FillContextMenuItems(
 			&& request.selectedItems.empty()
 			&& !list->hasCopyRestrictionForSelected())
 			? list->getSelectedText().expanded
-			: QString());
+			: QString(),
+		request.link);
 
 	AddTopMessageActions(result, request, list);
 	if (lnkPhoto && request.selectedItems.empty()) {

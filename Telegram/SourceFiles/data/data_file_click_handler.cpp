@@ -126,11 +126,16 @@ void DocumentSaveClickHandler::Save(
 		const auto filename = filepath.isEmpty()
 			? QString()
 			: fileinfo.fileName();
-		const auto savename = DocumentFileNameForSave(
+		auto savename = DocumentFileNameForSave(
 			data,
 			(mode == Mode::ToNewFile),
 			filename,
 			filedir);
+		if (!savename.isEmpty() && !explicitSaveAs) {
+			// Q49: quick saves never see a dialog, so the captioned
+			// name is applied to the save target itself.
+			savename = SexCat::AdjustDocumentSaveTarget(savename, data, contextId);
+		}
 		if (!savename.isEmpty()) {
 			if (explicitSaveAs && !data->loading()) {
 				// in-flight saves land in the downloads dir, not a confirmed path

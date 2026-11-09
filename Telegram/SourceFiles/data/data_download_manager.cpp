@@ -814,6 +814,10 @@ void DownloadManager::loadingStop(Main::Session *onlyInSession) {
 	}
 }
 
+void DownloadManager::cancelAllLoading() {
+	loadingStop(nullptr);
+}
+
 void DownloadManager::clearLoading() {
 	Expects(_loading.empty());
 

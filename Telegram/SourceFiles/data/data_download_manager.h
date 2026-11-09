@@ -122,6 +122,8 @@ public:
 	void clearIfFinished();
 	void deleteFiles(const std::vector<GlobalMsgId> &ids);
 	void deleteAll();
+	// Q50: cancels everything still downloading, finished entries stay.
+	void cancelAllLoading();
 	[[nodiscard]] bool loadedHasNonCloudFile() const;
 
 	[[nodiscard]] auto loadingList() const
