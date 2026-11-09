@@ -9220,6 +9220,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_sexcat_lost" = "Missing";
 "lng_sexcat_relocate" = "Relocate...";
 "lng_sexcat_verify" = "Verify selected";
+"lng_sexcat_refresh" = "Refresh";
 "lng_sexcat_settings_toggle" = "Record downloaded files";
 "lng_sexcat_hashing" = "Hashing...";
 "lng_sexcat_filter_all" = "All conversations";

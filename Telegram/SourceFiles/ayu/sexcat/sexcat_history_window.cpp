@@ -131,6 +131,15 @@ public:
 		_filter = new QComboBox(this);
 		_search = new QLineEdit(this);
 		_search->setPlaceholderText(tr::lng_dlg_filter(tr::now));
+		auto *refresh = new QPushButton(
+			tr::lng_sexcat_refresh(tr::now),
+			this);
+		top->addWidget(_filter, 1);
+		top->addWidget(_search, 2);
+		top->addWidget(refresh);
+		root->addLayout(top);
+
+		auto *actions = new QHBoxLayout();
 		auto *verify = new QPushButton(
 			tr::lng_sexcat_verify(tr::now),
 			this);
@@ -145,15 +154,14 @@ public:
 		_customExt = new QLineEdit(this);
 		_customExt->setPlaceholderText(u"自定义后缀 (逗号分隔)"_q);
 		_customExt->setFixedWidth(150);
-		top->addWidget(_filter, 1);
-		top->addWidget(_search, 2);
-		top->addWidget(_textExt);
-		top->addWidget(_imageExt);
-		top->addWidget(_customExt);
-		top->addWidget(verify);
-		top->addWidget(scan);
-		top->addWidget(selectAll);
-		root->addLayout(top);
+		actions->addWidget(_textExt);
+		actions->addWidget(_imageExt);
+		actions->addWidget(_customExt);
+		actions->addWidget(verify);
+		actions->addWidget(scan);
+		actions->addWidget(selectAll);
+		actions->addStretch(1);
+		root->addLayout(actions);
 
 		_tree = new QTreeWidget(this);
 		_tree->setColumnCount(kColCount);
@@ -202,6 +210,9 @@ public:
 			&QLineEdit::textChanged,
 			this,
 			[=](const QString &) { applyFilter(); });
+		connect(refresh, &QPushButton::clicked, this, [=] {
+			reload();
+		});
 		connect(verify, &QPushButton::clicked, this, [=] {
 			verifySelected();
 		});
@@ -399,9 +410,9 @@ private:
 			}
 			if (filtering) {
 				const auto ext = rowExtension(row.fileName);
-				if (!((textOn && TextExtensions().contains(ext))
+				if ((textOn && TextExtensions().contains(ext))
 					|| (imageOn && ImageExtensions().contains(ext))
-					|| custom.contains(ext))) {
+					|| custom.contains(ext)) {
 					continue;
 				}
 			}
