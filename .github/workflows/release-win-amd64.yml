@@ -398,6 +398,9 @@ jobs:
           } else {
             Set-Content release-body.md "（本版本没有发布说明文件）" -Encoding UTF8
           }
+          # WHY: publishing fires a release event that re-triggers this
+          # workflow; the marker lets the jobs' guard skip that second run.
+          Add-Content release-body.md "<!-- auto-built -->" -Encoding UTF8
 
       - name: Publish release
         uses: softprops/action-gh-release@v2
