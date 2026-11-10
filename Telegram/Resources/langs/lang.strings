@@ -9224,7 +9224,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_sexcat_col_source" = "Source";
 "lng_sexcat_col_path" = "Current path";
 "lng_sexcat_lost" = "Missing";
-"lng_sexcat_lost_group" = "Lost records ({count}) — double-click to expand";
+"lng_sexcat_lost_group#one" = "{count} lost record — double-click to expand";
+"lng_sexcat_lost_group#other" = "{count} lost records — double-click to expand";
 "lng_sexcat_relocate" = "Relocate...";
 "lng_sexcat_verify" = "Verify selected";
 "lng_sexcat_refresh" = "Refresh";

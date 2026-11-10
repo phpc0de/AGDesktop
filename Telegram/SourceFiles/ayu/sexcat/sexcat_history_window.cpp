@@ -12,7 +12,6 @@
 #include "ayu/sexcat/sexcat_save_hook.h"
 #include "ayu/sexcat/sexcat_shell_watch.h"
 #include "ayu/ui/toasts.h"
-#include "base/unixtime.h"
 #include "core/application.h"
 #include "core/file_utilities.h"
 #include "data/data_peer.h"
@@ -174,6 +173,10 @@ public:
 			tr::lng_sexcat_col_sha(tr::now),
 		});
 		_tree->setRootIsDecorated(false);
+		// WHY: default expand-on-doubleclick would toggle the lost group
+		// twice, cancelling the manual toggle in the itemDoubleClicked
+		// handler.
+		_tree->setExpandsOnDoubleClick(false);
 		_tree->setUniformRowHeights(true);
 		_tree->setAllColumnsShowFocus(true);
 		_tree->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -608,7 +611,7 @@ private:
 		if (!HashStore::WriteAds(file, row->sha256, row->srcPeerId, row->srcMsgId)) {
 			HashStore::TrySidecar(file, row->sha256, row->srcPeerId, row->srcMsgId);
 		}
-		if (!Database::instance().Relink(row->id, file)) {
+		if (!Database::instance().Relink(int64(row->id), file)) {
 			Ui::Toast::Show(tr::lng_sexcat_verify_failed(tr::now));
 			return;
 		}

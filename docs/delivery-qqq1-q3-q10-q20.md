@@ -44,6 +44,21 @@
 - 历史窗口 `RecordSaved`/`base::unixtime` 旧用法清除；`Recent(limit, {})` 默认参存在。
 - 注释预算：2 行尾注 + 1 个两行 WHY 块，合规。
 
+## 编译错误审计（7c1a6e1..HEAD，覆盖 20b0f94388 批次）
+
+四路并行静态审计（数据层 / sexcat / UI-dialogs / 跨文件符号一致性），全部结论经人工复核：
+
+**已修复（commit 后附）**
+1. **error**：`menu_item_download_files.cpp:375` `FormatSizeText` 无限定名（声明于 `namespace Ui`，本文件无 `using namespace`）→ 改 `Ui::FormatSizeText`。这是 20b0f94388 批次引入的唯一确定编译错误。
+2. **warning（codegen 风险）**：`lng_sexcat_lost_group` 是全 lang.strings 唯一"非复数键 + {count} 占位符"组合（{count} 按名映射 count-tag 系统，无先例可证 codegen 行为）→ 改为 `#one/#other` 复数键，调用点（lt_count + int）与 `lng_seconds` 先例完全同型，无需改代码。
+3. **warning（运行时行为）**：下载历史分组双击展开被 Qt 默认 `expandsOnDoubleClick` 二次翻转抵消（净效果为零）→ `setExpandsOnDoubleClick(false)` + 保留手动翻转。
+4. **warning（一致性）**：`Relink(row->id, file)` uint64→int64 隐式转换 → 显式 `int64(row->id)`，与兄弟路径一致。
+5. **info**：移除因 Q10 改动而孤立的 `base/unixtime.h` include。
+
+**确认通过（无需改动）**：AyuForbidden 位唯一（61/30 空闲）+ include 链齐全 + Data::Flags removeFlags API 存在；saveFromData 家族与 SexCat 写点五函数声明/定义/全仓调用点逐一匹配；Relink 双列 set 有基提交 5 列先例；`Entry::saved_path` 是 QString（std::string→QString 转换在 EntryFromRow，直接传 QFileInfo 合法）；applyFilter 双 vector const 性正确；dialogs_layout 变量作用域完整（旧变量 nameW/markLimit 零残留）；样式键 7 个全部存在；新增 6 个 lang 键双向核对无孤儿；枚举位/删除符号/include 全部通过。
+
+**遗留 info（不修）**：三处零参 `saveFromDataSilent()` 拿不到 rename 上下文（行为提示，编译正确）；lib_ui/lib_base 子模块未检出，Text::String::DrawArgs 等以同树既有调用点等价性验证。
+
 ## 外部构建机手测清单
 
 1. 有检查点的会话、长名字 + 认证徽章：AG 标记完整可读（不再被盖左半）。

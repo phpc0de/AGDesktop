@@ -372,7 +372,7 @@ void AddDownloadVideosSelector(
 	for (auto i = 0; i < int(videos.size()); i++) {
 		const auto index = i;
 		const auto label = u"%1 · %2"_q.arg(i + 1).arg(
-			FormatSizeText(videos[i].first->size));
+			Ui::FormatSizeText(videos[i].first->size));
 		sub->addAction(label, [=] {
 			auto &on = (*state)[index];
 			on = !on;
