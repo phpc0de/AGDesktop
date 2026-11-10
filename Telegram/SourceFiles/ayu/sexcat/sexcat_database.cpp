@@ -13,6 +13,7 @@
 #include <crl/crl.h>
 
 #include <QDir>
+#include <QFileInfo>
 
 #include <algorithm>
 #include <limits>
@@ -402,7 +403,10 @@ bool Database::Relink(int64 id, const QString &newPath) {
 	try {
 		std::lock_guard lock(storageMutex);
 		storage.update_all(
-			set(c(&SavedFileRow::saved_path) = newPath.toStdString()),
+			set(
+				c(&SavedFileRow::saved_path) = newPath.toStdString(),
+				c(&SavedFileRow::file_name)
+					= QFileInfo(newPath).fileName().toStdString()),
 			where(column<SavedFileRow>(&SavedFileRow::id) == id));
 		try {
 			auto rows = storage.get_all<SavedFileRow>(

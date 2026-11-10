@@ -276,7 +276,13 @@ public:
 		});
 		connect(_tree, &QTreeWidget::itemDoubleClicked, this, [=](
 				QTreeWidgetItem *item,
-				int) { openFolder(RowIdOf(item)); });
+				int) {
+			if (item && item->childCount() > 0 && RowIdOf(item) == 0) {
+				item->setExpanded(!item->isExpanded());
+				return;
+			}
+			openFolder(RowIdOf(item));
+		});
 		connect(_tree, &QTreeWidget::itemClicked, this, [=](
 				QTreeWidgetItem *item,
 				int column) {
@@ -407,7 +413,8 @@ private:
 			}
 		}
 		const auto filtering = textOn || imageOn || !custom.isEmpty();
-		_tree->clear();
+		auto valid = std::vector<const Row *>();
+		auto lost = std::vector<const Row *>();
 		for (const auto &row : _rows) {
 			if (peerId != PeerId(0) && row.srcPeerId != peerId) {
 				continue;
@@ -425,8 +432,25 @@ private:
 					continue;
 				}
 			}
-			auto *item = new QTreeWidgetItem(_tree);
-			fillItem(item, row);
+			(row.lost ? lost : valid).push_back(&row);
+		}
+		_tree->clear();
+		for (const auto &row : valid) {
+			fillItem(new QTreeWidgetItem(_tree), *row);
+		}
+		if (!lost.empty()) {
+			auto *group = new QTreeWidgetItem(_tree);
+			group->setText(kColTime, tr::lng_sexcat_lost_group(
+				tr::now,
+				lt_count,
+				int(lost.size())));
+			group->setForeground(
+				kColTime,
+				QBrush(st::windowSubTextFg->c));
+			for (const auto &row : lost) {
+				fillItem(new QTreeWidgetItem(group), *row);
+			}
+			group->setExpanded(false);
 		}
 	}
 
@@ -472,11 +496,22 @@ private:
 		if (!row) {
 			return;
 		}
-		for (auto i = 0; i != _tree->topLevelItemCount(); ++i) {
-			auto *item = _tree->topLevelItem(i);
+		const auto paint = [&](QTreeWidgetItem *item) {
 			if (RowIdOf(item) == id) {
 				fillItem(item, *row);
+				return true;
+			}
+			return false;
+		};
+		for (auto i = 0; i != _tree->topLevelItemCount(); ++i) {
+			auto *item = _tree->topLevelItem(i);
+			if (paint(item)) {
 				return;
+			}
+			for (auto j = 0; j != item->childCount(); ++j) {
+				if (paint(item->child(j))) {
+					return;
+				}
 			}
 		}
 	}
@@ -573,23 +608,12 @@ private:
 		if (!HashStore::WriteAds(file, row->sha256, row->srcPeerId, row->srcMsgId)) {
 			HashStore::TrySidecar(file, row->sha256, row->srcPeerId, row->srcMsgId);
 		}
-		auto updated = SexCat::Entry{
-			.id = 0,
-			.sha256 = row->sha256,
-			.file_name = row->fileName,
-			.saved_path = file,
-			.file_size = row->fileSize,
-			.src_peer_id = int64(row->srcPeerId.value),
-			.src_msg_id = row->srcMsgId.bare,
-			.src_title = row->srcTitle,
-			.src_attach = row->srcAttach,
-			.saved_at = base::unixtime::now(),
-		};
-		if (!Database::instance().RecordSaved(std::move(updated))) {
+		if (!Database::instance().Relink(row->id, file)) {
 			Ui::Toast::Show(tr::lng_sexcat_verify_failed(tr::now));
 			return;
 		}
 		row->savedPath = file;
+		row->fileName = QFileInfo(file).fileName();
 		row->lost = false;
 		row->hashMismatch = false;
 		reload();

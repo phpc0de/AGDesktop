@@ -25,6 +25,7 @@ enum class ChatDataFlag {
 	NoForwards = (1 << 8),
 	HasWelcomeMessages = (1 << 9),
 
+	AyuForbidden = (1 << 30),
 	AyuNoForwards = (1 << 31),
 };
 inline constexpr bool is_flag_type(ChatDataFlag) { return true; };

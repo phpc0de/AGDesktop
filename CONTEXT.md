@@ -264,3 +264,11 @@
 - 计划偏差：AddAction 因遮蔽注释行不可转写，重构改为抽 `ChooseFolderAndSave` + 选择器自建 save 闭包（行为等价）。
 - 静态验证全绿（git diff --check / 0 残留 / 符号三向一致 / include 链确认）；等待外部构建机编译 + 手测清单（见交付文档）。
 - 本轮代码改动文件：sexcat_save_hook.h/.cpp、data_document.h/.cpp、data_file_click_handler.cpp、media_view_overlay_widget.cpp、data_document_resolver.cpp、menu_item_download_files.cpp、lang.strings。
+
+## 20. 第 6 轮：UI 四连修（QQQ1/QQQ3/QQQ10/Q20）
+- 用户令：改 UI 前必须先读 UI 代码；本轮按 systematic-debugging 四阶段走，全部先根因后动手。
+- **QQQ1**：那个被截断的字母标记 = 聊天列表 AG 检查点标记（`AG <当前消息序号>/<检查点ID>`，dialogs_layout ResolveCheckpointMark，仅在有检查点的会话显示）。显示病根：badge 用未截断的 `rowName.maxWidth()` 定位，名字省略时 badge 漂进静音图标/标记区盖住标记左半；修复 = 统一定位游标（nameWidth 截断 + markAvailable 公式）。
+- **QQQ3**：两处 tint 接线早已正确；真根因 = `Flag::Forbidden` 是瞬态——全量 MTPDchannel/chat apply 的 flagsMask 把它抹掉。修复 = 持久化客户端旗标 `AyuForbidden`（ChannelDataFlag 1<<61 / ChatDataFlag 1<<30）：channelForbidden/chatForbidden 置位，全量更新仅在频道未 restricted / 群组有真实成员时清除；PeerTintOf 首查它 → Banned 红。
+- **QQQ10**：Relink 只更新 saved_path 不更新 file_name（改名后名字列永旧）；手动 relocate 对有效行走 RecordSaved 插入 → 产生重复行且旧行 path 永灰。修复 = Relink 同步写 file_name；手动 relocation 改走 Relink；自动搬迁候选目录加 DB 近期记录的目录（用户常用目的地）；watch 根加 Documents。
+- **Q20**：下载历史失效灰行折叠沉底：applyFilter 分 valid/lost 两组，lost 归入一个折叠的顶级分组（双击展开），refreshRow 兼容子节点。
+- 改动文件：dialogs_layout.cpp、data_channel.h、data_chat.h、data_session.cpp、peer_tint.cpp、sexcat_database.cpp、sexcat_shell_watch.cpp、sexcat_history_window.cpp、lang.strings；交付文档 docs/delivery-qqq1-q3-q10-q20.md。

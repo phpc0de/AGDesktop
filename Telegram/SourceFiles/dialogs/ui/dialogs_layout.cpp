@@ -1008,12 +1008,6 @@ void PaintRow(
 					- muteIcon.width()
 					- st::dialogsMuteIconSkip);
 		}
-		auto badgeWidth = 0;
-		if ((history || sublist) && !context.search) {
-			const auto widthBefore = rectForName.width();
-			paintPeerBadge(rowName.maxWidth());
-			badgeWidth = widthBefore - rectForName.width();
-		}
 		auto checkpointMark = CheckpointMark();
 		if (history && history->maxMsgId() > 0 && !from->isSelf()) {
 			checkpointMark = ResolveCheckpointMark(history, context.now);
@@ -1037,6 +1031,16 @@ void PaintRow(
 					- checkpointMark.width
 					- markSkip);
 		}
+		// WHY: the badge, mute icon and mark hang off the drawn name
+		// width; an elided name must clamp them or they overlap.
+		const auto nameAvailable = rectForName.width();
+		const auto nameWidth = std::min(rowName.maxWidth(), nameAvailable);
+		auto badgeWidth = 0;
+		if ((history || sublist) && !context.search) {
+			const auto widthBefore = rectForName.width();
+			paintPeerBadge(nameWidth);
+			badgeWidth = widthBefore - rectForName.width();
+		}
 		PeerData *tintPeer = nullptr;
 		if (history) {
 			tintPeer = history->peer;
@@ -1053,7 +1057,7 @@ void PaintRow(
 			: Ayu::PeerTintFg(tint));
 		rowName.draw(p, {
 			.position = rectForName.topLeft(),
-			.availableWidth = rectForName.width(),
+			.availableWidth = nameWidth,
 			.elisionLines = 1,
 		});
 		if (drawMuteIcon) {
@@ -1061,11 +1065,8 @@ void PaintRow(
 				st::dialogsMuteIcon,
 				context.active,
 				context.selected);
-			const auto nameW = std::min(
-				rowName.maxWidth(),
-				rectForName.width());
 			const auto muteLeft = rectForName.left()
-				+ nameW
+				+ nameWidth
 				+ badgeWidth
 				+ st::dialogsMuteIconSkip;
 			const auto muteTop = rectForName.top()
@@ -1076,19 +1077,14 @@ void PaintRow(
 			// WHY: the mark shares the name line with the mute icon and
 			// the unread badge, so it draws only inside the width
 			// reserved for it, elided instead of running under the date.
-			const auto nameW = std::min(
-				rowName.maxWidth(),
-				rectForName.width());
 			const auto markLeft = rectForName.left()
-				+ nameW
+				+ nameWidth
 				+ badgeWidth
 				+ muteTaken
 				+ markSkip;
-			const auto markLimit = rectForName.left()
-				+ rectForName.width()
-				+ checkpointMark.width
-				+ markSkip;
-			const auto markAvailable = markLimit - markLeft;
+			const auto markAvailable
+				= (rectForName.width() - nameWidth)
+					+ checkpointMark.width;
 			if (markAvailable > 0) {
 				const auto markFont = st::dialogsCheckpointMarkFont;
 				p.setFont(markFont);

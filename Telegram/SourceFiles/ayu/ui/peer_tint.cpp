@@ -20,7 +20,9 @@ PeerTint PeerTintOf(PeerData *peer) {
 		return PeerTint::None;
 	}
 	if (const auto channel = peer->asChannel()) {
-		if (channel->isForbidden()) {
+		if (channel->flags() & ChannelDataFlag::AyuForbidden) {
+			return PeerTint::Banned;
+		} else if (channel->isForbidden()) {
 			// WHY: the channelForbidden apply path zeroes date on purpose,
 			// so guarding on it made the tint unreachable for exactly the
 			// region-blocked channels this feature is meant to mark.
@@ -33,7 +35,9 @@ PeerTint PeerTintOf(PeerData *peer) {
 			return PeerTint::AyuRestricted;
 		}
 	} else if (const auto chat = peer->asChat()) {
-		if (chat->flags() & ChatDataFlag::NoForwards) {
+		if (chat->flags() & ChatDataFlag::AyuForbidden) {
+			return PeerTint::Banned;
+		} else if (chat->flags() & ChatDataFlag::NoForwards) {
 			return PeerTint::Protected;
 		} else if (chat->isAyuNoForwards()) {
 			return PeerTint::AyuRestricted;

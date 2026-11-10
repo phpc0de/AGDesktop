@@ -157,6 +157,12 @@ std::vector<QString> RelocateCandidates(const QString &oldPath) {
 		roots,
 		drive,
 		QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation));
+	for (const auto &entry : Database::instance().Recent(kRelocateScanLimit, {})) {
+		AppendCandidate(
+			roots,
+			drive,
+			QFileInfo(entry.saved_path).absolutePath());
+	}
 	return roots;
 }
 
@@ -501,6 +507,8 @@ void RegisterShellWatch() {
 			QStandardPaths::DownloadLocation);
 	}
 	watch(downloadRoot);
+	watch(QStandardPaths::writableLocation(
+		QStandardPaths::DocumentsLocation));
 	if (entries.empty()) {
 		LogFailure(u"shell watch has no folders to watch"_q);
 		return;

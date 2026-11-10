@@ -1037,6 +1037,9 @@ not_null<PeerData*> Session::processChat(const MTPChat &data) {
 			| (data.is_noforwards() ? Flag::AyuNoForwards : Flag());
 		chat->setFlags((chat->flags() & ~flagsMask) | flagsSet);
 		chat->count = data.vparticipants_count().v;
+		if (chat->count > 0) {
+			chat->removeFlags(ChatDataFlag::AyuForbidden); // alive again
+		}
 
 		if (canAddMembers != chat->canAddMembers()) {
 			flags |= UpdateFlag::Rights;
@@ -1051,7 +1054,7 @@ not_null<PeerData*> Session::processChat(const MTPChat &data) {
 		chat->date = 0;
 		chat->count = -1;
 		chat->invalidateParticipants();
-		chat->setFlags(ChatDataFlag::Forbidden);
+		chat->setFlags(ChatDataFlag::Forbidden | ChatDataFlag::AyuForbidden);
 		chat->setAdminRights(ChatAdminRights());
 		chat->setDefaultRestrictions(ChatRestrictions());
 
@@ -1233,6 +1236,9 @@ not_null<PeerData*> Session::processChat(const MTPChat &data) {
 						: Flag()))
 				: Flag::StarsPerMessageKnown);
 		channel->setFlags((channel->flags() & ~flagsMask) | flagsSet);
+		if (!data.is_restricted()) {
+			channel->removeFlags(ChannelDataFlag::AyuForbidden); // accessible again
+		}
 		channel->setBotVerifyDetailsIcon(
 			data.vbot_verification_icon().value_or_empty());
 		if (!minimal && storiesState) {
@@ -1288,7 +1294,8 @@ not_null<PeerData*> Session::processChat(const MTPChat &data) {
 		const auto flagsSet = (data.is_broadcast() ? Flag::Broadcast : Flag())
 			| (data.is_megagroup() ? Flag::Megagroup : Flag())
 			| (data.is_monoforum() ? Flag::Monoforum : Flag())
-			| Flag::Forbidden;
+			| Flag::Forbidden
+			| Flag::AyuForbidden;
 		channel->setFlags((channel->flags() & ~flagsMask) | flagsSet);
 
 		if (channel->hasAdminRights()) {
