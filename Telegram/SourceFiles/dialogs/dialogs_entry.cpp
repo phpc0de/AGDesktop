@@ -541,19 +541,18 @@ void Entry::updateChatListEntryHeight() {
 // WHY: tag chips are synthesized locally, so neither the server premium
 // tagsEnabled flag nor an extra toggle may gate the row rendering path.
 bool Entry::hasChatsFilterTags(FilterId exclude) const {
-	if (exclude
-		&& _tagColors.size() == 1
-		&& _tagColors.begin()->first == exclude) {
-		return false;
+	if (!_tagColors.empty()
+		&& !(exclude
+			&& _tagColors.size() == 1
+			&& _tagColors.begin()->first == exclude)) {
+		return true;
 	}
-	if (_tagColors.empty()) {
-		if (const auto history = asHistory()) {
-			return AyuSettings::getInstance()
-				.localPeerTags(history->peer->id.value)
-				.has_value();
-		}
+	if (const auto history = asHistory()) {
+		return AyuSettings::getInstance()
+			.localPeerTags(history->peer->id.value)
+			.has_value();
 	}
-	return !_tagColors.empty();
+	return false;
 }
 
 } // namespace Dialogs
