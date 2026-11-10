@@ -272,3 +272,4 @@
 - **QQQ10**：Relink 只更新 saved_path 不更新 file_name（改名后名字列永旧）；手动 relocate 对有效行走 RecordSaved 插入 → 产生重复行且旧行 path 永灰。修复 = Relink 同步写 file_name；手动 relocation 改走 Relink；自动搬迁候选目录加 DB 近期记录的目录（用户常用目的地）；watch 根加 Documents。
 - **Q20**：下载历史失效灰行折叠沉底：applyFilter 分 valid/lost 两组，lost 归入一个折叠的顶级分组（双击展开），refreshRow 兼容子节点。
 - 改动文件：dialogs_layout.cpp、data_channel.h、data_chat.h、data_session.cpp、peer_tint.cpp、sexcat_database.cpp、sexcat_shell_watch.cpp、sexcat_history_window.cpp、lang.strings；交付文档 docs/delivery-qqq1-q3-q10-q20.md。
+- **Q1 修正（用户补充"NRFAD 跟文件夹标签同一行"后重查）**：NRFAD 不是 AG 检查点标记，而是**标签行 chip 的大写文本**（filter 标题与本地标签都 `toUpper()` 渲染）。真显示 bug = `Entry::hasChatsFilterTags(exclude)` 在"仅属于当前文件夹"时提前 return false，高度侧（Row::ComputeSt）保持 62px，而绘制侧 localTags 分支仍切 taggedDialogRow 把 chip 画在 y=52 → 底部 ~4px 被下一行背景盖掉，大写字母失下横（E→F，"UNREAD"→"NRFAD"），仅在文件夹视图触发。修复 = 排除命中时继续落到本地标签检查（1a073e20cd）；dialogs_layout 徽章重叠修复保留（另一独立覆盖源）。

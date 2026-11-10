@@ -2,16 +2,18 @@
 
 > 本轮全程先读 UI 代码、先根因后动手（systematic-debugging 四阶段）。零构建；验证 = 静态交叉核验 + 外部构建机实测。
 
-## QQQ1 — 聊天列表里那个"四分之一隐藏的字母标记"是什么
+## QQQ1 — 补充修正（用户："NRFAD 跟文件夹标签同一行"）
 
-**它是什么**：AyuGram 检查点标记。聊天列表会话名右侧的 `AG <当前最大消息序号>/<检查点消息ID>` 小字（dialogs/ui/dialogs_layout.cpp `ResolveCheckpointMark`），只在保存过本地检查点（AG 检查点功能）的会话上显示，用于一眼看出离线历史边界。
+**归属更正**："NRFAD"不是 AG 检查点标记（那在名字行最右，文本 `AG n/m`）。它是**文件夹标签行的 chip 文本**——所有 chip 都被 `toUpper()` 渲染（filter 标题 `dialogs_inner_widget.cpp:6008`、本地标签 `:225`），小写原文在 chip 里显示为大写。
 
-**显示病根（真根因，非猜测）**：`paintPeerBadge(rowName.maxWidth())` 用**未截断**的名字全宽定位认证/高级徽章；当名字被省略号截断时，徽章漂进右侧区域，正好压住静音图标和检查点标记的左半 → 标记只剩后四分之三，读起来像乱码（用户看到的 "NRFAD"）。
+**真显示 bug（证据链）**：
+- 绘制侧：`hasChatsFilterTags(context.filter)` 为 false 时，`localTags` 非空仍切 `taggedDialogRow`，chip 画在 y=52（inner_widget :1353-1356）。
+- 高度侧：`Row::ComputeSt` → 同名函数在 `_tagColors.size()==1 && first==exclude`（聊天只属于当前文件夹）时**提前 return false**，本地标签兜底不可达 → 行高保持 62px。
+- 后果：62px 行里 chip 从 y52 起画，底部 ~4px 被下一行背景盖住；大写字母失去下横 → **E 读作 F**、n/r 顶部残笔像 "ll" → "UNREAD"/测试标签 被读成 "NRFAD"，恰好"四分之一隐藏"。只在**文件夹视图**触发（全部聊天 exclude=0 不触发），解释了此前三次修复都没打中的现象。
 
-**修复**（dialogs_layout.cpp PaintRow）：
-- 先预留标记宽度，再以 `nameWidth = min(maxWidth, 可用宽)` 统一定位 badge、静音图标、标记；
-- 名字绘制 `availableWidth` 用同一 nameWidth（顺带修掉名字与徽章间的缝隙）；
-- `markAvailable = (rectForName.width() - nameWidth) + mark.width`，标记终点恰好在日期边界，不再过省略/不再压日期。
+**修复**（`dialogs_entry.cpp` hasChatsFilterTags，commit 1a073e20cd）：排除命中时不再短路，继续落到本地标签检查；高度与绘制在每个用例下一致（真值表逐格核验；`data_chat_filters.cpp:809` 的 exclude=0 用例不变，accessibility 调用方现在与绘制一致）。dialogs_layout 的徽章重叠修复保留——那是名字行另一处独立覆盖源。
+
+**验证方式**：修好后 chip 完整可读，文本本体一目了然（大概率是某个 "Unread" 文件夹的 chip 或此前 QQ2 测试时设置过的本地标签；右键 → Set local tags 可查）。
 
 ## QQQ3 — 特殊限制频道红色 tint（顶部群名 + 左侧列表）
 
