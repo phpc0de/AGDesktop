@@ -374,8 +374,7 @@ void AddDownloadVideosSelector(
 		const auto label = u"%1 · %2"_q.arg(i + 1).arg(
 			Ui::FormatSizeText(videos[i].first->size));
 		sub->addAction(label, [=] {
-			auto &on = (*state)[index];
-			on = !on;
+			(*state)[index] = !(*state)[index];
 			auto count = 0;
 			for (const auto value : *state) {
 				count += (value ? 1 : 0);
