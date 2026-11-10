@@ -55,10 +55,8 @@ constexpr auto kSexCatToastDuration = crl::time(3000);
 struct PendingSaveAs {
 	FullMsgId contextId;
 	QString sourceTag;
-	crl::time when = 0;
 };
 
-constexpr auto kPendingSaveAsTtl = 10 * crl::time(60'000);
 constexpr auto kPendingSaveAsMax = 32;
 
 std::map<DocumentData*, PendingSaveAs> &PendingMap() {
@@ -66,20 +64,9 @@ std::map<DocumentData*, PendingSaveAs> &PendingMap() {
 	return result;
 }
 
-// WHY: a failed save can die without its Forget callback and
-// DocumentData is not a QObject, so entries age out and the map
-// stays bounded instead of tracking document lifetimes.
-void PruneStalePending() {
-	auto &map = PendingMap();
-	const auto now = crl::now();
-	for (auto i = map.begin(); i != map.end();) {
-		if (now - i->second.when > kPendingSaveAsTtl) {
-			i = map.erase(i);
-		} else {
-			++i;
-		}
-	}
-}
+// WHY: entries leave the map when the download finishes
+// (NotifyDocumentSaved) or dies (Forget callback); a TTL would strip
+// the rename context from long downloads, which kept reproducing Q49.
 
 [[nodiscard]] bool Enabled() {
 	return AyuSettings::getInstance().sexcatEnabled();
@@ -582,7 +569,6 @@ void ResolveHashAndPersist(
 			}
 		}
 	}
-	PruneStalePending();
 	const auto i = PendingMap().find(document.get());
 	if (i == end(PendingMap())) {
 		return std::nullopt;
@@ -735,6 +721,44 @@ constexpr auto kAugmentedNameTries = 100;
 	return target;
 }
 
+// Shared captioned-name builder; empty when the rules don't apply.
+// WHY: all write-point callers land here, so a failing guard is logged
+// once with its exact reason.
+[[nodiscard]] QString BuildCaptionedNameFor(
+		not_null<DocumentData*> document,
+		const QString &original,
+		FullMsgId contextId) {
+	const auto dot = original.lastIndexOf(u'.');
+	const auto stem = (dot > 0) ? original.left(dot) : original;
+	if (!IsAllDigitsName(stem)) {
+		return {};
+	}
+	auto item = contextId
+		? document->owner().message(contextId)
+		: nullptr;
+	if (!item || !item->isRegular()) {
+		const auto i = PendingMap().find(document.get());
+		if (i != end(PendingMap())) {
+			item = document->owner().message(i->second.contextId);
+		}
+	}
+	if (!Enabled()) {
+		LogFailure(u"augment %1 skipped: disabled"_q.arg(original));
+		return {};
+	}
+	if (!item || !item->isRegular()) {
+		LogFailure(u"augment %1 skipped: no source item"_q.arg(original));
+		return {};
+	}
+	const auto candidate = BuildAugmentedName(
+		original,
+		AugmentNameParts(item));
+	if (candidate.isEmpty()) {
+		LogFailure(u"augment %1 skipped: no caption text"_q.arg(original));
+	}
+	return candidate;
+}
+
 void HandleLoadedDownload(not_null<const Data::DownloadedId*> id) {
 	if (id->object && id->object->document) {
 		Ayu::SexCat::RememberDownloadedDocument(id->object->document);
@@ -798,7 +822,6 @@ bool ShouldSkipDuplicateDownload(
 	}
 	// Q80: record the (peer, msg, attach) position at download start,
 	// so the next download of the same position dedups before any sha.
-	PruneStalePending();
 	if (const auto i = PendingMap().find(document.get()); i != end(PendingMap())) {
 		const auto item = document->owner().message(i->second.contextId);
 		if (item && item->isRegular()) {
@@ -931,18 +954,16 @@ void MarkDocumentSaveAs(
 		not_null<DocumentData*> document,
 		FullMsgId contextId,
 		const QString &sourceTag) {
-	PruneStalePending();
 	auto &map = PendingMap();
 	if (map.size() >= size_t(kPendingSaveAsMax)) {
 		map.clear();
 	}
-	map[document.get()] = PendingSaveAs{ contextId, sourceTag, crl::now() };
+	map[document.get()] = PendingSaveAs{ contextId, sourceTag };
 }
 
 void NotifyDocumentSaved(
 		const QString &savedPath,
 		not_null<DocumentData*> document) {
-	PruneStalePending();
 	const auto i = PendingMap().find(document.get());
 	if (i == end(PendingMap())) {
 		return;
@@ -1029,33 +1050,36 @@ QString SourceTagForItem(HistoryItem *item) {
 	return AugmentNameParts(item).tags.value(0);
 }
 
+QString AugmentedDocumentName(
+		not_null<DocumentData*> document,
+		FullMsgId contextId) {
+	return BuildCaptionedNameFor(document, document->filename(), contextId);
+}
+
 QString AdjustDocumentSaveTarget(
 		const QString &targetPath,
 		not_null<DocumentData*> document,
 		FullMsgId contextId) {
-	if (!Enabled() || targetPath.isEmpty()) {
-		return targetPath;
-	}
-	const auto item = contextId
-		? document->owner().message(contextId)
-		: nullptr;
-	if (!item || !item->isRegular()) {
+	if (targetPath.isEmpty()) {
 		return targetPath;
 	}
 	const auto info = QFileInfo(targetPath);
 	const auto original = info.fileName();
-	const auto dot = original.lastIndexOf(u'.');
-	const auto stem = (dot > 0) ? original.left(dot) : original;
-	if (!IsAllDigitsName(stem)) {
-		return targetPath;
-	}
-	const auto candidate = BuildAugmentedName(original, AugmentNameParts(item));
+	const auto candidate = BuildCaptionedNameFor(document, original, contextId);
 	if (candidate.isEmpty()) {
 		return targetPath;
 	}
 	const auto target = UniqueAugmentedTarget(info, candidate);
 	LogFailure(u"save target augmented: %1 -> %2"_q.arg(original, target));
 	return target;
+}
+
+void NotifyDuplicateSkipped(const QString &path) {
+	LogFailure(u"duplicate download skipped: "_q + path);
+	if (!Enabled()) {
+		return;
+	}
+	ShowToastText(tr::lng_sexcat_already_saved(tr::now, lt_path, path));
 }
 
 // Retro-tag: hang already downloaded records of this message on a tag.

@@ -164,8 +164,8 @@ public:
 		bool check = false) const;
 	void setLocation(const Core::FileLocation &loc);
 
-	bool saveFromData();
-	bool saveFromDataSilent();
+	bool saveFromData(FullMsgId contextId = {});
+	bool saveFromDataSilent(FullMsgId contextId = {});
 	[[nodiscard]] QString filepath(bool check = false) const;
 
 	void forceToCache(bool force);
@@ -385,7 +385,7 @@ private:
 	void handleLoaderUpdates();
 	void destroyLoader();
 
-	bool saveFromDataChecked();
+	bool saveFromDataChecked(FullMsgId contextId);
 
 	void refreshPossibleCoverThumbnail();
 

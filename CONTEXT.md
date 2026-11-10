@@ -219,3 +219,48 @@
 - **R3 Q50 交互**：✅ 已实现——`AddAction` 改 const 引用 + `forceFolderDialog` 参数；多选/相册菜单各新增"Save selected as..."/"Save all album files as..."（恒弹文件夹选择，整批同 tag/改名管线）；`DownloadManager::cancelAllLoading()`（public，包 `loadingStop(nullptr)`，只取消在途）；入口 = 下载区顶栏菜单（loadingInProgress 才出现，menuIconCancel）+ 下载条右键菜单（download_bar 新增 `menuRequests()` producer，ContextMenuFilter 事件过滤器）；lang 新增 ayu_DownloadAlbumAs/ayu_DownloadFilesAs/ayu_CancelAllDownloading。
 - **R4 验证**：静态交叉验证 ✅（声明/定义/调用点/图标 `st::menuIconCancel`/popupMenuWithIcons 经 style_chat、LF 行尾、`git diff --check` 干净、修正 `base/click_handler.h`→`ui/basic_click_handlers.h`）；外部构建机 Debug 编译 + 手测清单见 `docs/delivery-q49-q50-q52-sexcat.md`，未构建未打 tag。
 - grill 冻结保持至用户令下开工；本体代码 0 改动。
+
+## 18. 第 4 轮审计（QQQQ49 / QQQQ50）：缓存直存是幸存根因（/grill，只读取证）
+> Q 计数 3→4 = R1–R3 交付（v7.2.9-ayu.22 起有效）实测后仍未修好。HEAD `7c1a6e1ff7`，`fbf2354d38..HEAD` 对相关文件仅 download_bar.cpp +4 行 include，无回归回滚。
+
+### 18.1 Q49 幸存缺口（全部实测于当前 HEAD）
+- **H1 主根因：缓存直存绕过全部改名钩子**。`DocumentSaveClickHandler::Save`（data_file_click_handler.cpp:109-120）在 `data->saveFromData()` 成功时**直接 return**：快速保存（!explicitSaveAs）既不走 RecordSaveAttempt（:110 仅 `!wasLocal && explicitSaveAs`）也不走 AdjustDocumentSaveTarget（:134 在此分支之后）。而 `saveFromDataChecked`（data_document.cpp:1549-1575）按 `DocumentFileNameForSave` 把缓存字节**直接写进下载目录的裸数字名**并置 `_location`。
+  - 触发面 = 一切"字节已在流媒体缓存"后的保存：**播放器保存按钮**（media_view_overlay_widget.cpp:3547 `SaveAndTrack` Mode::ToFile）、聊天右键快速保存、**批量快速保存**（menu_item_download_files.cpp:241 SaveAndTrack 同入此洞）→ "看完再存 = 必现原名"，这正是用户最常见流程。
+  - 变体 H1b：播放器静态分支 `saveFromDataSilent`（media_view_overlay_widget.cpp:4812）**不点保存**就把图片/GIF 按裸数字名写进下载目录。
+- H2 次级风险：DownloadManager 兜底 `MaybeAugmentedSavePath`（sexcat_save_hook.cpp:738-751→705-736）在完成回调里 `QFile::rename`，Windows 句柄占用即失败（仅 LogFailure）；且管理器条目 path 保留旧名。
+- H3 去重静默跳过：`DocumentData::save` 对已记录 (document,toFile) `setLocation`+return（data_document.cpp:1330-1336）→ 重存同一相册"点了没反应"。
+- 格式/门槛本身符合 ADR-0006：`BuildAugmentedName`（sexcat_save_hook.cpp:658-688）= `#tags -简介-原名`、240 截断保原名、保留名检查（:634-654）；R2 两注入点（data_file_click_handler.cpp:134-138、menu_item_download_files.cpp:232-238）在各自分支内确实生效。
+- 结构性结论：**改名钩子挂在"链路节点"上，而缓存直存是从旁绕行的第三条落盘路径**；只要钩子不在写盘点上，任何新绕行路径都会复发（第 4 个 Q 的由来）。
+
+### 18.2 Q50 现状
+- 入口两 UI 均已挂接：classic 相册 history_inner_widget.cpp:3594/:3774、多选 :3618/:3940；新 UI history_view_context_menu.cpp:1252-1268（相册仅在 `!overSelection && selectedItems.empty()` 时出现）。相册两条（Download album files / Save all album files as…）、多选两条（…as / Save selected as…）。
+- 批量"另存为"分支改名✓（menu_item_download_files.cpp:232-238）；**批量快速保存（askDownloadPath=关）→ SaveAndTrack → H1** → 相册快速批量同样裸数字名（Q50"需自动重命名"因此被 Q49 连坐）。
+- 未做：全屏播放器内批量入口；相册内子集多选（全选已有）。
+
+### 18.3 本轮三问（已回执，见 18.4）
+1. Q49 复现序列（验证/否证 H1 为主根因；并确认实测 build ≥ v7.2.9-ayu.22）。
+2. Q50 缺口定位：入口不可见 / 落名未改 / 需播放器批量 / 需相圈子集多选。
+3. 修复面拍板：改名下沉到写盘点（`saveFromDataChecked` 计算增补名直接落盘，显式链+管理器兜底保留）± 把裸数字名 GIF/图片静默落盘一并纳入。
+
+### 18.4 第一轮问答回执（拍板 + 新增假设）
+- **复现序列 = 未点开直接另存仍得裸数字名** → H1 非唯一根因；显式/批量"另存为"链在实测中失守。
+- Q50 缺口 = ①批量落名仍裸数字（连坐 Q49）②**相册内子集多选**（新增需求；全选已有、播放器批量**不需要**、入口可见**无问题**）。
+- **修复面拍板 = 写盘时改名 + 裸数字名 GIF/图片一并纳入**（用户选定）。
+- 新增假设（第二轮问答分流）：
+  - **HA 去重静默跳过 + 旧文件残留**：Q80 `SexCatShouldSkipDuplicate` 对已记录 (peer,msg,attach) 重存静默跳过并 `setLocation(toFile)` 虚指（data_document.cpp:1330-1336）→ 后续 fast save 因 `saveFromData()` 虚指短路成 no-op；文件夹里留的是旧轮次的数字名文件，"重下≠新文件"。
+  - **HB 增补素材源为空**：tag/简介不在被保存文档的消息正文或相册组内（独立文本消息/实体缺失）→ `BuildAugmentedName` 返回空 → 不改名（批量选文件夹分支与 fast 注入点都会因此直落原名）。
+  - **HC 另存改名标记 10 分钟过期**：`kPendingSaveAsTtl = 10min`（sexcat_save_hook.cpp:61，PruneStalePending :72-83）；单个 Save as… 的下载（大视频/慢网/批量串行长队列）超过 10 分钟后 `NotifyDocumentSaved` 找不到 Pending 条目提前 return（sexcat_save_hook.cpp:947-955）→ 永不改名。批量选文件夹分支不受此影响（落盘即增补终名），单个 Save as 链实锤受害。
+- 定稿后动作：ADR-0006 修订（Decision 2 细化为"写盘点单一钩子 + 标记无 TTL 依赖"）→ 实现计划 → 才动代码。
+
+### 18.5 第二轮问答回执 + 定案（全歧义清零，写入 ADR-0006 Amendment 1）
+- 用户回执（原话级）：①"我下载文件就是原名字"（新下载即原名，排除旧文件残留视角）；② caption"和视频在一起啊，同一条消息"（HB 素材源无缺排除）；③ 子集多选 = **右键子菜单勾选**。
+- 新实锤 **HD**：`SaveAndTrack` 默认 `Mode::ToCacheOrFile`（data_file_click_handler.h）；`askDownloadPath=开` 时所有快存/另存目标本身即裸数字名，全押在事后 rename 上；而 `explicitSaveAs && !data->loading()`（data_file_click_handler.cpp:140）在文档已加载（自动下载/预取）时**吞掉改名标记** → 确定性复现。四缺口 H1/HA/HC/HD 共同形状 = 改名钩子不在写盘点上。
+- **定案（ADR-0006 Amendment 1）**：写盘点单一钩子（含 ToNewFile 对话框默认名）；事后 rename 降为兜底；标记免 TTL、去 `!loading()` 守卫；去重跳过去虚指 + toast；裸数字名 GIF/图片纳入；Q50 右键子菜单勾选；保存链五点 AyuLog 防第 5 个 Q。
+- **执行路线图（R1–R6）**：R1 写盘点钩子（saveFromDataChecked/Silent、fast 目标、批量目标、对话框默认名）→ R2 标记寿命 + HD 守卫移除 → R3 HA 去重虚指修复 → R4 Q50 子集子菜单 → R5 五点诊断日志 → R6 GIF/图片扩面验证。
+- 交付形态：先出实现计划（writing-plans，docs/plan/），经外部构建机编译实测；本会话代码零改动。
+
+## 19. 第 5 轮实现交付（用户令"开工"后）
+- 计划：`docs/plan/q49-write-point-naming.md`；交付：`docs/delivery-q49-q50-write-point.md`；实现按 ADR-0006 Amendment 1 全量落地（H1/HA/HC/HD 四缺口 + 子集多选 + 6 lang 键 + 五点诊断）。
+- 计划偏差：AddAction 因遮蔽注释行不可转写，重构改为抽 `ChooseFolderAndSave` + 选择器自建 save 闭包（行为等价）。
+- 静态验证全绿（git diff --check / 0 残留 / 符号三向一致 / include 链确认）；等待外部构建机编译 + 手测清单（见交付文档）。
+- 本轮代码改动文件：sexcat_save_hook.h/.cpp、data_document.h/.cpp、data_file_click_handler.cpp、media_view_overlay_widget.cpp、data_document_resolver.cpp、menu_item_download_files.cpp、lang.strings。

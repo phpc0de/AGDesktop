@@ -4809,7 +4809,8 @@ void OverlayWidget::displayDocument(
 				initThemePreview();
 			} else {
 				_documentMedia->automaticLoad(fileOrigin(), _message);
-				_document->saveFromDataSilent();
+				_document->saveFromDataSilent(
+					_message ? _message->fullId() : FullMsgId());
 				auto &location = _document->location(true);
 				if (location.accessEnable()) {
 					setStaticContent(PrepareStaticImage({

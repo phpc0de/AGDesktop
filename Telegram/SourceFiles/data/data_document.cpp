@@ -1328,11 +1328,14 @@ void DocumentData::save(
 		// Sexcat dedup: re-download would only duplicate library content.
 		if (!toFile.isEmpty()
 			&& SexCatShouldSkipDuplicate(this, toFile)) {
-			setLocation(Core::FileLocation(toFile));
-			session().local().writeFileLocation(
-				mediaKey(),
-				Core::FileLocation(toFile));
-			owner().requestDocumentViewRepaint(this);
+			if (QFileInfo::exists(toFile)) {
+				setLocation(Core::FileLocation(toFile));
+				session().local().writeFileLocation(
+					mediaKey(),
+					Core::FileLocation(toFile));
+				owner().requestDocumentViewRepaint(this);
+			}
+			SexCat::NotifyDuplicateSkipped(toFile);
 			return;
 		}
 		auto reader = owner().streaming().sharedReader(this, origin, true);
@@ -1536,17 +1539,17 @@ QString DocumentData::filepath(bool check) const {
 		: location(check).name();
 }
 
-bool DocumentData::saveFromData() {
-	return !filepath(true).isEmpty() || saveFromDataChecked();
+bool DocumentData::saveFromData(FullMsgId contextId) {
+	return !filepath(true).isEmpty() || saveFromDataChecked(contextId);
 }
 
-bool DocumentData::saveFromDataSilent() {
+bool DocumentData::saveFromDataSilent(FullMsgId contextId) {
 	return !filepath(true).isEmpty()
 		|| (Core::App().canSaveFileWithoutAskingForPath()
-			&& saveFromDataChecked());
+			&& saveFromDataChecked(contextId));
 }
 
-bool DocumentData::saveFromDataChecked() {
+bool DocumentData::saveFromDataChecked(FullMsgId contextId) {
 	if (forbidsFileSave()) {
 		return false;
 	}
@@ -1558,10 +1561,12 @@ bool DocumentData::saveFromDataChecked() {
 	if (bytes.isEmpty()) {
 		return false;
 	}
-	const auto path = DocumentFileNameForSave(this);
-	if (path.isEmpty()) {
+	const auto rawPath = DocumentFileNameForSave(this);
+	if (rawPath.isEmpty()) {
 		return false;
 	}
+	// Q49: cached bytes are written to the final captioned name here.
+	const auto path = SexCat::AdjustDocumentSaveTarget(rawPath, this, contextId);
 	auto file = QFile(path);
 	if (!file.open(QIODevice::WriteOnly)
 		|| file.write(bytes) != bytes.size()) {

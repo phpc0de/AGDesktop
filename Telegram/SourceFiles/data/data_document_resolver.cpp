@@ -307,7 +307,7 @@ void ResolveDocument(
 			showDocument();
 		}
 	} else {
-		document->saveFromDataSilent();
+		document->saveFromDataSilent(item ? item->fullId() : FullMsgId());
 		if (openPluginInfo()) {
 			return;
 		}

@@ -36,7 +36,13 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "ayu/sexcat/sexcat_save_hook.h"
+#include "base/unique_qptr.h"
 #include "history/history.h"
+#include "ui/text/format_values.h"
+#include "ui/widgets/menu/menu_action.h"
+#include "ui/widgets/menu/menu_add_action_callback.h"
+#include "ui/widgets/menu/menu_add_action_callback_factory.h"
+#include <QMenu>
 
 
 namespace Menu {
@@ -63,6 +69,42 @@ using Photos = std::vector<std::pair<not_null<PhotoData*>, FullMsgId>>;
 		}
 	}
 	return false;
+}
+
+// One folder dialog for the whole batch when forced or configured, silent save otherwise.
+void ChooseFolderAndSave(
+		base::weak_ptr<Window::SessionController> weak,
+		Fn<void(const QString &folderPath)> save,
+		bool forceFolderDialog) {
+	const auto controller = weak.get();
+	if (!controller) {
+		return;
+	}
+	if (forceFolderDialog || Core::App().settings().askDownloadPath()) {
+		const auto initialPath = [] {
+			const auto path = Core::App().settings().downloadPath();
+			if (!path.isEmpty() && path != FileDialog::Tmp()) {
+				return path.left(path.size()
+					- (path.endsWith('/') ? 1 : 0));
+			}
+			return QString();
+		}();
+		const auto handleFolder = [=](const QString &result) {
+			if (!result.isEmpty()) {
+				const auto folderPath = result.endsWith('/')
+					? result
+					: (result + '/');
+				save(folderPath);
+			}
+		};
+		FileDialog::GetFolder(
+			controller->window().widget().get(),
+			tr::lng_download_path_choose(tr::now),
+			initialPath,
+			handleFolder);
+	} else {
+		save(QString());
+	}
 }
 
 void AddAction(
@@ -244,41 +286,121 @@ void AddAction(
 	};
 
 	menu->addAction(text, [=] {
-		const auto save = [=](const QString &folderPath) {
-			saveImages(folderPath);
-			saveDocuments(folderPath);
-			callback();
-		};
+		ChooseFolderAndSave(
+			weak,
+			[=](const QString &folderPath) {
+				saveImages(folderPath);
+				saveDocuments(folderPath);
+				callback();
+			},
+			forceFolderDialog);
+	}, icon);
+}
+
+// Q50: pick a subset of an album's videos and download just those.
+void AddDownloadVideosSelector(
+		not_null<Ui::PopupMenu*> menu,
+		not_null<Window::SessionController*> window,
+		const Documents &documents) {
+	auto videos = Documents();
+	for (const auto &entry : documents) {
+		const auto &document = entry.first;
+		if (document->isVideoFile() || document->isAnimation()) {
+			videos.push_back(entry);
+		}
+	}
+	if (videos.size() < 2) {
+		return;
+	}
+	const auto weak = base::make_weak(window);
+	const auto state = std::make_shared<std::vector<bool>>(
+		videos.size(),
+		false);
+	const auto anchor = menu->addAction(
+		base::make_unique_q<Ui::Menu::Action>(
+			menu->menu(),
+			menu->menu()->st(),
+			Ui::Menu::CreateAction(
+				menu->menu().get(),
+				tr::ayu_SelectVideosToDownload(tr::now),
+				nullptr),
+			&st::menuIconDownload,
+			&st::menuIconDownload));
+	anchor->setMenu(new QMenu(menu->menu().get()));
+	const auto sub = menu->ensureSubmenu(anchor, st::popupMenuWithIcons);
+	const auto showCount = [=](int count) {
+		Ui::Toast::Show(Ui::Toast::Config{
+			.text = TextWithEntities{
+				tr::lng_sexcat_videos_selected(tr::now, lt_count, count),
+			},
+		});
+	};
+	const auto savePicked = [=](const QString &folderPath) {
 		const auto controller = weak.get();
 		if (!controller) {
 			return;
 		}
-		if (forceFolderDialog || Core::App().settings().askDownloadPath()) {
-			const auto initialPath = [] {
-				const auto path = Core::App().settings().downloadPath();
-				if (!path.isEmpty() && path != FileDialog::Tmp()) {
-					return path.left(path.size()
-						- (path.endsWith('/') ? 1 : 0));
+		const auto session = &controller->session();
+		auto batchTag = QString();
+		for (const auto &[document, fullId] : videos) {
+			if (const auto item = session->data().message(fullId)) {
+				batchTag = SexCat::SourceTagForItem(item);
+				if (!batchTag.isEmpty()) {
+					break;
 				}
-				return QString();
-			}();
-			const auto handleFolder = [=](const QString &result) {
-				if (!result.isEmpty()) {
-					const auto folderPath = result.endsWith('/')
-						? result
-						: (result + '/');
-					save(folderPath);
-				}
-			};
-			FileDialog::GetFolder(
-				controller->window().widget().get(),
-				tr::lng_download_path_choose(tr::now),
-				initialPath,
-				handleFolder);
-		} else {
-			save(QString());
+			}
 		}
-	}, icon);
+		for (auto i = 0; i < int(videos.size()); i++) {
+			if (!(*state)[i]) {
+				continue;
+			}
+			const auto &[document, origin] = videos[i];
+			if (!folderPath.isEmpty()) {
+				const auto name =
+					base::FileNameFromUserString(document->filename());
+				const auto target = SexCat::AdjustDocumentSaveTarget(
+					folderPath + name,
+					document,
+					origin);
+				SexCat::MarkDocumentSaveAs(document, origin, batchTag);
+				document->save(origin, target);
+			} else {
+				DocumentSaveClickHandler::SaveAndTrack(origin, document);
+			}
+		}
+	};
+	for (auto i = 0; i < int(videos.size()); i++) {
+		const auto index = i;
+		const auto label = u"%1 · %2"_q.arg(i + 1).arg(
+			FormatSizeText(videos[i].first->size));
+		sub->addAction(label, [=] {
+			auto &on = (*state)[index];
+			on = !on;
+			auto count = 0;
+			for (const auto value : *state) {
+				count += (value ? 1 : 0);
+			}
+			showCount(count);
+		});
+	}
+	sub->addAction(
+		tr::ayu_DownloadSelectedVideos(tr::now),
+		[=] {
+			auto picked = 0;
+			for (const auto value : *state) {
+				picked += (value ? 1 : 0);
+			}
+			if (!picked) {
+				Ui::Toast::Show(Ui::Toast::Config{
+					.text = TextWithEntities{
+						tr::lng_sexcat_nothing_selected(tr::now),
+					},
+				});
+				return;
+			}
+			ChooseFolderAndSave(weak, savePicked, false);
+		},
+		&st::menuIconDownload);
 }
 
 } // namespace
@@ -406,6 +528,7 @@ void AddDownloadAlbumAction(
 		tr::ayu_DownloadAlbumAs(tr::now),
 		&st::menuIconDownload,
 		true);
+	AddDownloadVideosSelector(menu, window, docs);
 }
 
 } // namespace Menu

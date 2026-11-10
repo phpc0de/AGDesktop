@@ -18,6 +18,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "ayu/sexcat/sexcat_save_hook.h"
+#include "ayu/utils/ayu_log.h"
 #include "core/core_settings.h"
 
 
@@ -106,7 +107,11 @@ void DocumentSaveClickHandler::Save(
 		const auto explicitSaveAs = (mode == Mode::ToNewFile)
 			|| Core::App().settings().askDownloadPath();
 		const auto wasLocal = !data->filepath(true).isEmpty();
-		if (mode != Mode::ToNewFile && data->saveFromData()) {
+		Ayu::Log::Write(
+			u"sexcat"_q,
+			u"save: mode=%1 explicit=%2 local=%3"_q.arg(
+				int(mode)).arg(explicitSaveAs).arg(wasLocal));
+		if (mode != Mode::ToNewFile && data->saveFromData(contextId)) {
 			if (!wasLocal && explicitSaveAs) {
 				SexCat::RecordSaveAttempt(
 					data->filepath(true),
@@ -126,10 +131,15 @@ void DocumentSaveClickHandler::Save(
 		const auto filename = filepath.isEmpty()
 			? QString()
 			: fileinfo.fileName();
+		auto already = filename;
+		if (mode == Mode::ToNewFile && already.isEmpty()) {
+			// Q49: the save dialog opens with the captioned default name.
+			already = SexCat::AugmentedDocumentName(data, contextId);
+		}
 		auto savename = DocumentFileNameForSave(
 			data,
 			(mode == Mode::ToNewFile),
-			filename,
+			already,
 			filedir);
 		if (!savename.isEmpty() && !explicitSaveAs) {
 			// Q49: quick saves never see a dialog, so the captioned
@@ -137,8 +147,9 @@ void DocumentSaveClickHandler::Save(
 			savename = SexCat::AdjustDocumentSaveTarget(savename, data, contextId);
 		}
 		if (!savename.isEmpty()) {
-			if (explicitSaveAs && !data->loading()) {
-				// in-flight saves land in the downloads dir, not a confirmed path
+			if (explicitSaveAs) {
+				// WHY: loading state must not eat the marker; the
+				// write-point name and the fallback rename key off it.
 				SexCat::MarkDocumentSaveAs(data, contextId);
 			}
 			data->save(origin, savename);
