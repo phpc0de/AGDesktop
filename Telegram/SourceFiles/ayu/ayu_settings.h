@@ -268,6 +268,8 @@ public:
 	void removeShadowBan(int64 id);
 	[[nodiscard]] bool isShadowBanned(const int64 id) const { return _shadowBanIds.contains(id); }
 	[[nodiscard]] const std::unordered_set<int64> &shadowBanIds() const { return _shadowBanIds; }
+	[[nodiscard]] bool isSpecialRestrictedPeer(uint64 id) const { return _specialRestrictedPeers.contains(id); }
+	void setSpecialRestrictedPeer(uint64 id, bool special);
 
 	[[nodiscard]] std::optional<uint8> chatGroupMarkColor(uint64 peerId) const;
 	void setChatGroupMarkColor(uint64 peerId, std::optional<uint8> colorIndex);
@@ -661,6 +663,7 @@ private:
 	rpl::variable<bool> _saveMessagesHistory = true;
 	rpl::variable<bool> _saveForBots = false;
 	std::unordered_set<int64> _shadowBanIds;
+	std::unordered_set<uint64> _specialRestrictedPeers;
 	std::map<uint64, uint8> _chatGroupMarks;
 	std::map<uint64, QString> _chatGroupMarkLabels;
 	std::map<uint64, QString> _localPeerTags;

@@ -6,6 +6,7 @@
 // Copyright @Radolyn, 2026
 #include "ayu/ui/peer_tint.h"
 
+#include "ayu/ayu_settings.h"
 #include "data/data_channel.h"
 #include "data/data_chat.h"
 #include "data/data_peer.h"
@@ -20,7 +21,10 @@ PeerTint PeerTintOf(PeerData *peer) {
 		return PeerTint::None;
 	}
 	if (const auto channel = peer->asChannel()) {
-		if (channel->flags() & ChannelDataFlag::AyuForbidden) {
+		if (AyuSettings::getInstance().isSpecialRestrictedPeer(
+			channel->id.value)) {
+			return PeerTint::Banned;
+		} else if (channel->flags() & ChannelDataFlag::AyuForbidden) {
 			return PeerTint::Banned;
 		} else if (channel->isForbidden()) {
 			// WHY: the channelForbidden apply path zeroes date on purpose,

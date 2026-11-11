@@ -306,3 +306,18 @@
   - F3 保险（dialogs_layout.cpp:1138-1145）：chip 绘制 y 钳位 `min(tagTop, 行高-chip高)`，任何未来 stale 路径都不可能再裁。
   - 验证：静态三向核验 + 外部构建机 Debug + 手测（全部聊天视图 unread 文件夹成员 chip 完整、切视图、重启）。
   - 实施状态（用户令"开工"）：**F2/F3 已落地**（dialogs_inner_widget.cpp:582-604 去门 + dialogs_layout.cpp:1141-1146 钳位）。**F1 被拦截**：dialogs_entry.cpp 被 session-05b57906 活跃认领（非 stale，不可 force；pending_write 需整文件明文、受占位符协议限制不可行）——待对方 release 后一条 edit 即落地并二次提交。F2 已使存在变更自愈对非 premium 生效（data_session.cpp:5805-5808 在 addToChatList 着色后必发存在事件）；F1 仍必要：data_chat_filters.cpp:816 批量重建直调 addToChatList、不经 refreshChatListEntry、无事件可自愈。
+
+## 22. 第 8 轮：QQQQ3——tint 四连修全部无效，特殊限制频道永远全黑（/grill）
+- 症状澄清（用户两轮回执）：第 3 轮的"颜色"不是意图分叉——**症状 = 两处（顶栏群名 Q3.1、列表频道名 Q3.2）全是黑色，tint 特性从未生效过**（"是你的修改0生效，全部都是黑色，根本没有变过色"）。用户要的是：特殊限制频道名字显示区分色。
+- tint 提交史（四连修全败）：18c8fd7957（建 peer_tint，接线两处）→ 9cb8ededbe（加 AyuRestrictedContent→RegionRestricted）→ 5272ab2778（去 date!=0 守卫，自称 "never reaching forbidden channels... rows stayed plain black"）→ 0d0c001b68（AyuForbidden 持久化）。
+- 静态验证（本轮全部实测）：接线 ✓（PaintRow `from` 分支 :1044-1057 + 顶栏 :748-762，均真路径）；置位点 ✓（channelForbidden→Forbidden+AyuForbidden data_session.cpp:1298-1300；is_restricted→AyuRestrictedContent :1217；noforwards→AyuNoForwards :1207）；位无冲突 ✓（上游最高 1<<48，fork 61/62/63；Chat 侧 1<<30/31）；样式 ✓（info.style:915-932 六色）；绘制链 ✓（RowPainter::Paint→PaintRow）。
+- **四轮共同盲区：零运行时验证**——没有任何一轮确认过用户的频道实际带什么旗标。静态全对 + 用户全黑 ⇒ 唯一剩余解释：用户的"特殊限制频道"不落进任何判定类（region 封禁频道服务端可能不发 restricted/forbidden 旗标；或"特殊限制"是用户自定义概念，四轮全在猜错的目标集合上修）。
+- 本轮动作：已发 ask_user_question（频道打开后的表现 + 主题），答案将钉死旗标类；若静态判定类全覆盖仍黑 → 下轮加运行时探针（applyPeerChanged 旗标变更走 ayu_log，一次构建周期取证）。grill 冻结保持。
+- **回执定案**：①频道打开后"除了没有消息之外，其他一模一样"= 首载**空成功**（非 channelForbidden 弹窗、无限制提示页、无 restricted/noforwards 旗标）②官方默认主题（排除调色板掩蔽）。⇒ **根因定案：目标集合错误**——四轮全在修"服务器旗标可见性"（Forbidden/is_restricted/noforwards），而该类频道服务端**静默拒发消息**，peer 对象是普通频道、一个旗标都不带 → `PeerTintOf` 恒 None → 永远黑。前四轮不是"没修中点"，是"修的对象根本不存在于数据"。
+- 现成信号盘点：history_widget.cpp:4760 messagesFailed 对 CHANNEL_PRIVATE 族只 closeCurrent+toast 不落状态；apiwrap.cpp:3690-3695 fail 同族发 `notifyHistoryAccessLost`（瞬态事件，data_session.cpp:2592-2597，仅 chat_section.cpp:980 消费）→ 无持久状态可复用；首载成功空历史（apiwrap.cpp:3680-3684 addSlice 空片）完全无人标记。
+- **G1–G4 已实施（用户令下工）**：
+  - G1 history_widget.cpp firstLoadMessages done（~:5034）：FirstLoadCameBackEmpty（四构造 match：messages/messagesSlice/channelMessages 判 vmessages 空；messagesNotModified 不算）→ MarkSilentlyRestrictedChannel。**路线图修正：首载真实路径 = HistoryWidget::firstLoadMessages（history_widget.cpp:5029 histories.sendRequest），非 apiwrap:3680 的跳转/搜索请求；apiwrap 未覆盖。**
+  - G2 history_widget.cpp messagesFailed（:4766-4772）CHANNEL_PRIVATE/CHANNEL_PUBLIC_GROUP_NA/USER_BANNED_IN_CHANNEL 族 → 同 G1（close/toast 行为不动）。
+  - G3 ayu_settings.h/.cpp：`std::unordered_set<uint64> _specialRestrictedPeers` + isSpecialRestrictedPeer/setSpecialRestrictedPeer（镜像 shadowBanIds 的 json 直序列化双向模式），随 settings 落盘跨重启。
+  - G4 peer_tint.cpp 频道分支最前查集合 → Banned 红；MarkSilentlyRestrictedChannel（history_widget.cpp 匿名 ns）置位后 updateChatListEntry + peerUpdated(UnavailableReason)，列表行与顶栏同拍重绘。
+  - 行为注记（物理上限，如实告知）：染色自该频道**首次打开之后**生效并跨重启持久；从未打开过的静默受限频道无任何客户端信号可辨，仍是黑。不新增 ChannelData 旗标（AyuForbidden 会被全量 apply 清掉，复用必死）；不动 close/toast 行为。

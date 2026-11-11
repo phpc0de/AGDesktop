@@ -247,6 +247,34 @@ constexpr auto kCommonModifiers = 0
 	| Qt::ControlModifier;
 const auto kPsaAboutPrefix = "cloud_lng_about_psa_";
 
+[[nodiscard]] bool FirstLoadCameBackEmpty(const MTPmessages_Messages &result) {
+	return result.match(
+		[](const MTPDmessages_messages &d) {
+			return d.vmessages().v.isEmpty();
+		},
+		[](const MTPDmessages_messagesSlice &d) {
+			return d.vmessages().v.isEmpty();
+		},
+		[](const MTPDmessages_channelMessages &d) {
+			return d.vmessages().v.isEmpty();
+		},
+		[](const MTPDmessages_messagesNotModified &) {
+			return false;
+		});
+}
+
+void MarkSilentlyRestrictedChannel(not_null<History*> history) {
+	auto &settings = AyuSettings::getInstance();
+	if (settings.isSpecialRestrictedPeer(history->peer->id.value)) {
+		return;
+	}
+	settings.setSpecialRestrictedPeer(history->peer->id.value, true);
+	history->updateChatListEntry();
+	history->peer->session().changes().peerUpdated(
+		history->peer,
+		PeerUpdateFlag::UnavailableReason);
+}
+
 [[nodiscard]] rpl::producer<PeerData*> ActivePeerValue(
 		not_null<Window::SessionController*> controller) {
 	return controller->activeChatValue(
@@ -4766,6 +4794,9 @@ void HistoryWidget::messagesFailed(const MTP::Error &error, int requestId) {
 	} else if (error.type() == u"CHANNEL_PRIVATE"_q
 		|| error.type() == u"CHANNEL_PUBLIC_GROUP_NA"_q
 		|| error.type() == u"USER_BANNED_IN_CHANNEL"_q) {
+		if (_history) {
+			MarkSilentlyRestrictedChannel(_history);
+		}
 		auto was = _peer;
 		closeCurrent();
 		const auto wasAccount = not_null(&was->account());
@@ -5039,6 +5070,11 @@ void HistoryWidget::firstLoadMessages() {
 			MTP_long(historyHash)
 		)).done([=](const MTPmessages_Messages &result) {
 			messagesReceived(history->peer, result, _firstLoadRequest);
+			// WHY: silently restricted channels carry no server flags, so
+			// an empty first load is the only client-side proof of the block.
+			if (FirstLoadCameBackEmpty(result)) {
+				MarkSilentlyRestrictedChannel(history);
+			}
 			finish();
 		}).fail([=](const MTP::Error &error) {
 			messagesFailed(error, _firstLoadRequest);

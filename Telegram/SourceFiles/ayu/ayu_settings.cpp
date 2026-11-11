@@ -479,6 +479,17 @@ void AyuSettings::removeShadowBan(int64 id) {
 	}
 }
 
+void AyuSettings::setSpecialRestrictedPeer(uint64 id, bool special) {
+	if (special) {
+		if (!_specialRestrictedPeers.insert(id).second) {
+			return;
+		}
+	} else if (!_specialRestrictedPeers.erase(id)) {
+		return;
+	}
+	save();
+}
+
 std::optional<uint8> AyuSettings::chatGroupMarkColor(uint64 peerId) const {
 	const auto it = _chatGroupMarks.find(peerId);
 	if (it == end(_chatGroupMarks)) {
@@ -1190,6 +1201,7 @@ void to_json(nlohmann::json &j, const AyuSettings &s) {
 		{"saveMessagesHistory", s._saveMessagesHistory.current()},
 		{"saveForBots", s._saveForBots.current()},
 		{"shadowBanIds", s._shadowBanIds},
+		{"specialRestrictedPeers", s._specialRestrictedPeers},
 		{"chatGroupMarks", chatGroupMarks},
 		{"chatGroupMarkLabels", chatGroupMarkLabels},
 		{"localPeerTags", localPeerTags},
@@ -1302,6 +1314,9 @@ void from_json(const nlohmann::json &j, AyuSettings &s) {
 	s._saveMessagesHistory = j.value("saveMessagesHistory", defaults._saveMessagesHistory.current());
 	s._saveForBots = j.value("saveForBots", defaults._saveForBots.current());
 	s._shadowBanIds = j.value("shadowBanIds", defaults._shadowBanIds);
+	s._specialRestrictedPeers = j.value(
+		"specialRestrictedPeers",
+		defaults._specialRestrictedPeers);
 	if (j.contains("chatGroupMarks") && j["chatGroupMarks"].is_object()) {
 		s._chatGroupMarks.clear();
 		for (const auto &[key, value] : j["chatGroupMarks"].items()) {
