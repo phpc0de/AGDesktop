@@ -273,3 +273,36 @@
 - **Q20**：下载历史失效灰行折叠沉底：applyFilter 分 valid/lost 两组，lost 归入一个折叠的顶级分组（双击展开），refreshRow 兼容子节点。
 - 改动文件：dialogs_layout.cpp、data_channel.h、data_chat.h、data_session.cpp、peer_tint.cpp、sexcat_database.cpp、sexcat_shell_watch.cpp、sexcat_history_window.cpp、lang.strings；交付文档 docs/delivery-qqq1-q3-q10-q20.md。
 - **Q1 修正（用户补充"NRFAD 跟文件夹标签同一行"后重查）**：NRFAD 不是 AG 检查点标记，而是**标签行 chip 的大写文本**（filter 标题与本地标签都 `toUpper()` 渲染）。真显示 bug = `Entry::hasChatsFilterTags(exclude)` 在"仅属于当前文件夹"时提前 return false，高度侧（Row::ComputeSt）保持 62px，而绘制侧 localTags 分支仍切 taggedDialogRow 把 chip 画在 y=52 → 底部 ~4px 被下一行背景盖掉，大写字母失下横（E→F，"UNREAD"→"NRFAD"），仅在文件夹视图触发。修复 = 排除命中时继续落到本地标签检查（1a073e20cd）；dialogs_layout 徽章重叠修复保留（另一独立覆盖源）。
+
+## 21. 第 7 轮：QQQQ1——"NRFAD 是什么"代码指认（/grill，零应用代码改动）
+- 用户问句：NRFAD（前两字母疑似 "ll"，约四分之一被隐藏）这个标记是什么来的；与"本地文件夹标记"同列。
+- 本轮 UI 绘制链全读（行号实测于 HEAD 403e3c4e5c = tag v7.2.9-ayu.23）：
+  - chip 绘制点：`dialogs/ui/dialogs_layout.cpp:1138-1145`（`p.drawImage(left, context.st->tagTop, *tag)`，自 nameLeft=68px 起横排）。
+  - chip 生成：`ui/chat/chats_filter_tag.cpp:235-277`——图高 = `st::dialogRowFilterTagStyle.font->height`（`font(10px)`，dialogs.style:159-161 ≈13-14px）；文本 y=0 全盒绘制，大写墨迹不出盒。
+  - 文本来源两类、均 `toUpper()`：①文件夹标签 chip = `filter.title()` 大写（`dialogs_inner_widget.cpp:6004-6008`，无 emoji 文件夹即标题文本 chip；颜色用 filter.colorIndex :6009-6018）；②本地标签 chip = `CacheLocalTag`（:220-244，:225 toUpper；唯一写入方 = 右键 "Set local tags" 菜单 :252-297 → ayu_settings `localPeerTags`；颜色按文本 hash 随机 :232-235）。
+  - 行高判定：`dialogs/dialogs_row.cpp:420-436` ComputeSt（taggedDialogRow 72px/tagTop 52px，dialogs.style:114-118；taggedForumDialogRow 96/77）；绘制侧 :1284-1375 与高度侧同谓词（1a073e20cd 后一致，:1353 else-if 分支已死代码）。
+  - 覆盖机制：行背景不透明 `fillRect(geometry, bg)`（dialogs_layout.cpp:539）→ 下一行行首盖住上一行超出自身行高的内容（Q3 前 62px 行的 ~4px 裁剪即此）。
+- **指认**：NRFAD = "unread" 的 UNREAD 底部裁剪读法（U 失底弧→"ll"、E 失下横→F；"四分之一"=13px chip 的 ~4px）。来源二选一（待回执）：文件夹名 "Unread" 的标题 chip（官方端有 Unread 预设文件夹），或该会话本地标签 "unread"（delivery doc:12 记录的测试标签在案，上一轮排查遗留可能性大）。
+- 几何自洽性（HEAD 静态）：52+14=66<72；forum 77+14=91<96；narrow 关 chip（:1285,:1290）；RowsScrollCache 按 rowId+physicalSize 失配即重画、仅滚动期生效 → **未发现第二静态裁剪源**。
+- 残余假设（回执分流）：HA 用户 exe 早于 .23（修复不在内）；HB 分数 DPR/字体度量边界（未证实）；HC 旧截图/旧行高状态。
+- 三问已发（ask_user_question）：①About 版本号 ②出现视图（文件夹视图/全部聊天/两者）③侧栏有无 "Unread" 文件夹 + 该会话 Set local tags 内容（多选）。
+- grill 冻结保持；钉死根因前不动应用代码。附记：用户不满"UI 颜色"可能含 chip 随机取色（本地标签 hash 色），独立项待拍板。
+- **回执（2025-11-10 当轮）**：①版本选了 ".23 或更新"（未经 About 原文核实，存疑）；②位置自定义："左边的聊天和频道列表，频道名字下面"（即标签行/预览行区域，未指明视图）；③来源自定义："不知道什么鸡巴玩意来的，**大部分聊天会话都有**"——两处都未按选项核对。
+- 回执后修正：**"大部分会话都有"** → 单个本地标签（单会话）不成立；最可能 = **覆盖面很大的文件夹的标题文本 chip**（该文件夹无 emoji → 大写标题 chip 出现在几乎所有成员会话行上，全部聊天视图 exclude=0 全显示）。无 emoji 的英文/拉丁名文件夹 → 用户不认得 → "不知道什么玩意"。词形重建唯一解仍是 UNREAD（ll=失底 U，F=失底 E）。
+- **决定性 10 秒判别法（已发给用户）**：进入侧栏每个文件夹视图看该标记是否消失——chip 只画"非当前文件夹"的标签（dialogs_inner_widget.cpp:1303-1306），进"Unread"文件夹视图时其 chip 必消失；任何视图都不消失 → 本地标签（右键 Set local tags 核对）；都不消失且行高与邻行相同 → 非 chip，必须截图。
+- 静态结论维持：.23 几何自洽（52+14<72），若确为 .23 仍裁 → 与静态矛盾，须截图取像素真相；4 轮 Q 的共同教训 = 从未取得过一张截图。
+- **来源定案（用户回执："确实是 unread"）**：标记 = 名为 unread 的条目的大写 chip；结合"大部分会话都有" → unread **文件夹**的标题文本 chip（其无 emoji）；词形反推 UNREAD（U失底→ll、E失底→F）与用户确认完全吻合。"版本核实"质疑收回（措辞失当）。
+- 剩余分叉（唯一决策变量）：用户 .23 构建里该 chip 是否仍被裁四分之一。仍裁 → 违背静态几何 → 出修复改动单前必须拿到截图（标记行 + About 版本同框）；不裁 → QQQQ1 就地结案（前 3 个 Q 为旧构建时期裁剪源，已逐一修复）。
+- 用户侧立即可消除项（可选）：给 unread 文件夹设 emoji（chip 变 emoji 不再是文本）或改名/删文件夹。
+- 用户确认 .23 仍裁（"我已经23版本了"）→ 第 7 轮深挖，**根因实锤（静态全链路闭合，无需截图）**：
+  1. 主列表 Row 创建/重算早于文件夹加载：`_tagColors` 尚空 → `ComputeSt`→`hasChatsFilterTags(0)`=false → **行高 62px 存储固化**（dialogs_list.cpp:35/178/195）。
+  2. 文件夹加载/变更：`addToChatList`→fork 强制兜底取色 `setColorIndexForFilterId`（dialogs_entry.cpp:461-469，上游仅显式 colorIndex 才设）**只改 `_tagColors`，不发任何 Height 更新**（:441-452 无事件；removeFromChatList :488-493 同）。
+  3. 唯一自愈管线被 premium 门死：`tagsEnabledValue()` 来自服务端 `is_tags_enabled`（data_chat_filters.cpp:478，非 premium=false）→ `dialogs_inner_widget.cpp:583-585` `if (!tags) return;` → `chatListEntryRefreshes` 的 existenceChanged→`updateHeights` 处理器**永不接线**（:588-608）；而 data_session.cpp:5790-5808 的存在变更事件照发无人消费。
+  4. 绘制侧谓词已被 fork 解门（WHY 注释："chips synthesized locally…premium flag must not gate"，dialogs_entry.cpp:541-542）→ gate=true → chip 画在 y=52（dialogs_inner_widget.cpp:1294-1296 + dialogs_layout.cpp:1138-1145）于 **62px 旧高行**内 → 底 ~4px 被下行不透明背景（dialogs_layout.cpp:539）盖 → UNREAD→"llNRFAD"。每会话必现、覆盖所有文件夹成员 = "大部分会话都有" ✓。
+  5. Q3 修复（1a073e20cd）只统一了"谓词函数"，没修"存储高度缓存永不刷新"——这就是第 4 个 Q 仍裁的原因；fork 解了渲染门没解高度自愈门 = 不完整解门。
+- **修复改动单 F1–F3（待用户令下工）**：
+  - F1 根因（dialogs_entry.cpp）：`setColorIndexForFilterId` 在 `_tagColors` **size 变化**（0↔1↔N，谓词几何全依赖 size）时补发 `updateChatListEntryHeight()`；值不变不发。所有变更路径（addToChatList/removeFromChatList/tagColorChanged:633/unread-hack）皆经此单点。
+  - F2 管线（dialogs_inner_widget.cpp:583-585）：去掉 `chatListEntryRefreshes` 处理器的 `tagsEnabled` 门，与"chips 本地合成不门控"决策对齐。
+  - F3 保险（dialogs_layout.cpp:1138-1145）：chip 绘制 y 钳位 `min(tagTop, 行高-chip高)`，任何未来 stale 路径都不可能再裁。
+  - 验证：静态三向核验 + 外部构建机 Debug + 手测（全部聊天视图 unread 文件夹成员 chip 完整、切视图、重启）。
+  - 实施状态（用户令"开工"）：**F2/F3 已落地**（dialogs_inner_widget.cpp:582-604 去门 + dialogs_layout.cpp:1141-1146 钳位）。**F1 被拦截**：dialogs_entry.cpp 被 session-05b57906 活跃认领（非 stale，不可 force；pending_write 需整文件明文、受占位符协议限制不可行）——待对方 release 后一条 edit 即落地并二次提交。F2 已使存在变更自愈对非 premium 生效（data_session.cpp:5805-5808 在 addToChatList 着色后必发存在事件）；F1 仍必要：data_chat_filters.cpp:816 批量重建直调 addToChatList、不经 refreshChatListEntry、无事件可自愈。

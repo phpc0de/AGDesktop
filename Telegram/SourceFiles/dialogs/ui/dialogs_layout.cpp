@@ -1138,7 +1138,12 @@ void PaintRow(
 	if (const auto tags = context.chatsFilterTags) {
 		auto left = nameleft;
 		for (const auto &tag : *tags) {
-			p.drawImage(left, context.st->tagTop, *tag);
+			// Clamp so a stale stored row height can never clip the chip.
+			const auto y = std::min(
+				context.st->tagTop,
+				geometry.height()
+					- int(tag->height() / tag->devicePixelRatio()));
+			p.drawImage(left, y, *tag);
 			left += st::dialogRowFilterTagSkip
 				+ (tag->width() / style::DevicePixelRatio());
 		}

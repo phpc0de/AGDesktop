@@ -579,12 +579,7 @@ InnerWidget::InnerWidget(
 		refreshWithCollapsedRows();
 	}, lifetime());
 
-	session().data().chatsFilters().tagsEnabledValue(
-	) | rpl::on_next([=](bool tags) {
-		_handleChatListEntryTagRefreshesLifetime.destroy();
-		if (!tags) {
-			return;
-		}
+	{
 		using Event = Data::Session::ChatListEntryRefresh;
 		session().data().chatListEntryRefreshes(
 		) | rpl::filter([=](const Event &event) {
@@ -640,7 +635,7 @@ InnerWidget::InnerWidget(
 				update();
 			}
 		}, _handleChatListEntryTagRefreshesLifetime);
-	}, lifetime());
+	}
 
 	session().settings().archiveInMainMenuChanges(
 	) | rpl::on_next([=] {
