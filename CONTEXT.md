@@ -343,3 +343,14 @@
 - H1 的两个右键入口保留为兜底。
 - **H3 已实施（全局 shell 事件，用户拍板）**：SHChangeNotifyRegister 注册面从"桌面文件夹+下载+文档三子树"换成 **CSIDL_DESKTOP 命名空间根**（SHGetFolderLocation）递归注册 = 全盘所有驱动器的改名/移动/删除事件；事件面裁掉 SHCNE_UPDATEITEM（全局范围下每个文件内容变化都触发会成 IO 风暴）；HandleDeleted → 5 秒冷却（kRescueCooldownMs）触发批量救援；HandleRename 的 miss 日志静音（全局范围下未跟踪文件改名是常态）；HandleUpdate/TryAutoRelocate/RelocateInFlight 删除（单行旧名扫描被批量三级匹配全面取代）。同卷移动/改名/Ctrl+X = RENAMEITEM 即时精确重链；跨卷 = DELETE → 批量救援兜底。
 - **H4 已实施**：USN 日志方案否决（SDK 事实：卷句柄 GENERIC_READ 需提权，非管理员 ERROR_ACCESS_DENIED，Everything 装服务即为此；Telegram 不提权 → 空转死代码）；等价落法 = `RelocateMissingEntries()` 挂进 sexcat 模块启动序列（save_hook，StartShellWatch 之后）→ 应用关闭期间的移动/改名下次启动自动找回。
+
+## 25. 第 2 轮：Q2——有下载记录的视频消息看不出标记（/grill，诊断轮）
+- 症状：有些带下载记录的视频，消息上看不出标记；用户要求一个合适的视觉效果。
+- 实测双徽章系统并存：
+  - **SexCat::Badge**（sexcat_badge.cpp:252 PaintBadge）= 下载记录徽章：右上角裸图标（无底板，style_sexcat 的 sexcatBadgeIcon），photo.cpp:501 / document.cpp:1130 / media_grouped.cpp:574 三个视图有画；**history_view_gif.cpp 完全没有**（Gif 视图 = 视频播放态/GIF/圆视视频）。
+  - **ayuDownloadedBadge**（gif.cpp:101 本地实现）= 底板圆角矩形+对勾（ayuDownloadedBadgeBg/Check），只画在 Gif 视图，四道闸门：`!isRound`（圆视永不显示）、`DownloadedBadgeFits`（小图跳过）、`loaded || loadedInMediaCache || IsDownloadedDocument`、非剧透/TTL。
+- **漏洞链**：IsDownloadedDocument 基于**会话内存 set**（RememberDownloadedDocument，save_hook.cpp:1203-1218），重启即空 → 视频"未加载 + 不在媒体缓存 + 本会话没下过"时四条件全灭 → 有记录也不画（= "有些"的成因）；圆视视频永不显示；同一视频缩略图态（Document 视图 = sexcat 裸图标）与播放态（Gif 视图 = ayu 底板对勾或没有）**外观还会切换**。
+- 视觉问题：sexcat 裸图标叠在视频内容上无底板，亮帧/花帧上不可读。
+- 改动单（三问已答，定稿）：**视觉形态 = 媒体四周细色边框**（用户选"角标条/边框"，替代角标chip形态）；**圆视视频显示**（圆形环线）；**sexcat 徽章为主，ayuDownloadedBadge 让位**（无记录但已下载才画旧对勾）。
+- 实施清单（边框色定稿：**金+暗双圈描边**，用户嫌单色会被同色系视频帧吞掉，否决流光动画——列表持续重绘性能付不起）：① sexcat.style 加 `sexcatMediaFrameGold: #f2b544`（内圈 2px）+ `sexcatMediaFrameOutline: #1f1f1f`（外圈 1px）+ 两宽度变量——外圈职责=把金圈从任何亮/花/同色帧上剥离，双圈任何背景都有分离度；② `SexCat::Badge::PaintBadge` 重绘为双圈描边（新增 radius 参数，radius<0 = 圆视环形），BadgeRect 悬停区不变；③ photo.cpp:501 / document.cpp:1130 / media_grouped.cpp:574 传各自圆角半径；④ gif.cpp 补 PaintBadge + Gif::textState:1436 悬停/tooltip（照 photo.cpp:784-806 模式），isRound 传环形，剧透/TTL 门沿用；⑤ ayuDownloadedBadge（gif.cpp:835-845）包上 `!ShouldShowBadge` 让位闸门。
+- **Q2-H1 已实施**（提交见 git log）：五处全部落地；附加清理 = 旧 chip 样式变量（sexcatBadgeFg/Bg/Icon*）与 `IsHovered` 死 API 删除、badge.cpp 补 QPainterPath/<algorithm> include；边框圆角 v1 统一 st::roundRadiusLarge（分角映射待视觉验收再说）。

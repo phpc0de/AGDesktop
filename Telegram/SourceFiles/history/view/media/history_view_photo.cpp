@@ -503,7 +503,7 @@ void Photo::draw(Painter &p, const PaintContext &context) const {
 			fullId.peer,
 			fullId.msg,
 			QRect(0, 0, width(), height()),
-			context.selected(),
+			st::roundRadiusLarge,
 			crl::guard(_parent, [parent = _parent] { parent->repaint(); }));
 	}
 

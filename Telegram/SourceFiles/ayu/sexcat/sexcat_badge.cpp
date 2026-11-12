@@ -24,9 +24,11 @@
 #include "styles/style_sexcat.h"
 
 #include <QtGui/QDesktopServices>
+#include <QtGui/QPainterPath>
 #include <QtCore/QFileInfo>
 #include <QtCore/QUrl>
 
+#include <algorithm>
 #include <list>
 #include <optional>
 #include <unordered_map>
@@ -233,11 +235,6 @@ bool SetHovered(PeerId peerId, MsgId msgId, bool hovered) {
 	return false;
 }
 
-bool IsHovered(PeerId peerId, MsgId msgId) {
-	const auto &current = Hovered();
-	return current && (*current == MakeKey(peerId, msgId));
-}
-
 QRect BadgeRect(const QRect &mediaRect) {
 	const auto size = st::sexcatBadgeSize;
 	const auto shift = st::sexcatBadgeShift;
@@ -254,7 +251,7 @@ void PaintBadge(
 		PeerId peerId,
 		MsgId msgId,
 		const QRect &mediaRect,
-		bool selected,
+		int frameRadius,
 		Fn<void()> refresh) {
 	if (!FeatureEnabled()) {
 		return;
@@ -263,13 +260,43 @@ void PaintBadge(
 		Query(peerId, msgId, Lifetime(), std::move(refresh));
 		return;
 	}
-	const auto rect = BadgeRect(mediaRect);
-	const auto &icon = selected
-		? st::sexcatBadgeIconSelected
-		: IsHovered(peerId, msgId)
-		? st::sexcatBadgeIconHover
-		: st::sexcatBadgeIcon;
-	icon.paintInCenter(p, rect);
+	// WHY: a single ring merges into video frames of the same hue, so the
+	// dark ring exists purely to strip the gold ring off any content.
+	const auto ring = [&](const style::color &color, int width, int inset) {
+		auto path = QPainterPath();
+		const auto outer = mediaRect.adjusted(inset, inset, -inset, -inset);
+		const auto inner = mediaRect.adjusted(
+			inset + width,
+			inset + width,
+			-inset - width,
+			-inset - width);
+		if (frameRadius < 0) {
+			path.addEllipse(outer);
+			path.addEllipse(inner);
+		} else {
+			path.addRoundedRect(
+				outer,
+				std::max(frameRadius - inset, 0),
+				std::max(frameRadius - inset, 0));
+			path.addRoundedRect(
+				inner,
+				std::max(frameRadius - inset - width, 0),
+				std::max(frameRadius - inset - width, 0));
+		}
+		path.setFillRule(Qt::OddEvenFill);
+		PainterHighQualityEnabler hq(p);
+		p.setPen(Qt::NoPen);
+		p.setBrush(color);
+		p.drawPath(path);
+	};
+	ring(
+		st::sexcatMediaFrameOutline,
+		st::sexcatMediaFrameOutlineWidth,
+		0);
+	ring(
+		st::sexcatMediaFrameGold,
+		st::sexcatMediaFrameGoldWidth,
+		st::sexcatMediaFrameOutlineWidth);
 }
 
 void AddContextMenuActions(

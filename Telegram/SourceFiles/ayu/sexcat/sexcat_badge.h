@@ -40,7 +40,6 @@ void Query(
 
 // Returns true when the hover state actually changed (caller repaints).
 bool SetHovered(PeerId peerId, MsgId msgId, bool hovered);
-[[nodiscard]] bool IsHovered(PeerId peerId, MsgId msgId);
 
 [[nodiscard]] QRect BadgeRect(const QRect &mediaRect);
 
@@ -49,7 +48,7 @@ void PaintBadge(
 	PeerId peerId,
 	MsgId msgId,
 	const QRect &mediaRect,
-	bool selected,
+	int frameRadius,
 	Fn<void()> refresh = nullptr);
 
 void AddContextMenuActions(

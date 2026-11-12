@@ -1132,7 +1132,7 @@ void Document::draw(
 			fullId.peer,
 			fullId.msg,
 			QRect(0, 0, width, bottom),
-			context.selected(),
+			st::roundRadiusLarge,
 			crl::guard(_parent, [parent = _parent] { parent->repaint(); }));
 	}
 }

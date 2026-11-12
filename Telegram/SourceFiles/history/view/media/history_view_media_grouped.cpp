@@ -576,7 +576,7 @@ void GroupedMedia::draw(Painter &p, const PaintContext &context) const {
 				fullId.peer,
 				fullId.msg,
 				part.geometry.translated(0, groupPadding.top()),
-				fullSelection,
+				st::roundRadiusLarge,
 				refresh);
 		}
 	}

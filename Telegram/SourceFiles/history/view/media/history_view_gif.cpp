@@ -71,6 +71,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "ayu/features/message_shot/message_shot.h"
+#include "ayu/sexcat/sexcat_badge.h"
 #include "ayu/sexcat/sexcat_save_hook.h"
 
 
@@ -832,14 +833,24 @@ void Gif::draw(Painter &p, const PaintContext &context) const {
 	}
 	if (!skipDrawingContent
 		&& !fullHiddenBySpoiler
-		&& !isRound
 		&& !_ttlCover
-		&& !AyuFeatures::MessageShot::isTakingShot()
-		&& DownloadedBadgeFits(rthumb)
-		&& (loaded
-			|| _data->loadedInMediaCache()
-			|| Ayu::SexCat::IsDownloadedDocument(_data))) {
-		PaintDownloadedBadge(p, rthumb);
+		&& !AyuFeatures::MessageShot::isTakingShot()) {
+		const auto fullId = _realParent->fullId();
+		SexCat::Badge::PaintBadge(
+			p,
+			fullId.peer,
+			fullId.msg,
+			rthumb,
+			isRound ? -1 : st::roundRadiusLarge,
+			crl::guard(_parent, [parent = _parent] { parent->repaint(); }));
+		if (!isRound
+			&& DownloadedBadgeFits(rthumb)
+			&& !SexCat::Badge::ShouldShowBadge(fullId.peer, fullId.msg)
+			&& (loaded
+				|| _data->loadedInMediaCache()
+				|| Ayu::SexCat::IsDownloadedDocument(_data))) {
+			PaintDownloadedBadge(p, rthumb);
+		}
 	}
 
 	if (revealed < 1.) {
@@ -1438,6 +1449,21 @@ TextState Gif::textState(QPoint point, StateRequest request) const {
 
 	if (width() < st::msgPadding.left() + st::msgPadding.right() + 1) {
 		return result;
+	}
+	const auto fullId = _realParent->fullId();
+	if (SexCat::Badge::ShouldShowBadge(fullId.peer, fullId.msg)
+		&& SexCat::Badge::BadgeRect(QRect(0, 0, width(), height())).contains(point)) {
+		if (SexCat::Badge::SetHovered(fullId.peer, fullId.msg, true)) {
+			repaint();
+		}
+		result.customTooltip = true;
+		result.customTooltipText = tr::lng_sexcat_badge_tooltip(
+			tr::now,
+			lt_path,
+			SexCat::Badge::LastSavedPath(fullId.peer, fullId.msg));
+		return result;
+	} else if (SexCat::Badge::SetHovered(fullId.peer, fullId.msg, false)) {
+		repaint();
 	}
 	auto paintx = 0, painty = 0, paintw = width(), painth = height();
 	auto bubble = _parent->hasBubble();
