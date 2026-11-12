@@ -389,3 +389,11 @@
   4. **落盘后改名失败显式化**：MaybeAugmentedSavePath rename 失败（save_hook.cpp:714-716）LogFailure 升级 toast，不再静默。
   5. **N3 去重自愈**：SexCatShouldSkipDuplicate 跳过时若现存文件名未增补，就地 QFile::rename 补增补名（重下旧相册即自愈，不再干看旧裸名文件）。
   - 验证：静态三向核验 + 外部构建机 Debug + 手测（单条快存×2 设置形态 / Download all album files / Save all album files as / 重下同相册）。
+- **已实施（当轮令下即落码，commit `fa08503f28`，未 push）**：
+  - N1 quickPath 归一化（menu_item_download_files.cpp:154-170/:361-377 出口补尾斜杠）+ saveDocuments/savePicked 两处 join 改 `QDir(dir).filePath(name)`（:289/:398）。
+  - N2 data_file_click_handler.cpp:134-141：对话框默认名注入门 `mode == ToNewFile` → `explicitSaveAs`（ask-every-time 的单条快存对话框也拿增补默认名；已本地文件同样覆盖）。
+  - N3 save_hook.cpp：`IsAllDigitsName` 全删；`BuildAugmentedName` 改"parts 非空即增补 + 前缀 startsWith 幂等守卫"（:645-678）；`BuildCaptionedNameFor`/`MaybeAugmentedSavePath` 数字门移除；头文件 AdjustDocumentSaveTarget 注释同步。
+  - N4 MaybeAugmentedSavePath rename 失败 → toast `lng_sexcat_rename_failed`（lang.strings:9218 新键）。
+  - N5 `HealSkippedDuplicate`（save_hook.cpp:1118-1141，WHY 注释）：FindRecordedForDocument 命中的旧记录文件就地改名 + `Database::Relink(hit->id, renamed)`；`NotifyDuplicateSkipped(toFile, document)` 签名扩展（h:98-101 + data_document.cpp:1338 调用点），toast 显示治愈后的实际路径。
+  - 静态验证全绿：`git diff --check` 干净；`IsAllDigitsName`/`dir + name` 全仓 0 残留；NotifyDuplicateSkipped 三向一致（h/cpp/call）；lng key 定义↔使用配对；`DocumentFileNameForSave` 默认参重载确认（data_document.h:437-441）；注释预算 = 1 常规 + 1 WHY 例外 + 1 处原位改写。
+  - 遗留边界（如实）：mid-loading 命中 :147 注入时 loader 可能 setFileName 失败→cancel 重启下载（upstream 既有语义，产增补名，代价是重下流量）；幂等守卫按首 tag 前缀判定，服务器名恰好以 "#tag" 开头时保守跳过。
