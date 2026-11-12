@@ -613,11 +613,6 @@ void ResolveHashAndPersist(
 constexpr auto kMaxAugmentedNameLength = 240;
 constexpr auto kAugmentedNameTries = 100;
 
-[[nodiscard]] bool IsAllDigitsName(const QString &stem) {
-	static const QRegularExpression digits(u"^[0-9]+$"_q);
-	return !stem.isEmpty() && digits.match(stem).hasMatch();
-}
-
 [[nodiscard]] bool IsReservedWindowsName(const QString &name) {
 	static const auto reserved = [] {
 		auto names = std::vector<QString>{
@@ -648,6 +643,16 @@ constexpr auto kAugmentedNameTries = 100;
 	if (original.isEmpty()) {
 		return {};
 	}
+	if (parts.tags.isEmpty() && parts.description.isEmpty()) {
+		return {};
+	}
+	// Idempotence: never stack this prefix a second time.
+	const auto prefix = parts.tags.isEmpty()
+		? parts.description
+		: u"#%1"_q.arg(parts.tags.first());
+	if (original.startsWith(prefix)) {
+		return {};
+	}
 	auto segments = QStringList();
 	if (!parts.tags.isEmpty()) {
 		auto tags = QStringList();
@@ -658,9 +663,6 @@ constexpr auto kAugmentedNameTries = 100;
 	}
 	if (!parts.description.isEmpty()) {
 		segments.push_back(parts.description);
-	}
-	if (segments.isEmpty()) {
-		return {};
 	}
 	auto text = segments.join(u" -"_q);
 	if (IsReservedWindowsName(text)) {
@@ -691,7 +693,6 @@ constexpr auto kAugmentedNameTries = 100;
 	return target;
 }
 
-// The server names captioned videos by bare numeric ids.
 [[nodiscard]] QString MaybeAugmentedSavePath(
 		const QString &savedPath,
 		not_null<DocumentData*> document,
@@ -701,18 +702,17 @@ constexpr auto kAugmentedNameTries = 100;
 	}
 	const auto info = QFileInfo(savedPath);
 	const auto original = info.fileName();
-	const auto dot = original.lastIndexOf(u'.');
-	const auto stem = (dot > 0) ? original.left(dot) : original;
-	if (!IsAllDigitsName(stem)) {
-		return savedPath;
-	}
 	const auto candidate = BuildAugmentedName(original, AugmentNameParts(item));
 	if (candidate.isEmpty()) {
 		return savedPath;
 	}
 	const auto target = UniqueAugmentedTarget(info, candidate);
-	if (target == savedPath || !QFile::rename(savedPath, target)) {
+	if (target == savedPath) {
+		return savedPath;
+	}
+	if (!QFile::rename(savedPath, target)) {
 		LogFailure(u"failed to rename saved file to %1"_q.arg(target));
+		ShowToastText(tr::lng_sexcat_rename_failed(tr::now, lt_path, target));
 		return savedPath;
 	}
 	if (document->filepath() == savedPath) {
@@ -732,11 +732,6 @@ constexpr auto kAugmentedNameTries = 100;
 		not_null<DocumentData*> document,
 		const QString &original,
 		FullMsgId contextId) {
-	const auto dot = original.lastIndexOf(u'.');
-	const auto stem = (dot > 0) ? original.left(dot) : original;
-	if (!IsAllDigitsName(stem)) {
-		return {};
-	}
 	auto item = contextId
 		? document->owner().message(contextId)
 		: nullptr;
@@ -1116,12 +1111,47 @@ QString AdjustDocumentSaveTarget(
 	return target;
 }
 
-void NotifyDuplicateSkipped(const QString &path) {
-	LogFailure(u"duplicate download skipped: "_q + path);
+// WHY: a skipped re-download leaves the previously saved file where it
+// was — under an old bare name from earlier builds. Rename it in place
+// and relink the row, so "already saved" also means "correctly named".
+[[nodiscard]] QString HealSkippedDuplicate(
+		not_null<DocumentData*> document,
+		const QString &toFile) {
+	const auto hit = FindRecordedForDocument(document, toFile);
+	if (!hit
+		|| hit->saved_path.isEmpty()
+		|| !QFileInfo::exists(hit->saved_path)) {
+		return toFile;
+	}
+	auto contextId = FullMsgId();
+	if (const auto i = PendingMap().find(document.get());
+		i != end(PendingMap())) {
+		contextId = i->second.contextId;
+	}
+	const auto item = contextId
+		? document->owner().message(contextId)
+		: nullptr;
+	const auto renamed = MaybeAugmentedSavePath(
+		hit->saved_path,
+		document,
+		item);
+	if (renamed != hit->saved_path) {
+		Database::instance().Relink(hit->id, renamed);
+	}
+	return renamed;
+}
+
+void NotifyDuplicateSkipped(
+		const QString &toFile,
+		not_null<DocumentData*> document) {
+	LogFailure(u"duplicate download skipped: "_q + toFile);
 	if (!Enabled()) {
 		return;
 	}
-	ShowToastText(tr::lng_sexcat_already_saved(tr::now, lt_path, path));
+	ShowToastText(tr::lng_sexcat_already_saved(
+		tr::now,
+		lt_path,
+		HealSkippedDuplicate(document, toFile)));
 }
 
 // Retro-tag: hang already downloaded records of this message on a tag.

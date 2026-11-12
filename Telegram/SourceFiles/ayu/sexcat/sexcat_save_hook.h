@@ -85,17 +85,19 @@ void EnsureDownloadListener();
 	not_null<DocumentData*> document,
 	FullMsgId contextId = {});
 
-// Q49: pre-write save target fix. A quick-saved document whose server
-// name is bare digits gets a captioned name before the loader opens the
-// file, so no post-save rename is needed. Returns targetPath unchanged
-// when the naming rules don't apply.
+// Q49: pre-write save target fix. A quick-saved document gets a
+// captioned name before the loader opens the file, so no post-save
+// rename is needed. Returns targetPath unchanged when the naming rules
+// don't apply.
 [[nodiscard]] QString AdjustDocumentSaveTarget(
 	const QString &targetPath,
 	not_null<DocumentData*> document,
 	FullMsgId contextId);
 
 // Toast when the dedup gate skipped a download the library already has.
-void NotifyDuplicateSkipped(const QString &path);
+void NotifyDuplicateSkipped(
+	const QString &toFile,
+	not_null<DocumentData*> document);
 
 // Sow-list menu: save a #hashtag from the message, the one under the
 // cursor (link), or the selected text as a tag name. Adds nothing when

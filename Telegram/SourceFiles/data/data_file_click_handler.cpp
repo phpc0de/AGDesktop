@@ -132,9 +132,12 @@ void DocumentSaveClickHandler::Save(
 			? QString()
 			: fileinfo.fileName();
 		auto already = filename;
-		if (mode == Mode::ToNewFile && already.isEmpty()) {
-			// Q49: the save dialog opens with the captioned default name.
-			already = SexCat::AugmentedDocumentName(data, contextId);
+		if (explicitSaveAs) {
+			// Q49: every save dialog opens with the captioned default name.
+			if (const auto augmented = SexCat::AugmentedDocumentName(data, contextId);
+				!augmented.isEmpty()) {
+				already = augmented;
+			}
 		}
 		auto savename = DocumentFileNameForSave(
 			data,

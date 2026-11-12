@@ -1335,7 +1335,7 @@ void DocumentData::save(
 					Core::FileLocation(toFile));
 				owner().requestDocumentViewRepaint(this);
 			}
-			SexCat::NotifyDuplicateSkipped(toFile);
+			SexCat::NotifyDuplicateSkipped(toFile, this);
 			return;
 		}
 		auto reader = owner().streaming().sharedReader(this, origin, true);

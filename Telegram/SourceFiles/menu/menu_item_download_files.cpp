@@ -152,14 +152,18 @@ void AddAction(
 	const auto weak = base::make_weak(controller);
 	const auto quickPath = [&] {
 		const auto downloadPath = Core::App().settings().downloadPath();
-		const auto path = downloadPath.isEmpty()
+		auto path = downloadPath.isEmpty()
 			? File::DefaultDownloadPath(&controller->session())
 			: (downloadPath == FileDialog::Tmp())
 			? controller->session().local().tempDirectory()
 			: downloadPath;
-		if (!path.isEmpty()) {
-			QDir().mkpath(path);
+		if (path.isEmpty()) {
+			return path;
 		}
+		if (!path.endsWith('/')) {
+			path += '/';
+		}
+		QDir().mkpath(path);
 		return path;
 	}();
 	const auto saveImages = [=](const QString &folderPath) {
@@ -283,7 +287,7 @@ void AddAction(
 				const auto name = base::FileNameFromUserString(
 					SexCat::FallbackDocumentName(document));
 				const auto target = SexCat::AdjustDocumentSaveTarget(
-					dir + name,
+					QDir(dir).filePath(name),
 					document,
 					origin);
 				SexCat::MarkDocumentSaveAs(document, origin, batchTag);
@@ -359,14 +363,18 @@ void AddDownloadVideosSelector(
 		const auto session = &controller->session();
 		const auto quickPath = [&] {
 			const auto downloadPath = Core::App().settings().downloadPath();
-			const auto path = downloadPath.isEmpty()
+			auto path = downloadPath.isEmpty()
 				? File::DefaultDownloadPath(session)
 				: (downloadPath == FileDialog::Tmp())
 				? session->local().tempDirectory()
 				: downloadPath;
-			if (!path.isEmpty()) {
-				QDir().mkpath(path);
+			if (path.isEmpty()) {
+				return path;
 			}
+			if (!path.endsWith('/')) {
+				path += '/';
+			}
+			QDir().mkpath(path);
 			return path;
 		}();
 		auto batchTag = QString();
@@ -392,7 +400,7 @@ void AddDownloadVideosSelector(
 				const auto name = base::FileNameFromUserString(
 					SexCat::FallbackDocumentName(document));
 				const auto target = SexCat::AdjustDocumentSaveTarget(
-					dir + name,
+					QDir(dir).filePath(name),
 					document,
 					origin);
 				SexCat::MarkDocumentSaveAs(document, origin, batchTag);
