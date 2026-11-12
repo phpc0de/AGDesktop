@@ -45,6 +45,12 @@ shell watch 的 Windows 通知只注册了桌面文件夹/下载/文档三个子
 7. 跨盘移动（C: → D:）→ 打开窗口自动找回（走盘符根遍历兜底）。
 8. 恢复过的行重启后仍正确（落库）。
 
+### H4：启动时批量救援（USN 提权阻塞的等价替代）
+
+- SDK 事实：读 NTFS USN 变更日志需 `CreateFile(L"\\\\.\\C:", GENERIC_READ)` 卷句柄，非提权进程 `ERROR_ACCESS_DENIED`（Everything 全盘搜索必须装系统服务即此原因）；Telegram 不提权运行 → USN 层只会是空转死代码，不落。
+- 等价保证：`RelocateMissingEntries()`（异步、有界预算）挂进 sexcat 模块启动序列（save_hook :1045 StartShellWatch 之后）——**应用关闭期间**发生的移动/改名，下次启动自动找回，不再依赖用户开窗口。
+- USN 仍是唯一能精确回放历史路径的 API；若未来确有提权运行场景再议。
+
 ### H3：全局 shell 事件监听（用户拍板）
 
 - 注册面换成 `SHGetFolderLocation(CSIDL_DESKTOP)` 命名空间根 + 递归 = **全盘**改名/移动/删除事件（原先只有桌面/下载/文档三子树，用户收藏树收不到任何事件）。

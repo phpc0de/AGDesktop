@@ -1043,6 +1043,7 @@ void EnsureDownloadListener() {
 		HandleLoadedDownload(id);
 	}, lifetime);
 	StartShellWatch();
+	RelocateMissingEntries();
 	RehashPendingRows();
 }
 

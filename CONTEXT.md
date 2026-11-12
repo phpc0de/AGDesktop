@@ -342,3 +342,4 @@
   - 哈希助手迁 `HashStore::ComputeFileSha256`（hash_store.h/.cpp 新增同步版），history_window 三处改用、本地副本删除；shell_watch 增 <map>/toasts/lang_keys includes。
 - H1 的两个右键入口保留为兜底。
 - **H3 已实施（全局 shell 事件，用户拍板）**：SHChangeNotifyRegister 注册面从"桌面文件夹+下载+文档三子树"换成 **CSIDL_DESKTOP 命名空间根**（SHGetFolderLocation）递归注册 = 全盘所有驱动器的改名/移动/删除事件；事件面裁掉 SHCNE_UPDATEITEM（全局范围下每个文件内容变化都触发会成 IO 风暴）；HandleDeleted → 5 秒冷却（kRescueCooldownMs）触发批量救援；HandleRename 的 miss 日志静音（全局范围下未跟踪文件改名是常态）；HandleUpdate/TryAutoRelocate/RelocateInFlight 删除（单行旧名扫描被批量三级匹配全面取代）。同卷移动/改名/Ctrl+X = RENAMEITEM 即时精确重链；跨卷 = DELETE → 批量救援兜底。
+- **H4 已实施**：USN 日志方案否决（SDK 事实：卷句柄 GENERIC_READ 需提权，非管理员 ERROR_ACCESS_DENIED，Everything 装服务即为此；Telegram 不提权 → 空转死代码）；等价落法 = `RelocateMissingEntries()` 挂进 sexcat 模块启动序列（save_hook，StartShellWatch 之后）→ 应用关闭期间的移动/改名下次启动自动找回。
