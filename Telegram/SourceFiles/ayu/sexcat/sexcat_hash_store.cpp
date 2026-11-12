@@ -237,6 +237,19 @@ void HashFileAsync(const QString &path, Fn<void(QByteArray sha256)> callback) {
 	crl::async(DrainHashQueue);
 }
 
+QByteArray ComputeFileSha256(const QString &path) {
+	constexpr auto kChunkBytes = qint64(1024 * 1024);
+	QFile file(path);
+	if (!file.open(QIODevice::ReadOnly)) {
+		return {};
+	}
+	QCryptographicHash hash(QCryptographicHash::Sha256);
+	while (!file.atEnd()) {
+		hash.addData(file.read(kChunkBytes));
+	}
+	return hash.result();
+}
+
 } // namespace HashStore
 
 } // namespace SexCat

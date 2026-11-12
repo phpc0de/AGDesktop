@@ -28,6 +28,7 @@ bool WriteAds(const QString &path, const QByteArray &sha256, PeerId src, MsgId m
 bool TrySidecar(const QString &path, const QByteArray &sha256, PeerId src, MsgId msg);
 [[nodiscard]] std::optional<HashHit> ReadAds(const QString &path);
 void HashFileAsync(const QString &path, Fn<void(QByteArray sha256)> callback);
+[[nodiscard]] QByteArray ComputeFileSha256(const QString &path);
 
 } // namespace HashStore
 

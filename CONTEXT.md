@@ -331,3 +331,13 @@
   - showContextMenu：灰行在 "Relocate..." 下补 "Relocate by folder scan..."（新键 lng_sexcat_relocate_dir，lang.strings:9230）→ relocateByDirectory；目录扫描保留为第二入口（只移动未改名时按名字+大小找）。
   - 生效链：finishRelocation → Database::Relink 原地 UPDATE path+file_name（sexcat_database.cpp:399-427）→ _newSaved → 窗口 reload（:301-304）→ 两列当场刷新 + 落库跨重启。
   - 此前计划"不动 lang.strings"作废：lng_sexcat_scan_folder 是工具栏全局导入扫描的键，复用会混淆，故新增专用键。
+
+## 24. 第 10 轮：QQQQ10 续——用户嫌手动右键麻烦，H2 自动救援（/grill）
+- 需求：移动/改名后零手动，窗口自己跟上。
+- 缺口实测：shell watch Windows 通知只注册桌面文件夹/下载/文档三子树（shell_watch.cpp:470-511），用户收藏树不在内 → 无事件；救援扫描按旧名匹配（改名盲）+ 候选根有限 + 失败静默（:226-228）；`RelocateMissingEntries` 只挂"刷新"按钮（history_window:218），窗口打开不跑。
+- **H2 已实施**：
+  - `RelocateMissingEntries` 重写为单次批量遍历：灰行建 size→entries 索引，后台线程按优先级根（旧目录 → 候选根 → 丢失文件盘符根）一次走完；命中三级判定：同大小+同名（免费）→ 同大小+ADS 标记（同卷移动标记随文件走，微秒级）→ 同大小+全量哈希（≤512MB cap，kRescueHashCapBytes）。改名/移动通杀，一次遍历服务全部灰行。
+  - 主线程只收结果 Relink（crl::on_main），不卡 UI；成功 toast "Auto-relocated: {count}"（新键 lng_sexcat_autorelocate_done）。
+  - `RelocateMissingEntries` 挂上窗口构造（history_window ctor reload() 后）→ **打开窗口即自动救援**。
+  - 哈希助手迁 `HashStore::ComputeFileSha256`（hash_store.h/.cpp 新增同步版），history_window 三处改用、本地副本删除；shell_watch 增 <map>/toasts/lang_keys includes。
+- 保留：TryAutoRelocate（shell 删除事件单行路径）不动；H1 的两个右键入口保留为兜底。

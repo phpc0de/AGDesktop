@@ -54,7 +54,6 @@ namespace SexCat {
 namespace {
 
 constexpr auto kRecentLimit = 2000;
-constexpr auto kHashReadChunkBytes = qint64(1024 * 1024);
 
 constexpr auto kColTime = 0;
 constexpr auto kColName = 1;
@@ -62,18 +61,6 @@ constexpr auto kColSource = 2;
 constexpr auto kColPath = 3;
 constexpr auto kColSha = 4;
 constexpr auto kColCount = 5;
-
-[[nodiscard]] QByteArray ComputeFileSha256(const QString &path) {
-	QFile file(path);
-	if (!file.open(QIODevice::ReadOnly)) {
-		return {};
-	}
-	QCryptographicHash hash(QCryptographicHash::Sha256);
-	while (!file.atEnd()) {
-		hash.addData(file.read(kHashReadChunkBytes));
-	}
-	return hash.result();
-}
 
 struct Row {
 	uint64 id = 0;
@@ -304,6 +291,7 @@ public:
 		}, _lifetime);
 
 		reload();
+		RelocateMissingEntries();
 	}
 
 	static void ShowExisting() {
@@ -541,7 +529,7 @@ private:
 		refreshRow(id);
 		const auto path = row->savedPath;
 		crl::async([path, weak = QPointer<HistoryWindow>(this), id] {
-			auto sha = ComputeFileSha256(path);
+			auto sha = HashStore::ComputeFileSha256(path);
 			crl::on_main([weak, id, sha = std::move(sha)] {
 				if (weak) {
 					weak->finishVerification(id, sha);
@@ -580,7 +568,7 @@ private:
 		row->verifying = true;
 		refreshRow(id);
 		crl::async([file, weak = QPointer<HistoryWindow>(this), id] {
-			auto sha = ComputeFileSha256(file);
+			auto sha = HashStore::ComputeFileSha256(file);
 			crl::on_main([weak, id, file, sha = std::move(sha)] {
 				if (weak) {
 					weak->finishRelocation(id, file, sha);
@@ -804,7 +792,7 @@ void RequestReverify(const QString &path) {
 		return;
 	}
 	crl::async([path] {
-		auto sha = ComputeFileSha256(path);
+		auto sha = HashStore::ComputeFileSha256(path);
 		crl::on_main([path, sha = std::move(sha)] {
 			if (!QFileInfo::exists(path) || sha.isEmpty()) {
 				Ui::Toast::Show(tr::lng_sexcat_lost(tr::now));

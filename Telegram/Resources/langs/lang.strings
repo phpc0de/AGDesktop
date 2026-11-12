@@ -9228,6 +9228,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_sexcat_lost_group#other" = "{count} lost records — double-click to expand";
 "lng_sexcat_relocate" = "Relocate...";
 "lng_sexcat_relocate_dir" = "Relocate by folder scan...";
+"lng_sexcat_autorelocate_done" = "Auto-relocated: {count}";
 "lng_sexcat_verify" = "Verify selected";
 "lng_sexcat_refresh" = "Refresh";
 "lng_sexcat_settings_toggle" = "Record downloaded files";

@@ -8,11 +8,13 @@
 
 #include "ayu/sexcat/sexcat_database.h"
 #include "ayu/sexcat/sexcat_hash_store.h"
+#include "ayu/ui/toasts.h"
 #include "ayu/utils/ayu_log.h"
 #include "core/application.h"
 #include "core/core_settings.h"
 #include "data/data_msg_id.h"
 #include "data/data_peer_id.h"
+#include "lang/lang_keys.h"
 
 #include <QtWidgets/QWidget>
 
@@ -26,6 +28,7 @@
 
 #include <array>
 #include <exception>
+#include <map>
 #include <optional>
 #include <set>
 #include <vector>
@@ -49,6 +52,7 @@ constexpr auto kRelocateMs = crl::time(2000);
 constexpr auto kManualRelocateFiles = 20000;
 constexpr auto kManualRelocateDepth = 4;
 constexpr auto kManualRelocateMs = crl::time(10'000);
+constexpr auto kRescueHashCapBytes = qint64(512 * 1024 * 1024);
 
 struct RelocateBudget {
 	int filesLeft = 0;
@@ -166,6 +170,73 @@ std::vector<QString> RelocateCandidates(const QString &oldPath) {
 	return roots;
 }
 
+struct MissingIndex {
+	std::map<int64, std::vector<int64>> bySize;
+	std::map<int64, Entry> entries;
+};
+
+// WHY: the ADS marker rides along with same-volume moves, so a stream
+// read identifies a relocated file without hashing; unmarked files of a
+// matching size fall back to a bounded full hash.
+void ScanForMissing(
+		const QString &root,
+		const MissingIndex &index,
+		RelocateBudget &budget,
+		std::map<int64, QString> &hits) {
+	if (budget.filesLeft <= 0
+		|| budget.depthLeft <= 0
+		|| crl::now() >= budget.deadline) {
+		return;
+	}
+	auto files = QDirIterator(root, QDir::Files | QDir::NoDotAndDotDot);
+	while (files.hasNext()) {
+		const auto path = files.next();
+		--budget.filesLeft;
+		const auto info = QFileInfo(path);
+		const auto it = index.bySize.find(info.size());
+		if (it != end(index.bySize)) {
+			for (const auto id : it->second) {
+				if (hits.contains(id)) {
+					continue;
+				}
+				const auto &entry = index.entries.at(id);
+				auto matched = info.fileName().compare(
+					entry.file_name,
+					Qt::CaseInsensitive) == 0;
+				if (!matched && entry.sha256.size() == 32) {
+					const auto marker = HashStore::ReadAds(path);
+					matched = marker && marker->sha256 == entry.sha256;
+					if (!matched && info.size() <= kRescueHashCapBytes) {
+						matched = HashStore::ComputeFileSha256(path)
+							== entry.sha256;
+					}
+				}
+				if (matched) {
+					hits.emplace(id, path);
+					break;
+				}
+			}
+		}
+		if (budget.filesLeft <= 0 || crl::now() >= budget.deadline) {
+			return;
+		}
+	}
+	auto folders = QDirIterator(
+		root,
+		QDir::Dirs | QDir::NoDotAndDotDot | QDir::NoSymLinks);
+	while (folders.hasNext()) {
+		const auto path = folders.next();
+		--budget.depthLeft;
+		ScanForMissing(path, index, budget, hits);
+		++budget.depthLeft;
+		if (budget.filesLeft <= 0
+			|| budget.depthLeft <= 0
+			|| crl::now() >= budget.deadline) {
+			return;
+		}
+	}
+}
+
 } // namespace
 
 void RelinkMovedEntry(const Entry &entry, const QString &newPath) {
@@ -240,9 +311,61 @@ void RelocateMissingEntries() {
 			missing.push_back(entry);
 		}
 	}
-	for (const auto &entry : missing) {
-		TryAutoRelocate(entry);
+	if (missing.empty()) {
+		return;
 	}
+	auto index = MissingIndex();
+	for (const auto &entry : missing) {
+		index.entries.emplace(entry.id, entry);
+		index.bySize[entry.file_size].push_back(entry.id);
+	}
+	auto roots = std::vector<QString>();
+	auto seenRoots = std::set<QString>();
+	const auto addRoot = [&](const QString &path) {
+		const auto absolute = QFileInfo(path).absoluteFilePath();
+		if (absolute.isEmpty() || !QFileInfo(absolute).isDir()) {
+			return;
+		}
+		if (seenRoots.insert(absolute.toLower()).second) {
+			roots.push_back(absolute);
+		}
+	};
+	for (const auto &entry : missing) {
+		for (const auto &root : RelocateCandidates(entry.saved_path)) {
+			addRoot(root);
+		}
+		// last resort: a bounded walk from the drive root catches moves
+		// to folders no other entry has ever touched
+		addRoot(DriveRoot(entry.saved_path));
+	}
+	crl::async([index = std::move(index), roots = std::move(roots)] {
+		auto budget = RelocateBudget{
+			.filesLeft = kManualRelocateFiles,
+			.depthLeft = kManualRelocateDepth,
+			.deadline = crl::now() + kManualRelocateMs,
+		};
+		auto hits = std::map<int64, QString>();
+		for (const auto &root : roots) {
+			ScanForMissing(root, index, budget, hits);
+			if (budget.filesLeft <= 0 || crl::now() >= budget.deadline) {
+				break;
+			}
+		}
+		crl::on_main([hits = std::move(hits)] {
+			auto relinked = 0;
+			for (const auto &[id, path] : hits) {
+				if (Database::instance().Relink(id, path)) {
+					++relinked;
+				}
+			}
+			if (relinked > 0) {
+				Ui::Toast::Show(tr::lng_sexcat_autorelocate_done(
+					tr::now,
+					lt_count,
+					QString::number(relinked)));
+			}
+		});
+	});
 }
 
 std::optional<QString> LocateByNameSize(
