@@ -16,6 +16,7 @@
 #include "base/unique_qptr.h"
 #include "core/application.h"
 #include "core/file_location.h"
+#include "core/mime_type.h"
 #include "data/data_document.h"
 #include "data/data_download_manager.h"
 #include "data/data_peer.h"
@@ -644,6 +645,9 @@ constexpr auto kAugmentedNameTries = 100;
 [[nodiscard]] QString BuildAugmentedName(
 		const QString &original,
 		const HashtagParts &parts) {
+	if (original.isEmpty()) {
+		return {};
+	}
 	auto segments = QStringList();
 	if (!parts.tags.isEmpty()) {
 		auto tags = QStringList();
@@ -1051,6 +1055,37 @@ QString SourceTagForItem(HistoryItem *item) {
 	return AugmentNameParts(item).tags.value(0);
 }
 
+// Q49: nameless videos still need a digit stem for the augmentation.
+QString FallbackDocumentName(not_null<DocumentData*> document) {
+	auto name = document->filename();
+	if (!name.isEmpty()) {
+		return name;
+	}
+	const auto mimeType = Core::MimeTypeForName(document->mimeString());
+	const auto patterns = mimeType.globPatterns();
+	const auto ext = patterns.isEmpty()
+		? QString()
+		: patterns.front().replace(u'*', QString());
+	return ext.isEmpty()
+		? QString::number(document->id)
+		: QString::number(document->id) + ext;
+}
+
+QString AugmentedPhotoSavePath(
+		const QString &dir,
+		int index,
+		HistoryItem *item) {
+	const auto base = u"photo_%1.jpg"_q.arg(index);
+	const auto parts = item ? AugmentNameParts(item) : HashtagParts{};
+	const auto candidate = BuildAugmentedName(base, parts);
+	if (candidate.isEmpty()) {
+		return QDir(dir).filePath(base);
+	}
+	return UniqueAugmentedTarget(
+		QFileInfo(QDir(dir).filePath(base)),
+		candidate);
+}
+
 QString AugmentedDocumentName(
 		not_null<DocumentData*> document,
 		FullMsgId contextId) {
@@ -1065,13 +1100,20 @@ QString AdjustDocumentSaveTarget(
 		return targetPath;
 	}
 	const auto info = QFileInfo(targetPath);
-	const auto original = info.fileName();
-	const auto candidate = BuildCaptionedNameFor(document, original, contextId);
+	const auto base = info.fileName().isEmpty()
+		? QFileInfo(QDir(targetPath).filePath(FallbackDocumentName(document)))
+		: info;
+	const auto candidate = BuildCaptionedNameFor(
+		document,
+		base.fileName(),
+		contextId);
 	if (candidate.isEmpty()) {
 		return targetPath;
 	}
-	const auto target = UniqueAugmentedTarget(info, candidate);
-	LogFailure(u"save target augmented: %1 -> %2"_q.arg(original, target));
+	const auto target = UniqueAugmentedTarget(base, candidate);
+	LogFailure(u"save target augmented: %1 -> %2"_q.arg(
+		base.fileName(),
+		target));
 	return target;
 }
 

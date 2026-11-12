@@ -150,24 +150,28 @@ void AddAction(
 	}
 
 	const auto weak = base::make_weak(controller);
+	const auto quickPath = [&] {
+		const auto downloadPath = Core::App().settings().downloadPath();
+		const auto path = downloadPath.isEmpty()
+			? File::DefaultDownloadPath(&controller->session())
+			: (downloadPath == FileDialog::Tmp())
+			? controller->session().local().tempDirectory()
+			: downloadPath;
+		if (!path.isEmpty()) {
+			QDir().mkpath(path);
+		}
+		return path;
+	}();
 	const auto saveImages = [=](const QString &folderPath) {
 		const auto controller = weak.get();
 		if (!controller) {
 			return;
 		}
 		const auto session = &controller->session();
-		const auto downloadPath = folderPath.isEmpty()
-			? Core::App().settings().downloadPath()
-			: folderPath;
-		const auto path = downloadPath.isEmpty()
-			? File::DefaultDownloadPath(session)
-			: (downloadPath == FileDialog::Tmp())
-			? session->local().tempDirectory()
-			: downloadPath;
+		const auto path = folderPath.isEmpty() ? quickPath : folderPath;
 		if (path.isEmpty()) {
 			return;
 		}
-		QDir().mkpath(path);
 
 		const auto showToast = !shouldShowToast
 			? Fn<void(const QString &)>(nullptr)
@@ -218,10 +222,10 @@ void AddAction(
 
 		const auto saveToFiles = [=] {
 			const auto fullPath = [&](int i) {
-				return filedialogDefaultName(
-					u"photo_"_q + QString::number(i),
-					u".jpg"_q,
-					path);
+				return SexCat::AugmentedPhotoSavePath(
+					path,
+					i,
+					session->data().message(photos[i - 1].second));
 			};
 			auto lastPath = QString();
 			for (auto i = 0; i < views.size(); i++) {
@@ -270,11 +274,15 @@ void AddAction(
 	};
 	const auto saveDocuments = [=](const QString &folderPath) {
 		for (const auto &[document, origin] : documents) {
-			if (!folderPath.isEmpty()) {
-				const auto name =
-					base::FileNameFromUserString(document->filename());
+			if (!folderPath.isEmpty() || document->loaded()) {
+				const auto dir = folderPath.isEmpty() ? quickPath : folderPath;
+				if (dir.isEmpty()) {
+					continue;
+				}
+				const auto name = base::FileNameFromUserString(
+					SexCat::FallbackDocumentName(document));
 				const auto target = SexCat::AdjustDocumentSaveTarget(
-					folderPath + name,
+					dir + name,
 					document,
 					origin);
 				SexCat::MarkDocumentSaveAs(document, origin, batchTag);
@@ -291,6 +299,13 @@ void AddAction(
 			[=](const QString &folderPath) {
 				saveImages(folderPath);
 				saveDocuments(folderPath);
+				if (photos.size() + documents.size() > 1) {
+					Ui::Toast::Show(Ui::Toast::Config{
+						.text = TextWithEntities{
+							tr::ayu_BatchDownloadStarted(tr::now),
+						},
+					});
+				}
 				callback();
 			},
 			forceFolderDialog);
@@ -341,6 +356,18 @@ void AddDownloadVideosSelector(
 			return;
 		}
 		const auto session = &controller->session();
+		const auto quickPath = [&] {
+			const auto downloadPath = Core::App().settings().downloadPath();
+			const auto path = downloadPath.isEmpty()
+				? File::DefaultDownloadPath(session)
+				: (downloadPath == FileDialog::Tmp())
+				? session->local().tempDirectory()
+				: downloadPath;
+			if (!path.isEmpty()) {
+				QDir().mkpath(path);
+			}
+			return path;
+		}();
 		auto batchTag = QString();
 		for (const auto &[document, fullId] : videos) {
 			if (const auto item = session->data().message(fullId)) {
@@ -355,11 +382,15 @@ void AddDownloadVideosSelector(
 				continue;
 			}
 			const auto &[document, origin] = videos[i];
-			if (!folderPath.isEmpty()) {
-				const auto name =
-					base::FileNameFromUserString(document->filename());
+			if (!folderPath.isEmpty() || document->loaded()) {
+				const auto dir = folderPath.isEmpty() ? quickPath : folderPath;
+				if (dir.isEmpty()) {
+					continue;
+				}
+				const auto name = base::FileNameFromUserString(
+					SexCat::FallbackDocumentName(document));
 				const auto target = SexCat::AdjustDocumentSaveTarget(
-					folderPath + name,
+					dir + name,
 					document,
 					origin);
 				SexCat::MarkDocumentSaveAs(document, origin, batchTag);

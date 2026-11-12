@@ -70,6 +70,14 @@ void EnsureDownloadListener();
 // First #hashtag of the item text (group caption included), or empty.
 [[nodiscard]] QString SourceTagForItem(HistoryItem *item);
 
+// Q49: server name, or the id-composed name for nameless documents.
+[[nodiscard]] QString FallbackDocumentName(not_null<DocumentData*> document);
+
+[[nodiscard]] QString AugmentedPhotoSavePath(
+	const QString &dir,
+	int index,
+	HistoryItem *item);
+
 // Q49: augmented "#tags -description-original" name, or empty when the
 // naming rules don't apply. The source item comes from contextId or the
 // latest save-as marker of this document.

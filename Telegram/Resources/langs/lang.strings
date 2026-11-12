@@ -9185,6 +9185,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "ayu_CancelAllDownloading" = "Cancel all downloading";
 "ayu_SelectVideosToDownload" = "Select videos to download...";
 "ayu_DownloadSelectedVideos" = "Download selected videos";
+"ayu_BatchDownloadStarted" = "Batch download started - cancel it from the downloads page top bar";
 "ayu_RegisterURLScheme" = "Register URL Scheme";
 "ayu_PluginVersion" = "Version";
 "ayu_PluginNoDescription" = "No description provided.";

@@ -98,9 +98,9 @@ void DocumentSaveClickHandler::Save(
 		// If we call file dialog synchronously, it will stop
 		// background thread timers from working which would
 		// stop audio playback in voice chats / live streams.
-		// WHY: only dialog-confirmed destinations count as manual
-		// "Save As"; without askDownloadPath these same paths silently
-		// quick-save to the downloads folder and must not record.
+		// WHY: quick saves of cached files record exactly like the
+		// uncached path (HandleLoadedDownload) or already-viewed files
+		// vanish from the sexcat history.
 		const auto contextId = v::is<Data::FileOriginMessage>(origin.data)
 			? v::get<FullMsgId>(origin.data)
 			: FullMsgId();
@@ -112,7 +112,7 @@ void DocumentSaveClickHandler::Save(
 			u"save: mode=%1 explicit=%2 local=%3"_q.arg(
 				int(mode)).arg(explicitSaveAs).arg(wasLocal));
 		if (mode != Mode::ToNewFile && data->saveFromData(contextId)) {
-			if (!wasLocal && explicitSaveAs) {
+			if (!wasLocal) {
 				SexCat::RecordSaveAttempt(
 					data->filepath(true),
 					data,
