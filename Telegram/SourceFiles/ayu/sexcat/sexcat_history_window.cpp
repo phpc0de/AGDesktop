@@ -569,10 +569,6 @@ private:
 		if (!row) {
 			return;
 		}
-		if (row->lost) {
-			relocateByDirectory(id);
-			return;
-		}
 		const auto oldDir = QFileInfo(row->savedPath).absolutePath();
 		const auto file = QFileDialog::getOpenFileName(
 			this,
@@ -761,6 +757,11 @@ private:
 		menu->addAction(tr::lng_sexcat_relocate(tr::now), [=] {
 			relocateRow(id);
 		});
+		if (row->lost) {
+			menu->addAction(tr::lng_sexcat_relocate_dir(tr::now), [=] {
+				relocateByDirectory(id);
+			});
+		}
 		menu->addAction(tr::lng_sexcat_verify(tr::now), [=] {
 			startVerification(id);
 		});

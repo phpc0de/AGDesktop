@@ -321,3 +321,13 @@
   - G3 ayu_settings.h/.cpp：`std::unordered_set<uint64> _specialRestrictedPeers` + isSpecialRestrictedPeer/setSpecialRestrictedPeer（镜像 shadowBanIds 的 json 直序列化双向模式），随 settings 落盘跨重启。
   - G4 peer_tint.cpp 频道分支最前查集合 → Banned 红；MarkSilentlyRestrictedChannel（history_widget.cpp 匿名 ns）置位后 updateChatListEntry + peerUpdated(UnavailableReason)，列表行与顶栏同拍重绘。
   - 行为注记（物理上限，如实告知）：染色自该频道**首次打开之后**生效并跨重启持久；从未打开过的静默受限频道无任何客户端信号可辨，仍是黑。不新增 ChannelData 旗标（AyuForbidden 会被全量 apply 清掉，复用必死）；不动 close/toast 行为。
+
+## 23. 第 9 轮：QQQQ10——sexcat 下载文件移动/改名后 Current path、File name 不更新（/grill）
+- 症状：A. 移动下载文件到其他文件夹后 Current path 列不更新；B. 改名后行变灰、File name 不更新（sexcat_history_window 两列 lng_sexcat_col_path/name :170-172）。
+- 机制实测：lost 灰显 = `!QFileInfo::exists(savedPath)`（:352，灰刷 st::windowSubTextFg :484-490，lost 单独分组 :444-453）；自动追踪 TryAutoRelocate（shell_watch.cpp:193-229）按**名字+大小**扫描固定候选根（桌面/下载/文档/旧目录/最近条目目录 :130-166），失败仅 LogFailure 无 UI 提示（:226-228）→ 移动到候选外 = 静默卡灰。右键重定位：非 lost 行走文件选择器（sha256 校验、名字无关，finishRelocation :596-624 → Database::Relink **原地 UPDATE** path+file_name sexcat_database.cpp:399-427 + _newSaved → 窗口 reload :301-304 ✓）；**lost 行被 :572-574 强制走目录扫描** relocateByDirectory → LocateByNameSize(dir, 旧名, size)（:644）——**改名文件永远找不到（死路）**，且哈希校验路径对灰行不可达。finishDirectoryRelocation → RelinkMovedEntry（shell_watch.cpp:171-190，同样走 Relink 原地更新 + ADS/sidecar 迁移）→ reload ✓。
+- **根因定案（回执补全）**：用户回执 = 全部资源管理器手动操作，右键菜单从未用过。A = 手动移动 → TryAutoRelocate 候选根不含新目录 → LogFailure 静默失败（:226-228）→ 卡灰+旧路径；用户不知道右键可救援（失败无提示 = 缺陷本身）。B = 手动改名 → 灰行唯一可用通道（目录扫描）按旧名匹配永远失败，哈希通道被 :572-574 路由挡死 → 死路。H2（LocateByNameSize 排查）作废——用户没用过菜单。
+- **H1 已实施（用户令开工；session-05b57906 心跳 10h 停跳判 stale 后 force 接管 sexcat_history_window.cpp + lang.strings；CONTEXT.md 一并接管）**：
+  - relocateRow 撤掉 lost→relocateByDirectory 强制路由（原 :572-575），灰行直接走文件选择器（sha256 校验、名字无关——改名/移动通吃；选错弹 hashMismatch 无害）。
+  - showContextMenu：灰行在 "Relocate..." 下补 "Relocate by folder scan..."（新键 lng_sexcat_relocate_dir，lang.strings:9230）→ relocateByDirectory；目录扫描保留为第二入口（只移动未改名时按名字+大小找）。
+  - 生效链：finishRelocation → Database::Relink 原地 UPDATE path+file_name（sexcat_database.cpp:399-427）→ _newSaved → 窗口 reload（:301-304）→ 两列当场刷新 + 落库跨重启。
+  - 此前计划"不动 lang.strings"作废：lng_sexcat_scan_folder 是工具栏全局导入扫描的键，复用会混淆，故新增专用键。
