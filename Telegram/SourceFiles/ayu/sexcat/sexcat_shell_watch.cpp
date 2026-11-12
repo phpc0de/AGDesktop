@@ -314,7 +314,7 @@ void RelocateMissingEntries() {
 			if (relinked > 0) {
 				Ui::Toast::Show(tr::lng_sexcat_autorelocate_done(
 					tr::now,
-					lt_count,
+					lt_num,
 					QString::number(relinked)));
 			}
 		});

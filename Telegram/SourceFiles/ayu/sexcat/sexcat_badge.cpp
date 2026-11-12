@@ -246,6 +246,13 @@ QRect BadgeRect(const QRect &mediaRect) {
 		mediaRect.width());
 }
 
+// WHY: a single ring merges into same-hue video frames, so the dark
+// ring exists to strip the gold ring off any content. The style
+// generator accepts hex colors only in the palette module, so the two
+// brand colors live here.
+const auto kMediaFrameGold = QColor(0xF2, 0xB5, 0x44);
+const auto kMediaFrameOutline = QColor(0x1F, 0x1F, 0x1F);
+
 void PaintBadge(
 		Painter &p,
 		PeerId peerId,
@@ -260,9 +267,7 @@ void PaintBadge(
 		Query(peerId, msgId, Lifetime(), std::move(refresh));
 		return;
 	}
-	// WHY: a single ring merges into video frames of the same hue, so the
-	// dark ring exists purely to strip the gold ring off any content.
-	const auto ring = [&](const style::color &color, int width, int inset) {
+	const auto ring = [&](const QColor &color, int width, int inset) {
 		auto path = QPainterPath();
 		const auto outer = mediaRect.adjusted(inset, inset, -inset, -inset);
 		const auto inner = mediaRect.adjusted(
@@ -290,11 +295,11 @@ void PaintBadge(
 		p.drawPath(path);
 	};
 	ring(
-		st::sexcatMediaFrameOutline,
+		kMediaFrameOutline,
 		st::sexcatMediaFrameOutlineWidth,
 		0);
 	ring(
-		st::sexcatMediaFrameGold,
+		kMediaFrameGold,
 		st::sexcatMediaFrameGoldWidth,
 		st::sexcatMediaFrameOutlineWidth);
 }

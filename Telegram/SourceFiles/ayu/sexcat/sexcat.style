@@ -10,10 +10,6 @@ using "ui/colors.palette";
 
 sexcatBadgeSize: 14px;
 sexcatBadgeShift: margins(6px, 6px, 6px, 6px);
-// WHY: a single ring merges into video frames of the same hue, so the
-// dark ring exists purely to strip the gold ring off any content.
-sexcatMediaFrameGold: #f2b544;
-sexcatMediaFrameOutline: #1f1f1f;
 sexcatMediaFrameGoldWidth: 2px;
 sexcatMediaFrameOutlineWidth: 1px;
 
