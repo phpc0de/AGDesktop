@@ -17,8 +17,6 @@ namespace SexCat {
 // Relinks saved files after shell renames and same-content moves.
 void StartShellWatch();
 
-void TryAutoRelocate(const Entry &entry);
-
 // Feeds every recent row whose file went missing into the bounded
 // relocate search; used by the manual history refresh.
 void RelocateMissingEntries();

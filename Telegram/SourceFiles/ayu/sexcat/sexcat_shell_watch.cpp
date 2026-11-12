@@ -53,6 +53,7 @@ constexpr auto kManualRelocateFiles = 20000;
 constexpr auto kManualRelocateDepth = 4;
 constexpr auto kManualRelocateMs = crl::time(10'000);
 constexpr auto kRescueHashCapBytes = qint64(512 * 1024 * 1024);
+constexpr auto kRescueCooldownMs = crl::time(5000);
 
 struct RelocateBudget {
 	int filesLeft = 0;
@@ -111,12 +112,6 @@ void ScanForMatch(
 			return;
 		}
 	}
-}
-
-// Every call runs on the main thread, so the set needs no mutex.
-std::set<int64> &RelocateInFlight() {
-	static std::set<int64> result;
-	return result;
 }
 
 void AppendCandidate(
@@ -260,48 +255,6 @@ void RelinkMovedEntry(const Entry &entry, const QString &newPath) {
 		u"shell watch relocated %1 -> %2"_q.arg(entry.saved_path, newPath));
 }
 
-// Searches common move destinations and relinks the entry when found.
-void TryAutoRelocate(const Entry &entry) {
-	if (entry.id <= 0
-		|| entry.file_size <= 0
-		|| entry.file_name.isEmpty()
-		|| entry.saved_path.isEmpty()) {
-		return;
-	}
-	if (!RelocateInFlight().insert(entry.id).second) {
-		return;
-	}
-	crl::async([entry] {
-		auto found = QString();
-		auto budget = RelocateBudget{
-			.filesLeft = kRelocateFiles,
-			.depthLeft = kRelocateDepth,
-			.deadline = crl::now() + kRelocateMs,
-		};
-		for (const auto &root : RelocateCandidates(entry.saved_path)) {
-			ScanForMatch(
-				root,
-				entry.file_name,
-				entry.file_size,
-				budget,
-				found);
-			if (!found.isEmpty()) {
-				break;
-			}
-		}
-		crl::on_main([entry, found] {
-			RelocateInFlight().erase(entry.id);
-			if (!found.isEmpty()) {
-				RelinkMovedEntry(entry, found);
-			} else {
-				LogFailure(
-					u"relocate search found nothing, row stays missing: %1"_q
-					.arg(entry.saved_path));
-			}
-		});
-	});
-}
-
 void RelocateMissingEntries() {
 	auto missing = std::vector<Entry>();
 	for (const auto &entry
@@ -430,7 +383,6 @@ void HandleRename(const QString &oldPath, const QString &newPath) {
 		}
 		return;
 	}
-	LogFailure(u"shell watch rename miss: %1 -> %2"_q.arg(oldPath, newPath));
 	if (QFileInfo(newPath).isFile()) {
 		const auto hit = HashStore::ReadAds(newPath);
 		if (hit && hit->sha256.size() == 32) {
@@ -466,27 +418,27 @@ void HandleRenameFolder(const QString &oldDir, const QString &newDir) {
 	}
 }
 
-void HandleUpdate(const QString &path) {
-	if (!QFileInfo(path).isFile()) {
-		return;
-	}
-	const auto hit = HashStore::ReadAds(path);
-	if (hit && hit->sha256.size() == 32) {
-		RelinkLostByAds(path, *hit);
-	}
+crl::time &LastRescueAt() {
+	static crl::time value = 0;
+	return value;
 }
 
 void HandleDeleted(const QString &path) {
 	if (path.isEmpty() || QFileInfo::exists(path)) {
 		return;
 	}
-	const auto entry = Database::instance().LookupByPath(path);
-	if (!entry) {
+	if (!Database::instance().LookupByPath(path)) {
 		return;
 	}
 	// WHY: a move out of the watched tree arrives as a bare delete, so
 	// likely destinations are searched before the row is left missing.
-	TryAutoRelocate(*entry);
+	auto &last = LastRescueAt();
+	const auto now = crl::now();
+	if (now - last < kRescueCooldownMs) {
+		return;
+	}
+	last = now;
+	RelocateMissingEntries();
 }
 
 void ProcessChangeEvent(
@@ -501,10 +453,6 @@ void ProcessChangeEvent(
 	} else if (event == SHCNE_RENAMEFOLDER) {
 		if (!oldPath.isEmpty() && !newPath.isEmpty()) {
 			HandleRenameFolder(oldPath, newPath);
-		}
-	} else if (event == SHCNE_UPDATEITEM) {
-		if (!path.isEmpty()) {
-			HandleUpdate(path);
 		}
 	} else if (event == SHCNE_DELETE) {
 		if (!path.isEmpty()) {
@@ -555,7 +503,7 @@ protected:
 			if (event == SHCNE_RENAMEITEM || event == SHCNE_RENAMEFOLDER) {
 				oldPath = read(pidls ? pidls[0] : nullptr);
 				newPath = read(pidls ? pidls[1] : nullptr);
-			} else if (event == SHCNE_UPDATEITEM || event == SHCNE_DELETE) {
+			} else if (event == SHCNE_DELETE) {
 				path = read(pidls ? pidls[0] : nullptr);
 			}
 			SHChangeNotification_Unlock(lock);
@@ -574,79 +522,31 @@ protected:
 
 void RegisterShellWatch() {
 	auto window = new ShellWatchWindow();
-	auto pidls = std::vector<PIDLIST_ABSOLUTE>();
-	auto entries = std::vector<SHChangeNotifyEntry>();
-	auto seen = std::set<QString>();
-	const auto addPidl = [&](PIDLIST_ABSOLUTE pidl) {
-		if (!pidl) {
-			return;
-		}
-		pidls.push_back(pidl);
-		auto entry = SHChangeNotifyEntry();
-		entry.pidl = pidl;
-		entry.fRecursive = TRUE;
-		entries.push_back(entry);
-	};
+	// WHY: CSIDL_DESKTOP is the shell namespace root, so one recursive
+	// registration delivers renames, moves and deletes for every drive,
+	// not just the few folders the old entries covered.
 	auto desktopPidl = static_cast<PIDLIST_ABSOLUTE>(nullptr);
-	if (SUCCEEDED(
-			SHGetKnownFolderIDList(
-				FOLDERID_Desktop,
-				0,
+	if (FAILED(
+			SHGetFolderLocation(
 				nullptr,
+				CSIDL_DESKTOP,
+				nullptr,
+				0,
 				&desktopPidl))) {
-		addPidl(desktopPidl);
-	} else {
 		LogFailure(u"shell watch failed to resolve the desktop pidl"_q);
-	}
-	// the download folder sits outside the desktop tree, so moves out of it raised no events
-	const auto desktopPath = QDir::toNativeSeparators(
-		QStandardPaths::writableLocation(
-			QStandardPaths::DesktopLocation)).toLower();
-	const auto watch = [&](const QString &path) {
-		const auto native = QDir::toNativeSeparators(path);
-		if (native.isEmpty()
-			|| native.toLower() == desktopPath
-			|| !seen.insert(native.toLower()).second) {
-			return;
-		}
-		auto pidl = static_cast<PIDLIST_ABSOLUTE>(nullptr);
-		if (FAILED(
-				SHParseDisplayName(
-					reinterpret_cast<LPCWSTR>(native.utf16()),
-					nullptr,
-					&pidl,
-					0,
-					nullptr))) {
-			LogFailure(u"shell watch failed to resolve %1"_q.arg(native));
-			return;
-		}
-		addPidl(pidl);
-	};
-	auto downloadRoot = Core::App().settings().downloadPath();
-	if (downloadRoot.isEmpty()) {
-		// the default download location is never in the settings, so the
-		// folder moves would stay invisible without this fallback
-		downloadRoot = QStandardPaths::writableLocation(
-			QStandardPaths::DownloadLocation);
-	}
-	watch(downloadRoot);
-	watch(QStandardPaths::writableLocation(
-		QStandardPaths::DocumentsLocation));
-	if (entries.empty()) {
-		LogFailure(u"shell watch has no folders to watch"_q);
 		return;
 	}
+	auto entry = SHChangeNotifyEntry();
+	entry.pidl = desktopPidl;
+	entry.fRecursive = TRUE;
 	const auto registered = SHChangeNotifyRegister(
 		reinterpret_cast<HWND>(window->winId()),
 		SHCNRF_NewDelivery | SHCNRF_InterruptLevel | SHCNRF_ShellLevel,
-		SHCNE_RENAMEITEM | SHCNE_RENAMEFOLDER | SHCNE_UPDATEITEM
-			| SHCNE_DELETE,
+		SHCNE_RENAMEITEM | SHCNE_RENAMEFOLDER | SHCNE_DELETE,
 		kShellChangeMessage,
-		int(entries.size()),
-		entries.data());
-	for (const auto pidl : pidls) {
-		ILFree(pidl);
-	}
+		1,
+		&entry);
+	ILFree(desktopPidl);
 	if (!registered) {
 		LogFailure(u"shell watch failed to register change notifications"_q);
 	}

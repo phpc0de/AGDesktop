@@ -340,4 +340,5 @@
   - 主线程只收结果 Relink（crl::on_main），不卡 UI；成功 toast "Auto-relocated: {count}"（新键 lng_sexcat_autorelocate_done）。
   - `RelocateMissingEntries` 挂上窗口构造（history_window ctor reload() 后）→ **打开窗口即自动救援**。
   - 哈希助手迁 `HashStore::ComputeFileSha256`（hash_store.h/.cpp 新增同步版），history_window 三处改用、本地副本删除；shell_watch 增 <map>/toasts/lang_keys includes。
-- 保留：TryAutoRelocate（shell 删除事件单行路径）不动；H1 的两个右键入口保留为兜底。
+- H1 的两个右键入口保留为兜底。
+- **H3 已实施（全局 shell 事件，用户拍板）**：SHChangeNotifyRegister 注册面从"桌面文件夹+下载+文档三子树"换成 **CSIDL_DESKTOP 命名空间根**（SHGetFolderLocation）递归注册 = 全盘所有驱动器的改名/移动/删除事件；事件面裁掉 SHCNE_UPDATEITEM（全局范围下每个文件内容变化都触发会成 IO 风暴）；HandleDeleted → 5 秒冷却（kRescueCooldownMs）触发批量救援；HandleRename 的 miss 日志静音（全局范围下未跟踪文件改名是常态）；HandleUpdate/TryAutoRelocate/RelocateInFlight 删除（单行旧名扫描被批量三级匹配全面取代）。同卷移动/改名/Ctrl+X = RENAMEITEM 即时精确重链；跨卷 = DELETE → 批量救援兜底。

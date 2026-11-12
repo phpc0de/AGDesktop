@@ -44,3 +44,15 @@ shell watch 的 Windows 通知只注册了桌面文件夹/下载/文档三个子
 6. 手动改名/移动若干文件 → 打开 sexcat 窗口 → 数秒内灰行自动恢复 + toast "Auto-relocated: N"。
 7. 跨盘移动（C: → D:）→ 打开窗口自动找回（走盘符根遍历兜底）。
 8. 恢复过的行重启后仍正确（落库）。
+
+### H3：全局 shell 事件监听（用户拍板）
+
+- 注册面换成 `SHGetFolderLocation(CSIDL_DESKTOP)` 命名空间根 + 递归 = **全盘**改名/移动/删除事件（原先只有桌面/下载/文档三子树，用户收藏树收不到任何事件）。
+- Ctrl+X 剪切粘贴在同一卷上就是 SHCNE_RENAMEITEM → HandleRename 即时精确重链；跨卷移动 = 源目录 DELETE → 5 秒冷却触发批量救援（三级匹配 + 盘符根兜底）。
+- 裁掉 SHCNE_UPDATEITEM：全局范围下每个文件内容变化都触发会成 IO 风暴；其职责（按标记找回）由改名兜底 + 批量救援覆盖。
+- rename miss 日志静音；HandleUpdate/TryAutoRelocate/RelocateInFlight 删除（-102 行）。
+
+### 手测补充
+
+9. 应用开着，在**任意盘任意文件夹**改名/移动/Ctrl+X 剪切已收藏文件 → 无需任何操作，行即时恢复（同卷）；跨卷移动后打开窗口即自动恢复 + toast。
+10. 全盘监听下日常用机（浏览器/编译器/临时文件）不应有卡顿或日志刷屏（miss 静音 + 冷却）。
