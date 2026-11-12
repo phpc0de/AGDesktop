@@ -274,7 +274,8 @@ void AddAction(
 	};
 	const auto saveDocuments = [=](const QString &folderPath) {
 		for (const auto &[document, origin] : documents) {
-			if (!folderPath.isEmpty() || document->loaded()) {
+			if (!folderPath.isEmpty()
+				|| !document->filepath(true).isEmpty()) {
 				const auto dir = folderPath.isEmpty() ? quickPath : folderPath;
 				if (dir.isEmpty()) {
 					continue;
@@ -382,7 +383,8 @@ void AddDownloadVideosSelector(
 				continue;
 			}
 			const auto &[document, origin] = videos[i];
-			if (!folderPath.isEmpty() || document->loaded()) {
+			if (!folderPath.isEmpty()
+				|| !document->filepath(true).isEmpty()) {
 				const auto dir = folderPath.isEmpty() ? quickPath : folderPath;
 				if (dir.isEmpty()) {
 					continue;

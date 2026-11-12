@@ -272,7 +272,7 @@ void MarkSilentlyRestrictedChannel(not_null<History*> history) {
 	history->updateChatListEntry();
 	history->peer->session().changes().peerUpdated(
 		history->peer,
-		PeerUpdateFlag::UnavailableReason);
+		Data::PeerUpdate::Flag::UnavailableReason);
 }
 
 [[nodiscard]] rpl::producer<PeerData*> ActivePeerValue(

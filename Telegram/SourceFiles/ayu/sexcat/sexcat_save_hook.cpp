@@ -1063,9 +1063,8 @@ QString FallbackDocumentName(not_null<DocumentData*> document) {
 	}
 	const auto mimeType = Core::MimeTypeForName(document->mimeString());
 	const auto patterns = mimeType.globPatterns();
-	const auto ext = patterns.isEmpty()
-		? QString()
-		: patterns.front().replace(u'*', QString());
+	auto ext = patterns.isEmpty() ? QString() : patterns.front();
+	ext.replace(u'*', QString());
 	return ext.isEmpty()
 		? QString::number(document->id)
 		: QString::number(document->id) + ext;
