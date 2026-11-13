@@ -435,3 +435,8 @@
   - **C. 跨盘自动回链**：C1 RegisterShellWatch 事件掩码 +`SHCNE_CREATE`；C2 nativeEvent CREATE 分支读 pidls[0]；C3 ProcessChangeEvent → `HandleCreated(path)`（空/已跟踪跳过 → ReadAds 命中 → 现成 RelinkLostByAds 只回链丢失记录）；C4 RelocateMissingEntries roots 追加全部 `QDir::drives()` 盘根（排在旧盘 roots 之后，预算耗尽自然跳过）。
   - **D. 批量找回**：D1 shell_watch 导出 `RelocateLostInFolder(root)`（复用 MissingIndex 构建 + ScanForMissing + RelinkMovedEntry，返回回链数）；D2 历史窗口 lost 行右键新项 `lng_sexcat_relocate_lost`="Relocate all lost files in folder..." → 选目录 → async 回链 → toast 计数。
   - **边界（如实）**：丢失窗口 2000 条不扩（范围外）；CREATE 探测 = 全系统创建事件一次轻量 ads 读（拍板实时）；"复制"（非移动）不回链（新副本走既有新增记录语义）。
+- **已实施（commit `18f9972b2c`，未 push）**：
+  - C 落码：事件掩码 +SHCNE_CREATE；nativeEvent DELETE 分支合并 CREATE 读 pidls[0]；`HandleCreated`（空/目录/已跟踪跳过 → ReadAds 命中 → 现成 RelinkLostByAds，WHY 两行）；RelocateMissingEntries roots 追加全部 `QDir::drives()` 盘根（排在旧盘候选后，预算耗尽自然跳过）。Guard 边界核验：HandleCreated/ProcessChangeEvent 落在 Q_OS_WIN 区（:375-605）内，RelinkLostByAds 同区可见；RelocateLostInFolder 在跨平台区（:329）且只依赖跨平台符号（CollectMissingIndex/ScanForMissing/RelinkMovedEntry）。
+  - D 落码：导出 `RelocateLostInFolder(root)` 返回回链数；抽出 `CollectMissingIndex()`（anon ns）消除 RelocateMissingEntries 的 missing+index 双重构建，两处复用；历史窗口 lost 行右键新项 `lng_sexcat_relocate_lost`="Relocate all lost files in folder..." → relocateLostInFolder()（anyLost 预检 → 选目录 → crl::async 回链 → reload + "Relocated %1 files" toast，QPointer 模式与现有一致）。
+  - 注释预算：1 常规（"cross-volume moves land on other drives; scan them last."）+ 1 WHY 例外（HandleCreated 两行）✓。
+  - 静态验证全绿：`git diff --check` 干净；SHCNE_CREATE 三处（掩码/nativeEvent/分支）+ HandleCreated/RelocateLostInFolder/CollectMissingIndex 声明↔定义↔调用三方一致；lng 键双侧接线；HistoryWindow/reload()/_rows 成员与 QPointer 模式沿用现形。
