@@ -461,3 +461,11 @@
 - **定稿改动清单**：
   - **F. 分组显示重构（HistoryWindow）**：F1 applyFilter 后按 (srcPeerId, srcMsgId) 分组，组头 = QTreeWidgetItem（UserRole 组标记）显示 srcTitle + "N files · 总大小 · 日期范围"，无来源归 "No source" 组，lost 行留在组内沿用 lost 样式，默认展开；F2 组头左键 toggle 全选/取消全选子行（selectionModel，复用现有 ExtendedSelection 与 verifySelected 通路），组头右键菜单 = "Delete group records" / "Delete group records and files"；行级上下文菜单对称补两项；底部 lost 大组代码移除；F3 确认框 = QMessageBox（窗口纯 Qt 风格一致）列出条数+总大小，含源文件口径时再选 moveToTrash/remove；F4 导出 `DeleteRecords(ids)`（DB 事务删 saved_file+source_tag 行）+ `DeleteRecordFile(entry, toTrash)`（文件+侧车，先删文件再删行，失败可中断）；F5 删除后 reload + rebuildFilterBox（来源 combo 重建 = saved by source 同步清理 UI 面）+ toast 计数。
   - 注释预算照旧 2 常规 + 1 WHY 例外；手测口径 = 组折叠/全选切换、组级两口径删除（含回收站可恢复验证）、孤儿 tag 从 sow 列表消失、来源 combo 同步、lost 行组内显示。
+- **已实施（commit `9264c57b44`，未 push）**：
+  - F1 落码：applyFilter 改分组输出（std::map<(int64 peer, int64 msg)>，peer id 显式 int64 防窄化）；`fillGroupItem` = 组头（UserRole 0 哨兵）Time=最新行日期 / Name=srcTitle（空→"No source"）/ Source="N · 大小 · [M lost]"；组默认展开；底部 lost 大组代码移除，lost 行留组内沿用 lost 前景样式。
+  - F2 落码：itemClicked 组头分支 → `toggleGroupSelection`（QItemSelection 全子行 + Select/Deselect | Rows 标志）；组头右键菜单（select-all + 两删除口径）；行级右键补 "Delete record" / "Delete record and file"。
+  - F3/F4 落码：`deleteRows(ids, withFiles)` —— 仅记录 = QMessageBox::question Yes/Cancel；含文件 = 三按钮（回收站 ActionRole / 永久 DestructiveRole / Cancel）；先 DeleteRecordFile 后 DB.DeleteRecords（WHY 注释：失败留记录可重试）；DB `DeleteRecords` 事务删 saved_file+source_tag；顺手补齐 Q81 `DropRecordById` 的 source_tag 清理（同步清理要求）；shell_watch 导出 `DeleteRecordFile(entry, toTrash)`（moveToTrash/remove + 侧车清理，丢失行如实成功）。
+  - F5 落码：toast 双键（records / records+files，如实报告文件删除成功数）；reload 内已含 rebuildFilterBox（来源 combo 重建）。
+  - 计划外：抽 `EntryFromRow(row)` helper，finishDirectoryRelocation 的 Entry 字面量同步复用。
+  - 注释预算实况：database.h 1 常规（Q35）+ shell_watch.h 1 常规 + deleteRows 1 WHY = 2 常规 + 1 例外 ✓。
+  - 静态验证全绿：`git diff --check` 干净；10 个新 lang 键 lang↔code 双侧接线（每键精确 grep）；新符号三方一致；EntryFromRow 字段序沿用现成编译面。
