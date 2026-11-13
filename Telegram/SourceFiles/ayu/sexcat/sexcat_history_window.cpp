@@ -498,10 +498,15 @@ private:
 
 	void toggleGroupSelection(QTreeWidgetItem *group) {
 		const auto model = _tree->selectionModel();
+		const auto topRow = _tree->indexOfTopLevelItem(group);
+		if (topRow < 0) {
+			return;
+		}
+		const auto groupIndex = _tree->model()->index(topRow, 0);
 		auto selection = QItemSelection();
 		auto allSelected = true;
 		for (auto i = 0; i != group->childCount(); ++i) {
-			const auto index = _tree->indexFromItem(group->child(i));
+			const auto index = _tree->model()->index(i, 0, groupIndex);
 			if (!model->isSelected(index)) {
 				allSelected = false;
 			}
@@ -818,19 +823,21 @@ private:
 				}
 			}
 		}
-		Database::instance().DeleteRecords(ids);
+		const auto recordsDeleted = Database::instance().DeleteRecords(ids);
 		reload();
-		Ui::Toast::Show(withFiles
-			? tr::lng_sexcat_deleted_files(
-				tr::now,
-				lt_count1,
-				QString::number(ids.size()),
-				lt_count2,
-				QString::number(filesDeleted))
-			: tr::lng_sexcat_deleted(
-				tr::now,
-				lt_count1,
-				QString::number(ids.size())));
+		if (recordsDeleted) {
+			Ui::Toast::Show(withFiles
+				? tr::lng_sexcat_deleted_files(
+					tr::now,
+					lt_count1,
+					QString::number(ids.size()),
+					lt_count2,
+					QString::number(filesDeleted))
+				: tr::lng_sexcat_deleted(
+					tr::now,
+					lt_count1,
+					QString::number(ids.size())));
+		}
 	}
 
 	void deleteGroupRows(QTreeWidgetItem *group, bool withFiles) {
