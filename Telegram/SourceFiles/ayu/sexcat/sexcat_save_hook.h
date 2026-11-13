@@ -11,6 +11,7 @@
 
 #include <QByteArray>
 #include <QString>
+#include <QStringList>
 
 class DocumentData;
 class PhotoData;
@@ -28,18 +29,18 @@ void RecordSaveAttempt(
 	not_null<DocumentData*> document,
 	FullMsgId contextId = {},
 	int attachIndex = 0,
-	const QString &sourceTag = {});
+	const QStringList &sourceTags = {});
 void RecordPhotoSaveAttempt(
 	const QString &savedPath,
 	not_null<PhotoData*> photo,
 	FullMsgId contextId = {},
 	int attachIndex = 0,
-	const QString &sourceTag = {});
+	const QStringList &sourceTags = {});
 
 void MarkDocumentSaveAs(
 	not_null<DocumentData*> document,
 	FullMsgId contextId,
-	const QString &sourceTag = {});
+	const QStringList &sourceTags = {});
 void NotifyDocumentSaved(
 	const QString &savedPath,
 	not_null<DocumentData*> document);
@@ -67,8 +68,8 @@ void NoteDownloadedSha(const QString &path, const QByteArray &sha256);
 // Installs the download-manager hook once; safe to call repeatedly.
 void EnsureDownloadListener();
 
-// First #hashtag of the item text (group caption included), or empty.
-[[nodiscard]] QString SourceTagForItem(HistoryItem *item);
+// All #hashtags of the item text (group caption included), in order.
+[[nodiscard]] QStringList SourceTagsForItem(HistoryItem *item);
 
 // Q49: server name, or the id-composed name for nameless documents.
 [[nodiscard]] QString FallbackDocumentName(not_null<DocumentData*> document);

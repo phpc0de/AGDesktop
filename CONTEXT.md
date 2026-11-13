@@ -397,3 +397,22 @@
   - N5 `HealSkippedDuplicate`（save_hook.cpp:1118-1141，WHY 注释）：FindRecordedForDocument 命中的旧记录文件就地改名 + `Database::Relink(hit->id, renamed)`；`NotifyDuplicateSkipped(toFile, document)` 签名扩展（h:98-101 + data_document.cpp:1338 调用点），toast 显示治愈后的实际路径。
   - 静态验证全绿：`git diff --check` 干净；`IsAllDigitsName`/`dir + name` 全仓 0 残留；NotifyDuplicateSkipped 三向一致（h/cpp/call）；lng key 定义↔使用配对；`DocumentFileNameForSave` 默认参重载确认（data_document.h:437-441）；注释预算 = 1 常规 + 1 WHY 例外 + 1 处原位改写。
   - 遗留边界（如实）：mid-loading 命中 :147 注入时 loader 可能 setFileName 失败→cancel 重启下载（upstream 既有语义，产增补名，代价是重下流量）；幂等守卫按首 tag 前缀判定，服务器名恰好以 "#tag" 开头时保守跳过。
+
+## §28 Grill Q31–Q33：相册菜单视频化 + source 多 tag —— 调查完成，待裁决
+- **Q31/Q32 事实面**：`AddDownloadAlbumAction`（menu_item_download_files.cpp:533-563）用 `Collected` 同时收集 docs+photos，`AddAction` 的 saveImages+saveDocuments 都跑 → 相册两动作确实连图片一起下载。现有文案 `ayu_DownloadAlbumAll`="Download all album files"、`ayu_DownloadAlbumAs`="Save all album files as..."（lang.strings:9182-9183）；lang.strings 全仓 CJK=0（自定义文案纯英文，无中文默认值机制）。"Select videos to download..." 选择器本就只收视频，不受影响。多选路径 `ayu_DownloadFilesAs`="Save selected as..." 不在本次范围。
+- **Q31/Q32 拟改**：AddDownloadAlbumAction 只收 documents、`docs.empty()` 早退；两动作文案改"视频"语义。
+- **Q33 事实面**：`SourceTagForItem`（sexcat_save_hook.cpp:1049-1051）= `AugmentNameParts(item).tags.value(0)` —— 只取首个 hashtag（bug 根源）。4 个调用点（menu batchTag ×3 :135/:144/:383 → MarkDocumentSaveAs → OriginFromItem；OriginFromItem 回退 :333）全部喂 `Entry.src_tag`（写入点 :346/:406/:439/:490）；`RecordTag(origin.tag)` 在 :414/:496 单 tag 入注册表。读侧：`Recent()` 整串精确 ==（sexcat_database.cpp:460-469）；`TagSummaries` GROUP BY src_tag（sexcat_database.cpp:635-660）喂 retro-tag 候选菜单（save_hook:1183）；sow 入口 = SaveSowTag（history_inner_widget.cpp + history_view_context_menu.cpp）。文件名增补本就带全部 tag（BuildAugmentedName join 全部），不受影响。
+- **Q33 拟改**：SourceTagForItem 返回全部 tag 空格连接；写入点与签名不动；RecordTag 逐 tag 循环注册。读侧形态待裁决：(a) joined + Recent 改 token 匹配 + TagSummaries 客户端拆分聚合（零 schema 变更，旧单 tag 行天然兼容，推荐）vs (b) 多对多新表 source_tags(source_id, tag)（读取面最干净但 schema+全部读写改）。
+- **用户裁决（当轮）**：① 文案 = 英文等价；② 纯图片相册 = 补图片兜底入口；③ Q33 = 多对多新表。
+- **补充事实（裁决后核验）**：AddAction 对空 docs 完全容忍（文案/图标/toast 三处 fallback，overrideText 非空时无碍）；saveImages 的 batchTag 只遍历 documents —— 图片批量经 `RecordPhotoSaveAttempt(..., sourceTag)` 单独带 tag（:253-258），Q33 管线必须覆盖该参数；`Recent()` 的 tag 过滤当前无任何 UI 调用方（仅 4 写点 + :1020 读回）；storage 有现成 make_index 模式（:53-69）；`RetagSource` = update_all 整体替换语义。
+- **定稿改动清单**：
+  - **A. Q31/Q32 相册菜单视频化 + 图片兜底**：
+    - A1 AddDownloadAlbumAction：两动作 + 视频选择器收进 `!docs.empty()` 分支且只传 docs；新增 `!photos.empty()` 分支 → 单一图片快存入口（无对话框）。
+    - A2 lang.strings：`ayu_DownloadAlbumAll`="Download all videos"、`ayu_DownloadAlbumAs`="Save all videos to folder..."、新键 `ayu_DownloadAlbumPhotos`="Download all photos"。
+    - A3 多选 "Save selected as..." 与视频选择器不动。
+  - **B. Q33 多对多 source tag**：
+    - B1 新表 source_tags(source_id, tag) + make_index（tag / source_id）；sync_schema 自动建表，旧库零迁移。
+    - B2 一次性回填：初始化时 source_tags 空且存在 src_tag 非空行 → 逐行 {id, src_tag}。
+    - B3 写链：`SourceTagsForItem(item)` 返回全部 tag（SourceTagForItem 保留首 tag 喂 src_tag 列）；SourceOrigin 增 tags（tag 派生 value(0)）；OriginFromItem/menu batchTag ×3/PendingSaveAs/RecordPhotoSaveAttempt 的 tag 参数全部改 QStringList；4 个 Entry 写点后 ReplaceSourceTags(entry.id, origin.tags)；RecordTag 逐 tag 循环。
+    - B4 读面：Recent() tag 过滤两段查询（source_tags → id in）；TagSummaries 改 source_tags 聚合；RetagSource 保持替换语义（update_all + 命中 ids ReplaceSourceTags(id,{tag})）；save_hook:1020 读回改 SourceTags(id) 优先、src_tag 兜底。
+    - B5 验证：静态三向 + 外部构建机 + 手测（多 tag 消息 → retro-tag 候选列全 tag；tag 过滤命中任一；纯图片相册出图片入口；混合相册两视频动作不再带图片）。

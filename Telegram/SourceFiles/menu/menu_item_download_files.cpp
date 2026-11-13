@@ -41,6 +41,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/text/format_values.h"
 #include "ui/widgets/menu/menu_action.h"
 #include "ui/widgets/menu/menu_add_action_callback.h"
+
+
+#include <QStringList>
 #include "ui/widgets/menu/menu_add_action_callback_factory.h"
 #include <QMenu>
 
@@ -129,20 +132,20 @@ void AddAction(
 	const auto shouldShowToast = documents.empty();
 
 	// Q52.4: every file of a batch download carries the same sow tag.
-	auto batchTag = QString();
+	auto batchTags = QStringList();
 	for (const auto &[document, fullId] : documents) {
 		if (const auto item = controller->session().data().message(fullId)) {
-			batchTag = SexCat::SourceTagForItem(item);
-			if (!batchTag.isEmpty()) {
+			batchTags = SexCat::SourceTagsForItem(item);
+			if (!batchTags.isEmpty()) {
 				break;
 			}
 		}
 	}
-	if (batchTag.isEmpty()) {
+	if (batchTags.isEmpty()) {
 		for (const auto &[photo, fullId] : photos) {
 			if (const auto item = controller->session().data().message(fullId)) {
-				batchTag = SexCat::SourceTagForItem(item);
-				if (!batchTag.isEmpty()) {
+				batchTags = SexCat::SourceTagsForItem(item);
+				if (!batchTags.isEmpty()) {
 					break;
 				}
 			}
@@ -247,15 +250,13 @@ void AddAction(
 								QFileDevice::FileAccessTime);
 						}
 					}
-					if (folderPath.isEmpty()) {
-						continue;
-					}
+					// Q33: quick-saved photos record like folder saves do.
 					SexCat::RecordPhotoSaveAttempt(
 						lastPath,
 						photos[i].first,
 						photos[i].second,
 						0,
-						batchTag);
+						batchTags);
 				}
 			}
 			if (showToast) {
@@ -290,7 +291,7 @@ void AddAction(
 					QDir(dir).filePath(name),
 					document,
 					origin);
-				SexCat::MarkDocumentSaveAs(document, origin, batchTag);
+				SexCat::MarkDocumentSaveAs(document, origin, batchTags);
 				document->save(origin, target);
 			} else {
 				DocumentSaveClickHandler::SaveAndTrack(origin, document);
@@ -377,11 +378,11 @@ void AddDownloadVideosSelector(
 			QDir().mkpath(path);
 			return path;
 		}();
-		auto batchTag = QString();
+		auto batchTags = QStringList();
 		for (const auto &[document, fullId] : videos) {
 			if (const auto item = session->data().message(fullId)) {
-				batchTag = SexCat::SourceTagForItem(item);
-				if (!batchTag.isEmpty()) {
+				batchTags = SexCat::SourceTagsForItem(item);
+				if (!batchTags.isEmpty()) {
 					break;
 				}
 			}
@@ -403,7 +404,7 @@ void AddDownloadVideosSelector(
 					QDir(dir).filePath(name),
 					document,
 					origin);
-				SexCat::MarkDocumentSaveAs(document, origin, batchTag);
+				SexCat::MarkDocumentSaveAs(document, origin, batchTags);
 				document->save(origin, target);
 			} else {
 				DocumentSaveClickHandler::SaveAndTrack(origin, document);
@@ -551,24 +552,35 @@ void AddDownloadAlbumAction(
 	if (docs.empty() && photos.empty()) {
 		return;
 	}
-	AddAction(
-		menu,
-		window,
-		docs,
-		photos,
-		[] {},
-		tr::ayu_DownloadAlbumAll(tr::now),
-		&st::menuIconDownload);
-	AddAction(
-		menu,
-		window,
-		docs,
-		photos,
-		[] {},
-		tr::ayu_DownloadAlbumAs(tr::now),
-		&st::menuIconDownload,
-		true);
-	AddDownloadVideosSelector(menu, window, docs);
+	if (!docs.empty()) {
+		AddAction(
+			menu,
+			window,
+			docs,
+			{},
+			[] {},
+			tr::ayu_DownloadAlbumAll(tr::now),
+			&st::menuIconDownload);
+		AddAction(
+			menu,
+			window,
+			docs,
+			{},
+			[] {},
+			tr::ayu_DownloadAlbumAs(tr::now),
+			&st::menuIconDownload,
+			true);
+		AddDownloadVideosSelector(menu, window, docs);
+	}
+	if (!photos.empty()) {
+		AddAction(
+			menu,
+			window,
+			{},
+			photos,
+			[] {},
+			tr::ayu_DownloadAlbumPhotos(tr::now));
+	}
 }
 
 } // namespace Menu

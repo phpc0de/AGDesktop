@@ -9179,8 +9179,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "ayu_SearchByIDResults" = "Found by ID";
 "ayu_ContextCopyCallbackData" = "Copy Callback Data";
 "ayu_RepeatMessage" = "Repeat Message";
-"ayu_DownloadAlbumAll" = "Download all album files";
-"ayu_DownloadAlbumAs" = "Save all album files as...";
+"ayu_DownloadAlbumAll" = "Download all videos";
+"ayu_DownloadAlbumAs" = "Save all videos to folder...";
+"ayu_DownloadAlbumPhotos" = "Download all photos";
 "ayu_DownloadFilesAs" = "Save selected as...";
 "ayu_CancelAllDownloading" = "Cancel all downloading";
 "ayu_SelectVideosToDownload" = "Select videos to download...";

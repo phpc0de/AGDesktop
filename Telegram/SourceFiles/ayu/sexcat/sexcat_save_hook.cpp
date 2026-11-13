@@ -55,7 +55,7 @@ constexpr auto kSexCatToastDuration = crl::time(3000);
 
 struct PendingSaveAs {
 	FullMsgId contextId;
-	QString sourceTag;
+	QStringList sourceTags;
 };
 
 constexpr auto kPendingSaveAsMax = 32;
@@ -308,6 +308,7 @@ struct SourceOrigin {
 	int64 msgId = 0;
 	QString title;
 	QString tag;
+	QStringList tags;
 	int attach = 0;
 
 	[[nodiscard]] bool known() const {
@@ -317,10 +318,11 @@ struct SourceOrigin {
 
 [[nodiscard]] SourceOrigin OriginFromItem(
 		HistoryItem *item,
-		QString tag,
+		QStringList tags,
 		int attachOverride = 0) {
-	auto origin = SourceOrigin{ .tag = std::move(tag) };
+	auto origin = SourceOrigin{ .tags = std::move(tags) };
 	if (!item || !item->isRegular()) {
+		origin.tag = origin.tags.value(0);
 		return origin;
 	}
 	if (const auto peer = item->history()->peer) {
@@ -329,9 +331,10 @@ struct SourceOrigin {
 	}
 	origin.msgId = int64(item->id.bare);
 	origin.attach = attachOverride ? attachOverride : ResolveAttachIndex(item);
-	if (origin.tag.isEmpty()) {
-		origin.tag = SourceTagForItem(item);
+	if (origin.tags.isEmpty()) {
+		origin.tags = SourceTagsForItem(item);
 	}
+	origin.tag = origin.tags.value(0);
 	return origin;
 }
 
@@ -394,6 +397,7 @@ void DedupeOrRecordHashed(
 		LogFailure(u"duplicate content relinked to new copy: "_q + savedPath);
 	} else if (pendingId > 0) {
 		Database::instance().UpdateRowSha(pendingId, sha);
+		Database::instance().ReplaceSourceTags(pendingId, origin.tags);
 	} else {
 		auto entry = Entry{
 			.sha256 = sha,
@@ -407,11 +411,15 @@ void DedupeOrRecordHashed(
 			.src_attach = origin.attach,
 			.saved_at = base::unixtime::now(),
 		};
-		if (Database::instance().RecordSaved(std::move(entry)) <= 0) {
+		const auto recordId = Database::instance().RecordSaved(std::move(entry));
+		if (recordId <= 0) {
 			return;
 		}
+		Database::instance().ReplaceSourceTags(recordId, origin.tags);
 	}
-	Database::instance().RecordTag(origin.tag);
+	for (const auto &tag : origin.tags) {
+		Database::instance().RecordTag(tag);
+	}
 	HashStore::WriteAds(
 		savedPath,
 		sha,
@@ -493,7 +501,9 @@ void FinishHashedRecord(
 			Database::instance().BackfillSourceByHash(sha, source);
 		}
 	}
-	Database::instance().RecordTag(origin.tag);
+	for (const auto &tag : origin.tags) {
+		Database::instance().RecordTag(tag);
+	}
 	HashStore::WriteAds(
 		savedPath,
 		sha,
@@ -543,6 +553,7 @@ void ResolveHashAndPersist(
 	if (rowId <= 0) {
 		return;
 	}
+	Database::instance().ReplaceSourceTags(rowId, origin.tags);
 	HashStore::HashFileAsync(
 		savedPath,
 		[=, path = savedPath, origin = origin](QByteArray sha256) mutable {
@@ -824,7 +835,7 @@ bool ShouldSkipDuplicateDownload(
 	if (const auto i = PendingMap().find(document.get()); i != end(PendingMap())) {
 		const auto item = document->owner().message(i->second.contextId);
 		if (item && item->isRegular()) {
-			const auto origin = OriginFromItem(item, i->second.sourceTag);
+			const auto origin = OriginFromItem(item, i->second.sourceTags);
 			Database::instance().RecordPendingPosition(
 				SourceEntryForPending(origin, document->size));
 		}
@@ -902,7 +913,7 @@ void RecordSaveAttempt(
 		not_null<DocumentData*> document,
 		FullMsgId contextId,
 		int attachIndex,
-		const QString &sourceTag) {
+		const QStringList &sourceTags) {
 	EnsureDownloadListener();
 	Ayu::SexCat::RememberDownloadedDocument(document);
 	if (!Enabled()) {
@@ -916,7 +927,7 @@ void RecordSaveAttempt(
 		? document->owner().message(contextId)
 		: nullptr;
 	const auto path = MaybeAugmentedSavePath(savedPath, document, item);
-	auto origin = OriginFromItem(item, sourceTag, attachIndex);
+	auto origin = OriginFromItem(item, sourceTags, attachIndex);
 	if (!Database::instance().Enabled()) {
 		LogFailure(u"database unavailable, save not recorded: "_q + path);
 		return;
@@ -929,7 +940,7 @@ void RecordPhotoSaveAttempt(
 		not_null<PhotoData*> photo,
 		FullMsgId contextId,
 		int attachIndex,
-		const QString &sourceTag) {
+		const QStringList &sourceTags) {
 	EnsureDownloadListener();
 	if (!Enabled()) {
 		return;
@@ -941,7 +952,7 @@ void RecordPhotoSaveAttempt(
 	const auto item = contextId
 		? photo->owner().message(contextId)
 		: nullptr;
-	auto origin = OriginFromItem(item, sourceTag, attachIndex);
+	auto origin = OriginFromItem(item, sourceTags, attachIndex);
 	if (!Database::instance().Enabled()) {
 		LogFailure(u"database unavailable, photo save not recorded: "_q + savedPath);
 		return;
@@ -952,12 +963,12 @@ void RecordPhotoSaveAttempt(
 void MarkDocumentSaveAs(
 		not_null<DocumentData*> document,
 		FullMsgId contextId,
-		const QString &sourceTag) {
+		const QStringList &sourceTags) {
 	auto &map = PendingMap();
 	if (map.size() >= size_t(kPendingSaveAsMax)) {
 		map.clear();
 	}
-	map[document.get()] = PendingSaveAs{ contextId, sourceTag };
+	map[document.get()] = PendingSaveAs{ contextId, sourceTags };
 }
 
 void NotifyDocumentSaved(
@@ -968,12 +979,12 @@ void NotifyDocumentSaved(
 		return;
 	}
 	const auto contextId = i->second.contextId;
-	const auto sourceTag = i->second.sourceTag;
+	const auto sourceTags = i->second.sourceTags;
 	PendingMap().erase(i);
 	if (savedPath.isEmpty()) {
 		return;
 	}
-	RecordSaveAttempt(savedPath, document, contextId, 0, sourceTag);
+	RecordSaveAttempt(savedPath, document, contextId, 0, sourceTags);
 }
 
 void ForgetDoctrineSaveAs(not_null<DocumentData*> document) {
@@ -984,7 +995,7 @@ void ForgetDoctrineSaveAs(not_null<DocumentData*> document) {
 		i != end(PendingMap())) {
 		const auto item = document->owner().message(i->second.contextId);
 		if (item && item->isRegular()) {
-			const auto origin = OriginFromItem(item, i->second.sourceTag);
+			const auto origin = OriginFromItem(item, i->second.sourceTags);
 			Database::instance().DropPendingPosition(
 				SourceEntryForPending(origin, document->size));
 		}
@@ -1018,6 +1029,7 @@ void RehashPendingRows() {
 				.msgId = entry.src_msg_id,
 				.title = entry.src_title,
 				.tag = entry.src_tag,
+				.tags = Database::instance().SourceTags(entry.id),
 				.attach = entry.src_attach,
 			}](QByteArray sha256) mutable {
 				FinishHashedRecord(
@@ -1046,8 +1058,8 @@ void EnsureDownloadListener() {
 	RehashPendingRows();
 }
 
-QString SourceTagForItem(HistoryItem *item) {
-	return AugmentNameParts(item).tags.value(0);
+QStringList SourceTagsForItem(HistoryItem *item) {
+	return AugmentNameParts(item).tags;
 }
 
 // Q49: nameless videos still need a digit stem for the augmentation.

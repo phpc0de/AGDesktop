@@ -10,6 +10,7 @@
 
 #include <QByteArray>
 #include <QString>
+#include <QStringList>
 
 #include <optional>
 #include <vector>
@@ -83,6 +84,8 @@ public:
 		Filter filter = {},
 		int offset = 0);
 	[[nodiscard]] bool RecordTag(const QString &tag);
+	void ReplaceSourceTags(int64 sourceId, const QStringList &tags);
+	[[nodiscard]] QStringList SourceTags(int64 sourceId);
 	[[nodiscard]] std::vector<TagSummary> TagSummaries(int limit);
 	[[nodiscard]] bool RenameTag(const QString &from, const QString &to);
 	[[nodiscard]] bool DeleteTag(const QString &tag);
@@ -97,6 +100,8 @@ public:
 private:
 	Database();
 	~Database();
+
+	void BackfillLegacySourceTags();
 
 	rpl::event_stream<Entry> _newSaved;
 	bool _enabled = false;

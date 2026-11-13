@@ -46,6 +46,11 @@ struct SowTagRow {
 	int64 created_at = 0;
 };
 
+struct SourceTagRow {
+	int64 source_id = 0;
+	std::string tag;
+};
+
 // WHY: schema objects are iterated in reverse, so an index must precede
 // its table or sync_schema creates it while the table is still missing.
 auto storage = make_storage(
@@ -66,6 +71,12 @@ auto storage = make_storage(
 	make_index(
 		"idx_sow_tag_tag",
 		column<SowTagRow>(&SowTagRow::tag)),
+	make_index(
+		"idx_source_tag_tag",
+		column<SourceTagRow>(&SourceTagRow::tag)),
+	make_index(
+		"idx_source_tag_source",
+		column<SourceTagRow>(&SourceTagRow::source_id)),
 	make_table<SavedFileRow>(
 		"saved_file",
 		make_column("id", &SavedFileRow::id, primary_key().autoincrement()),
@@ -85,6 +96,11 @@ auto storage = make_storage(
 		make_column("id", &SowTagRow::id, primary_key().autoincrement()),
 		make_column("tag", &SowTagRow::tag),
 		make_column("created_at", &SowTagRow::created_at)
+	),
+	make_table<SourceTagRow>(
+		"source_tag",
+		make_column("source_id", &SourceTagRow::source_id),
+		make_column("tag", &SourceTagRow::tag)
 	)
 );
 
@@ -176,6 +192,7 @@ Database::Database() {
 		storage.sync_schema(true);
 		storage.open_forever();
 		_enabled = true;
+		BackfillLegacySourceTags();
 	} catch (const std::exception &ex) {
 		LogError(u"Database initialization failed, feature disabled: %1"_q.arg(QString::fromUtf8(ex.what())));
 	} catch (...) {
@@ -184,6 +201,30 @@ Database::Database() {
 }
 
 Database::~Database() = default;
+
+// WHY: legacy rows carry only the first tag in src_tag; the tag table
+// starts empty, so a one-time mirror keeps old records filterable.
+void Database::BackfillLegacySourceTags() {
+	if (!_enabled) {
+		return;
+	}
+	try {
+		std::lock_guard lock(storageMutex);
+		if (storage.count<SourceTagRow>() > 0) {
+			return;
+		}
+		for (const auto &row : storage.get_all<SavedFileRow>(
+			where(column<SavedFileRow>(&SavedFileRow::src_tag)
+				!= std::string()))) {
+			storage.insert(SourceTagRow{
+				.source_id = row.id,
+				.tag = row.src_tag,
+			});
+		}
+	} catch (const std::exception &ex) {
+		LogError(u"Failed to backfill source tags: %1"_q.arg(QString::fromUtf8(ex.what())));
+	}
+}
 
 bool Database::Enabled() const {
 	return _enabled;
@@ -464,8 +505,11 @@ std::vector<Entry> Database::Recent(int limit, Filter filter, int offset) {
 		const auto pattern = LikePattern(filter.search);
 		auto rows = hasTag
 			? storage.get_all<SavedFileRow>(
+				join<SourceTagRow>(
+					on(c(&SourceTagRow::source_id)
+						== c(&SavedFileRow::id))),
 				where(
-					column<SavedFileRow>(&SavedFileRow::src_tag)
+					column<SourceTagRow>(&SourceTagRow::tag)
 						== filter.src_tag.toStdString()
 					and (like(column<SavedFileRow>(&SavedFileRow::file_name), pattern, "\\")
 						or like(column<SavedFileRow>(&SavedFileRow::src_title), pattern, "\\"))
@@ -632,6 +676,58 @@ bool Database::RecordTag(const QString &tag) {
 	}
 }
 
+void Database::ReplaceSourceTags(int64 sourceId, const QStringList &tags) {
+	if (!_enabled || sourceId <= 0) {
+		return;
+	}
+	auto cleaned = QStringList();
+	for (const auto &tag : tags) {
+		if (!tag.isEmpty() && !cleaned.contains(tag)) {
+			cleaned.push_back(tag);
+		}
+	}
+	try {
+		std::lock_guard lock(storageMutex);
+		storage.begin_transaction();
+		storage.remove_all<SourceTagRow>(
+			where(column<SourceTagRow>(&SourceTagRow::source_id) == sourceId));
+		for (const auto &tag : cleaned) {
+			storage.insert(SourceTagRow{
+				.source_id = sourceId,
+				.tag = tag.toStdString(),
+			});
+		}
+		storage.commit();
+	} catch (const std::exception &ex) {
+		try {
+			storage.rollback();
+		} catch (...) {
+		}
+		LogError(u"Failed to replace source tags: %1"_q.arg(QString::fromUtf8(ex.what())));
+	}
+}
+
+QStringList Database::SourceTags(int64 sourceId) {
+	if (!_enabled || sourceId <= 0) {
+		return {};
+	}
+	try {
+		std::lock_guard lock(storageMutex);
+		auto rows = storage.select(
+			column<SourceTagRow>(&SourceTagRow::tag),
+			where(column<SourceTagRow>(&SourceTagRow::source_id) == sourceId));
+		auto result = QStringList();
+		result.reserve(int(rows.size()));
+		for (auto &tag : rows) {
+			result.push_back(QString::fromStdString(std::move(tag)));
+		}
+		return result;
+	} catch (const std::exception &ex) {
+		LogError(u"Failed to read source tags: %1"_q.arg(QString::fromUtf8(ex.what())));
+		return {};
+	}
+}
+
 std::vector<TagSummary> Database::TagSummaries(int limit) {
 	if (!_enabled || limit <= 0) {
 		return {};
@@ -640,11 +736,12 @@ std::vector<TagSummary> Database::TagSummaries(int limit) {
 		std::lock_guard lock(storageMutex);
 		auto rows = storage.select(
 			columns(
-				column<SavedFileRow>(&SavedFileRow::src_tag),
+				column<SourceTagRow>(&SourceTagRow::tag),
 				count(column<SavedFileRow>(&SavedFileRow::id)),
 				sum(column<SavedFileRow>(&SavedFileRow::file_size))),
-			where(column<SavedFileRow>(&SavedFileRow::src_tag) != std::string()),
-			group_by(column<SavedFileRow>(&SavedFileRow::src_tag)),
+			join<SavedFileRow>(
+				on(c(&SavedFileRow::id) == c(&SourceTagRow::source_id))),
+			group_by(column<SourceTagRow>(&SourceTagRow::tag)),
 			order_by(count(column<SavedFileRow>(&SavedFileRow::id))).desc());
 		auto result = std::vector<TagSummary>();
 		result.reserve(rows.size());
@@ -693,6 +790,29 @@ bool Database::RenameTag(const QString &from, const QString &to) {
 			set(c(&SavedFileRow::src_tag) = to.toStdString()),
 			where(column<SavedFileRow>(&SavedFileRow::src_tag)
 				== from.toStdString()));
+		const auto taggedIds = storage.select(
+			column<SourceTagRow>(&SourceTagRow::source_id),
+			where(column<SourceTagRow>(&SourceTagRow::tag)
+				== from.toStdString()));
+		for (const auto &id : taggedIds) {
+			const auto taken = !storage.get_all<SourceTagRow>(
+				where(column<SourceTagRow>(&SourceTagRow::source_id) == id
+					and column<SourceTagRow>(&SourceTagRow::tag)
+						== to.toStdString()),
+				sqlite_orm::limit(1)).empty();
+			if (taken) {
+				storage.remove_all<SourceTagRow>(
+					where(column<SourceTagRow>(&SourceTagRow::source_id) == id
+						and column<SourceTagRow>(&SourceTagRow::tag)
+							== from.toStdString()));
+			} else {
+				storage.update_all(
+					set(c(&SourceTagRow::tag) = to.toStdString()),
+					where(column<SourceTagRow>(&SourceTagRow::source_id) == id
+						and column<SourceTagRow>(&SourceTagRow::tag)
+							== from.toStdString()));
+			}
+		}
 		const auto taken = !storage.get_all<SowTagRow>(
 			where(column<SowTagRow>(&SowTagRow::tag) == to.toStdString()),
 			sqlite_orm::limit(1)).empty();
@@ -728,6 +848,9 @@ bool Database::DeleteTag(const QString &tag) {
 		storage.update_all(
 			set(c(&SavedFileRow::src_tag) = std::string()),
 			where(column<SavedFileRow>(&SavedFileRow::src_tag)
+				== tag.toStdString()));
+		storage.remove_all<SourceTagRow>(
+			where(column<SourceTagRow>(&SourceTagRow::tag)
 				== tag.toStdString()));
 		storage.remove_all<SowTagRow>(
 			where(column<SowTagRow>(&SowTagRow::tag) == tag.toStdString()));
@@ -792,6 +915,14 @@ int Database::RetagSource(PeerId peer, MsgId msg, const QString &tag) {
 				and column<SavedFileRow>(&SavedFileRow::src_msg_id)
 					== msg.bare));
 		if (matches > 0) {
+			const auto ids = storage.select(
+				column<SavedFileRow>(&SavedFileRow::id),
+				where(
+					column<SavedFileRow>(&SavedFileRow::src_peer_id)
+						== int64(peer.value)
+					and column<SavedFileRow>(&SavedFileRow::src_msg_id)
+						== msg.bare));
+			storage.begin_transaction();
 			storage.update_all(
 				set(c(&SavedFileRow::src_tag) = tag.toStdString()),
 				where(
@@ -799,6 +930,15 @@ int Database::RetagSource(PeerId peer, MsgId msg, const QString &tag) {
 						== int64(peer.value)
 					and column<SavedFileRow>(&SavedFileRow::src_msg_id)
 						== msg.bare));
+			for (const auto &id : ids) {
+				storage.remove_all<SourceTagRow>(
+					where(column<SourceTagRow>(&SourceTagRow::source_id) == id));
+				storage.insert(SourceTagRow{
+					.source_id = id,
+					.tag = tag.toStdString(),
+				});
+			}
+			storage.commit();
 		}
 		return matches;
 	} catch (const std::exception &ex) {
