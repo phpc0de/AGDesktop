@@ -170,6 +170,19 @@ struct MissingIndex {
 	std::map<int64, Entry> entries;
 };
 
+[[nodiscard]] MissingIndex CollectMissingIndex() {
+	auto index = MissingIndex();
+	for (const auto &entry
+		: Database::instance().Recent(kRelocateScanLimit, {})) {
+		if (!entry.saved_path.isEmpty()
+			&& !QFileInfo::exists(entry.saved_path)) {
+			index.entries.emplace(entry.id, entry);
+			index.bySize[entry.file_size].push_back(entry.id);
+		}
+	}
+	return index;
+}
+
 // WHY: the ADS marker rides along with same-volume moves, so a stream
 // read identifies a relocated file without hashing; unmarked files of a
 // matching size fall back to a bounded full hash.
@@ -256,21 +269,9 @@ void RelinkMovedEntry(const Entry &entry, const QString &newPath) {
 }
 
 void RelocateMissingEntries() {
-	auto missing = std::vector<Entry>();
-	for (const auto &entry
-		: Database::instance().Recent(kRelocateScanLimit, {})) {
-		if (!entry.saved_path.isEmpty()
-			&& !QFileInfo::exists(entry.saved_path)) {
-			missing.push_back(entry);
-		}
-	}
-	if (missing.empty()) {
+	auto index = CollectMissingIndex();
+	if (index.entries.empty()) {
 		return;
-	}
-	auto index = MissingIndex();
-	for (const auto &entry : missing) {
-		index.entries.emplace(entry.id, entry);
-		index.bySize[entry.file_size].push_back(entry.id);
 	}
 	auto roots = std::vector<QString>();
 	auto seenRoots = std::set<QString>();
@@ -283,13 +284,17 @@ void RelocateMissingEntries() {
 			roots.push_back(absolute);
 		}
 	};
-	for (const auto &entry : missing) {
+	for (const auto &[id, entry] : index.entries) {
 		for (const auto &root : RelocateCandidates(entry.saved_path)) {
 			addRoot(root);
 		}
 		// last resort: a bounded walk from the drive root catches moves
 		// to folders no other entry has ever touched
 		addRoot(DriveRoot(entry.saved_path));
+	}
+	// cross-volume moves land on other drives; scan them last.
+	for (const auto &info : QDir::drives()) {
+		addRoot(info.absoluteFilePath());
 	}
 	crl::async([index = std::move(index), roots = std::move(roots)] {
 		auto budget = RelocateBudget{
@@ -319,6 +324,32 @@ void RelocateMissingEntries() {
 			}
 		});
 	});
+}
+
+int RelocateLostInFolder(const QString &root) {
+	if (root.isEmpty() || !QFileInfo(root).isDir()) {
+		return 0;
+	}
+	const auto index = CollectMissingIndex();
+	if (index.entries.empty()) {
+		return 0;
+	}
+	auto budget = RelocateBudget{
+		.filesLeft = kManualRelocateFiles,
+		.depthLeft = kManualRelocateDepth,
+		.deadline = crl::now() + kManualRelocateMs,
+	};
+	auto hits = std::map<int64, QString>();
+	ScanForMissing(root, index, budget, hits);
+	auto relinked = 0;
+	for (const auto &[id, path] : hits) {
+		const auto i = index.entries.find(id);
+		if (i != end(index.entries)) {
+			RelinkMovedEntry(i->second, path);
+			++relinked;
+		}
+	}
+	return relinked;
 }
 
 std::optional<QString> LocateByNameSize(
@@ -441,6 +472,20 @@ void HandleDeleted(const QString &path) {
 	RelocateMissingEntries();
 }
 
+void HandleCreated(const QString &path) {
+	if (path.isEmpty()
+		|| QFileInfo(path).isDir()
+		|| Database::instance().LookupByPath(path)) {
+		return;
+	}
+	// WHY: a cross-volume move arrives as create+delete, so the new
+	// copy's ads marker is the only way to relink the lost row live.
+	const auto hit = HashStore::ReadAds(path);
+	if (hit && hit->sha256.size() == 32) {
+		RelinkLostByAds(path, *hit);
+	}
+}
+
 void ProcessChangeEvent(
 		LONG event,
 		const QString &oldPath,
@@ -457,6 +502,10 @@ void ProcessChangeEvent(
 	} else if (event == SHCNE_DELETE) {
 		if (!path.isEmpty()) {
 			HandleDeleted(path);
+		}
+	} else if (event == SHCNE_CREATE) {
+		if (!path.isEmpty()) {
+			HandleCreated(path);
 		}
 	}
 }
@@ -503,7 +552,7 @@ protected:
 			if (event == SHCNE_RENAMEITEM || event == SHCNE_RENAMEFOLDER) {
 				oldPath = read(pidls ? pidls[0] : nullptr);
 				newPath = read(pidls ? pidls[1] : nullptr);
-			} else if (event == SHCNE_DELETE) {
+			} else if (event == SHCNE_DELETE || event == SHCNE_CREATE) {
 				path = read(pidls ? pidls[0] : nullptr);
 			}
 			SHChangeNotification_Unlock(lock);
@@ -542,7 +591,8 @@ void RegisterShellWatch() {
 	const auto registered = SHChangeNotifyRegister(
 		reinterpret_cast<HWND>(window->winId()),
 		SHCNRF_NewDelivery | SHCNRF_InterruptLevel | SHCNRF_ShellLevel,
-		SHCNE_RENAMEITEM | SHCNE_RENAMEFOLDER | SHCNE_DELETE,
+		SHCNE_RENAMEITEM | SHCNE_RENAMEFOLDER | SHCNE_DELETE
+			| SHCNE_CREATE,
 		kShellChangeMessage,
 		1,
 		&entry);

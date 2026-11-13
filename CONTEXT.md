@@ -422,3 +422,16 @@
   - 计划外修正（如实）：saveImages 移除 `folderPath.isEmpty() continue` —— 快存图片此前完全不落记录（Q52 时代遗留，与文档路径不一致），移除后快存图片与文件夹保存同样记录（顺带兑现图片入口的 tag 承诺）。
   - 静态验证全绿：`git diff --check` 干净；`SourceTagForItem`/`batchTag`/`sourceTag` 全仓 0 残留；新符号三方一致；外部调用方核验（history_inner_widget/context_menu/admin_log/message_history 的 RecordPhotoSaveAttempt 3 参、media_view_overlay/data_file_click_handler 的 RecordSaveAttempt 3 参，均走默认 `{}` 兼容）；menu 文件 QStringList 按 AyuGram includes 规则补 `<QStringList>`；注释预算 = 1 常规 + 1 WHY 例外。
   - 构建机关注点（如实）：`get_all<T>(join<B>(on(...)))` 返回左表对象与 `select(columns(...), join(...))` 为 sqlite_orm 文档化 API，本机无头文件可查，若版本差异报错按两段查询回退。
+
+## §29 Grill QQQQQQ10：移动文件后记录路径不更新 —— 调查完成，待裁决
+- **现状三链路**（sexcat_shell_watch.cpp 570 行）：
+  1. **shell 监听**（RegisterShellWatch :523，Win only）：desktop pidl 递归注册 `SHChangeNotifyRegister`，订阅 `SHCNE_RENAMEITEM | SHCNE_RENAMEFOLDER | SHCNE_DELETE`；消息泵（ShellWatchWindow::nativeEvent）实现正确。`HandleRename` 精确路径匹配 Relink + ads 兜底（RelinkLostByAds）；`HandleRenameFolder` 前缀批量 Relink；`HandleDeleted` 限流 5s 触发救援。
+  2. **自动救援**（RelocateMissingEntries :258）：扫描 `Recent(kRelocateScanLimit=2000)` 内丢失记录；roots = RelocateCandidates（**AppendCandidate 有 SameDrive 硬门**，只认旧路径所在盘）+ DriveRoot(旧路径)；有界扫描（20000 文件 / 深度 4 / 10s）。触发点：首次保存/下载事件、下载历史窗口打开 ×2。
+  3. **手动**：逐条"选文件回填"（lng_sexcat_relocate :745）+ 逐条"选目录按文件名+大小扫描"（relocateByDirectory :610 → LocateByNameSize，同 20000/深度4/10s 预算）。
+- **失败面推断**：跨盘移动（Explorer 跨盘 = create+delete，DELETE 有订阅、CREATE 无 → 新盘文件 ads 永不被读；救援 SameDrive 硬门挡住新盘）→ 自动链路必然失效，只剩逐条手动；同盘移动理论上 rename 事件应命中（若用户同盘也失败则存在未定位 bug 或移动方式差异）。丢失扫描窗口仅最近 2000 条，更老记录无救援。
+- **候选修复面**：(a) 订阅 SHCNE_CREATE + ads 匹配回链（跨盘落盘即自动回链，代价是全系统文件创建事件做一次轻量探测）；(b) 救援扫描扩全部固定盘（有界）；(c) 历史窗口批量找回（选目录一次回链全部丢失记录）；(d) 丢失扫描窗口扩容。
+- **用户裁决（当轮）**：失败面 = 仅跨盘移动（同盘监听工作正常）；修复形态 = 全套（自动 + 批量手动兜底）；回链时机 = 实时。
+- **定稿改动清单**：
+  - **C. 跨盘自动回链**：C1 RegisterShellWatch 事件掩码 +`SHCNE_CREATE`；C2 nativeEvent CREATE 分支读 pidls[0]；C3 ProcessChangeEvent → `HandleCreated(path)`（空/已跟踪跳过 → ReadAds 命中 → 现成 RelinkLostByAds 只回链丢失记录）；C4 RelocateMissingEntries roots 追加全部 `QDir::drives()` 盘根（排在旧盘 roots 之后，预算耗尽自然跳过）。
+  - **D. 批量找回**：D1 shell_watch 导出 `RelocateLostInFolder(root)`（复用 MissingIndex 构建 + ScanForMissing + RelinkMovedEntry，返回回链数）；D2 历史窗口 lost 行右键新项 `lng_sexcat_relocate_lost`="Relocate all lost files in folder..." → 选目录 → async 回链 → toast 计数。
+  - **边界（如实）**：丢失窗口 2000 条不扩（范围外）；CREATE 探测 = 全系统创建事件一次轻量 ads 读（拍板实时）；"复制"（非移动）不回链（新副本走既有新增记录语义）。

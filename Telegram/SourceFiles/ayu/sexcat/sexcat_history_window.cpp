@@ -670,6 +670,38 @@ private:
 		Ui::Toast::Show(u"Relocated: "_q + *found);
 	}
 
+	void relocateLostInFolder() {
+		auto anyLost = false;
+		for (const auto &row : _rows) {
+			if (row.lost) {
+				anyLost = true;
+				break;
+			}
+		}
+		if (!anyLost) {
+			Ui::Toast::Show(tr::lng_sexcat_lost(tr::now));
+			return;
+		}
+		const auto dir = QFileDialog::getExistingDirectory(
+			this,
+			tr::lng_sexcat_relocate_lost(tr::now),
+			QString());
+		if (dir.isEmpty()) {
+			return;
+		}
+		crl::async([dir, weak = QPointer<HistoryWindow>(this)] {
+			const auto relinked = SexCat::RelocateLostInFolder(dir);
+			crl::on_main([weak, relinked] {
+				if (!weak) {
+					return;
+				}
+				weak->reload();
+				Ui::Toast::Show(
+					u"Relocated %1 files"_q.arg(relinked));
+			});
+		});
+	}
+
 	void openFolder(uint64 id) {
 		const auto row = findRow(id);
 		if (!row) {
@@ -748,6 +780,9 @@ private:
 		if (row->lost) {
 			menu->addAction(tr::lng_sexcat_relocate_dir(tr::now), [=] {
 				relocateByDirectory(id);
+			});
+			menu->addAction(tr::lng_sexcat_relocate_lost(tr::now), [=] {
+				relocateLostInFolder();
 			});
 		}
 		menu->addAction(tr::lng_sexcat_verify(tr::now), [=] {

@@ -27,6 +27,10 @@ void RelocateMissingEntries();
 	const QString &fileName,
 	int64 fileSize);
 
+// Bounded search for every missing record under one picked root;
+// relinks hits in place and returns how many rows moved.
+[[nodiscard]] int RelocateLostInFolder(const QString &root);
+
 void RelinkMovedEntry(const Entry &entry, const QString &newPath);
 
 } // namespace SexCat
