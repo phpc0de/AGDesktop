@@ -469,3 +469,5 @@
   - 计划外：抽 `EntryFromRow(row)` helper，finishDirectoryRelocation 的 Entry 字面量同步复用。
   - 注释预算实况：database.h 1 常规（Q35）+ shell_watch.h 1 常规 + deleteRows 1 WHY = 2 常规 + 1 例外 ✓。
   - 静态验证全绿：`git diff --check` 干净；10 个新 lang 键 lang↔code 双侧接线（每键精确 grep）；新符号三方一致；EntryFromRow 字段序沿用现成编译面。
+- **编译审计（f46cd36..HEAD）与阻断修复（commit `e765684bed`，已 push）**：审计 0 编译错之外的 2 阻断已清——①save_hook.cpp:806 OriginFromItem 漏迁移 QString→QStringList（C2664）改传 `{}`；②4 个非复数 lang 键用保留占位符 `{count}`（lang_values.h 把 count 标签无条件路由进复数流水线）改 `{count1}` + 调用点 `lt_count1`。非阻断挂账（后续轮次清）：RetagSource 缺 rollback / BackfillLegacySourceTags 无事务 / DropRecordByPath 缺 source_tag 清理 / 两处 [[nodiscard]] 丢弃 / 组头 "No source"/"lost" 未本地化 / menu include 块位置。
+- **偶发启动失败诊断（用户报 G:/AyuGram_7.2.9 log，未动码）**：上游单实例×日志轮转竞态——旧实例退出窗口内连发多个新进程，一个次实例还握着 log_start0.txt 句柄（5×1s 应答等待），另一进程因旧实例死透被判为主实例，改名失败 → NotStartedWindow。良性（无崩溃无 tdata 风险，重试即开）。修复选项挂账：(b) instanceChecked 失败回落继续用 start 日志（推荐，listen 成功即为主实例）；(a) 改名有界重试。
