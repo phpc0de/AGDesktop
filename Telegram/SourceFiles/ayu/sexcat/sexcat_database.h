@@ -92,6 +92,8 @@ public:
 	// Q81: drop one record by itself, siblings stay untouched.
 	[[nodiscard]] int64 DropRecordByPath(const QString &savedPath);
 	[[nodiscard]] bool DropRecordById(int64 id);
+	// Q35: batch drop records together with their source tags.
+	[[nodiscard]] bool DeleteRecords(const std::vector<int64> &ids);
 	[[nodiscard]] int RetagSource(PeerId peer, MsgId msg, const QString &tag);
 
 	[[nodiscard]] bool Enabled() const;

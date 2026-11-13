@@ -38,8 +38,10 @@
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QCheckBox>
+#include <QItemSelectionModel>
 #include <QLineEdit>
 #include <QMenu>
+#include <QMessageBox>
 #include <QSet>
 #include <QFileDialog>
 #include <QPointer>
@@ -48,6 +50,7 @@
 #include <QTreeWidget>
 #include <QVBoxLayout>
 
+#include <map>
 #include <optional>
 
 namespace SexCat {
@@ -276,6 +279,10 @@ public:
 		connect(_tree, &QTreeWidget::itemClicked, this, [=](
 				QTreeWidgetItem *item,
 				int column) {
+			if (item && item->childCount() > 0 && RowIdOf(item) == 0) {
+				toggleGroupSelection(item);
+				return;
+			}
 			if (column == kColSource) {
 				jumpToSource(RowIdOf(item));
 			}
@@ -320,6 +327,21 @@ private:
 			}
 		}
 		return nullptr;
+	}
+
+	[[nodiscard]] static Entry EntryFromRow(const Row &row) {
+		return Entry{
+			.id = int64(row.id),
+			.sha256 = row.sha256,
+			.file_name = row.fileName,
+			.saved_path = row.savedPath,
+			.file_size = row.fileSize,
+			.src_peer_id = int64(row.srcPeerId.value),
+			.src_msg_id = row.srcMsgId.bare,
+			.src_title = row.srcTitle,
+			.src_attach = row.srcAttach,
+			.saved_at = TimeId(row.savedAt),
+		};
 	}
 
 	void reload() {
@@ -404,8 +426,7 @@ private:
 			}
 		}
 		const auto filtering = textOn || imageOn || !custom.isEmpty();
-		auto valid = std::vector<const Row *>();
-		auto lost = std::vector<const Row *>();
+		auto visible = std::vector<const Row *>();
 		for (const auto &row : _rows) {
 			if (peerId != PeerId(0) && row.srcPeerId != peerId) {
 				continue;
@@ -423,26 +444,75 @@ private:
 					continue;
 				}
 			}
-			(row.lost ? lost : valid).push_back(&row);
+			visible.push_back(&row);
 		}
 		_tree->clear();
-		for (const auto &row : valid) {
-			fillItem(new QTreeWidgetItem(_tree), *row);
+		auto groups = std::map<
+			std::pair<int64, int64>,
+			std::vector<const Row *>>();
+		for (const auto *row : visible) {
+			groups[{ int64(row->srcPeerId.value), row->srcMsgId.bare }]
+				.push_back(row);
 		}
-		if (!lost.empty()) {
+		for (const auto &[key, rows] : groups) {
 			auto *group = new QTreeWidgetItem(_tree);
-			group->setText(kColTime, tr::lng_sexcat_lost_group(
-				tr::now,
-				lt_count,
-				int(lost.size())));
-			group->setForeground(
-				kColTime,
-				QBrush(st::windowSubTextFg->c));
-			for (const auto &row : lost) {
+			fillGroupItem(group, rows);
+			group->setExpanded(true);
+			for (const auto *row : rows) {
 				fillItem(new QTreeWidgetItem(group), *row);
 			}
-			group->setExpanded(false);
 		}
+	}
+
+	void fillGroupItem(
+			QTreeWidgetItem *item,
+			const std::vector<const Row *> &rows) {
+		auto total = qint64(0);
+		auto lostCount = 0;
+		auto title = QString();
+		for (const auto *row : rows) {
+			total += row->fileSize;
+			lostCount += row->lost ? 1 : 0;
+			if (title.isEmpty()) {
+				title = row->srcTitle;
+			}
+		}
+		item->setData(
+			kColTime,
+			Qt::UserRole,
+			QVariant::fromValue<qulonglong>(0));
+		item->setText(kColTime, RowTimeText(*rows.front()));
+		item->setText(kColName, title.isEmpty() ? u"No source"_q : title);
+		auto summary = u"%1 · %2"_q
+			.arg(rows.size())
+			.arg(Ui::FormatSizeText(total));
+		if (lostCount > 0) {
+			summary += u" · %1 lost"_q.arg(lostCount);
+		}
+		item->setText(kColSource, summary);
+		const auto fg = QBrush(st::windowSubTextFg->c);
+		for (auto column = 0; column != kColCount; ++column) {
+			item->setForeground(column, fg);
+		}
+	}
+
+	void toggleGroupSelection(QTreeWidgetItem *group) {
+		const auto model = _tree->selectionModel();
+		auto selection = QItemSelection();
+		auto allSelected = true;
+		for (auto i = 0; i != group->childCount(); ++i) {
+			const auto index = _tree->indexFromItem(group->child(i));
+			if (!model->isSelected(index)) {
+				allSelected = false;
+			}
+			selection.append(QItemSelectionRange(index));
+		}
+		model->select(
+			selection,
+			(allSelected
+				? QItemSelectionModel::Deselect
+				: QItemSelectionModel::Select)
+				| QItemSelectionModel::Rows);
 	}
 
 	void fillItem(QTreeWidgetItem *item, const Row &row) {
@@ -650,20 +720,7 @@ private:
 			refreshRow(id);
 			return;
 		}
-		SexCat::RelinkMovedEntry(
-			SexCat::Entry{
-				.id = int64(row->id),
-				.sha256 = row->sha256,
-				.file_name = row->fileName,
-				.saved_path = row->savedPath,
-				.file_size = row->fileSize,
-				.src_peer_id = int64(row->srcPeerId.value),
-				.src_msg_id = row->srcMsgId.bare,
-				.src_title = row->srcTitle,
-				.src_attach = row->srcAttach,
-				.saved_at = TimeId(row->savedAt),
-			},
-			*found);
+		SexCat::RelinkMovedEntry(EntryFromRow(*row), *found);
 		row->savedPath = *found;
 		row->lost = false;
 		refreshRow(id);
@@ -700,6 +757,91 @@ private:
 					u"Relocated %1 files"_q.arg(relinked));
 			});
 		});
+	}
+
+	void deleteRows(std::vector<int64> ids, bool withFiles) {
+		if (ids.empty()) {
+			return;
+		}
+		auto total = qint64(0);
+		for (const auto &id : ids) {
+			if (const auto row = findRow(uint64(id))) {
+				total += row->fileSize;
+			}
+		}
+		const auto sizeText = Ui::FormatSizeText(total);
+		auto toTrash = false;
+		if (withFiles) {
+			auto box = QMessageBox(this);
+			box.setText(tr::lng_sexcat_delete_files_confirm(
+				tr::now,
+				lt_count,
+				QString::number(ids.size()),
+				lt_size,
+				sizeText));
+			const auto trash = box.addButton(
+				tr::lng_sexcat_delete_to_trash(tr::now),
+				QMessageBox::ActionRole);
+			const auto permanent = box.addButton(
+				tr::lng_sexcat_delete_permanent(tr::now),
+				QMessageBox::DestructiveRole);
+			box.addButton(QMessageBox::Cancel);
+			box.exec();
+			const auto clicked = box.clickedButton();
+			if (clicked == trash) {
+				toTrash = true;
+			} else if (clicked != permanent) {
+				return;
+			}
+		} else {
+			const auto answer = QMessageBox::question(
+				this,
+				tr::lng_sexcat_delete(tr::now),
+				tr::lng_sexcat_delete_confirm(
+					tr::now,
+					lt_count,
+					QString::number(ids.size()),
+					lt_size,
+					sizeText));
+			if (answer != QMessageBox::Yes) {
+				return;
+			}
+		}
+		// WHY: files go first, so a failure leaves the records retryable.
+		auto filesDeleted = 0;
+		if (withFiles) {
+			for (const auto &id : ids) {
+				if (const auto row = findRow(uint64(id))) {
+					if (DeleteRecordFile(EntryFromRow(*row), toTrash)) {
+						++filesDeleted;
+					}
+				}
+			}
+		}
+		Database::instance().DeleteRecords(ids);
+		reload();
+		Ui::Toast::Show(withFiles
+			? tr::lng_sexcat_deleted_files(
+				tr::now,
+				lt_count,
+				QString::number(ids.size()),
+				lt_count2,
+				QString::number(filesDeleted))
+			: tr::lng_sexcat_deleted(
+				tr::now,
+				lt_count,
+				QString::number(ids.size())));
+	}
+
+	void deleteGroupRows(QTreeWidgetItem *group, bool withFiles) {
+		auto ids = std::vector<int64>();
+		for (auto i = 0; i != group->childCount(); ++i) {
+			const auto id = RowIdOf(group->child(i));
+			if (id > 0) {
+				ids.push_back(int64(id));
+			}
+		}
+		deleteRows(std::move(ids), withFiles);
 	}
 
 	void openFolder(uint64 id) {
@@ -759,6 +901,22 @@ private:
 
 	void showContextMenu(const QPoint &pos) {
 		auto *item = _tree->itemAt(pos);
+		if (item && item->childCount() > 0 && RowIdOf(item) == 0) {
+			auto *group = new QMenu(this);
+			group->setAttribute(Qt::WA_DeleteOnClose);
+			group->addAction(tr::lng_sexcat_select_all(tr::now), [=] {
+				toggleGroupSelection(item);
+			});
+			group->addSeparator();
+			group->addAction(tr::lng_sexcat_delete_group(tr::now), [=] {
+				deleteGroupRows(item, false);
+			});
+			group->addAction(tr::lng_sexcat_delete_group_files(tr::now), [=] {
+				deleteGroupRows(item, true);
+			});
+			group->popup(_tree->viewport()->mapToGlobal(pos));
+			return;
+		}
 		const auto row = item ? findRow(RowIdOf(item)) : nullptr;
 		if (!row) {
 			return;
@@ -799,6 +957,13 @@ private:
 		menu->addSeparator();
 		menu->addAction(tr::lng_sexcat_select_all(tr::now), [=] {
 			_tree->selectAll();
+		});
+		menu->addSeparator();
+		menu->addAction(tr::lng_sexcat_delete(tr::now), [=] {
+			deleteRows({ int64(id) }, false);
+		});
+		menu->addAction(tr::lng_sexcat_delete_files(tr::now), [=] {
+			deleteRows({ int64(id) }, true);
 		});
 		menu->popup(_tree->viewport()->mapToGlobal(pos));
 	}

@@ -33,4 +33,7 @@ void RelocateMissingEntries();
 
 void RelinkMovedEntry(const Entry &entry, const QString &newPath);
 
+// Deletes the saved file and its sidecar; lost files report success.
+[[nodiscard]] bool DeleteRecordFile(const Entry &entry, bool toTrash);
+
 } // namespace SexCat

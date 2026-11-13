@@ -893,11 +893,44 @@ bool Database::DropRecordById(int64 id) {
 	}
 	try {
 		std::lock_guard lock(storageMutex);
+		storage.begin_transaction();
 		storage.remove_all<SavedFileRow>(
 			where(column<SavedFileRow>(&SavedFileRow::id) == id));
+		storage.remove_all<SourceTagRow>(
+			where(column<SourceTagRow>(&SourceTagRow::source_id) == id));
+		storage.commit();
 		return true;
 	} catch (const std::exception &ex) {
+		try {
+			storage.rollback();
+		} catch (...) {
+		}
 		LogError(u"Failed to drop record by id: %1"_q.arg(QString::fromUtf8(ex.what())));
+		return false;
+	}
+}
+
+bool Database::DeleteRecords(const std::vector<int64> &ids) {
+	if (!_enabled || ids.empty()) {
+		return false;
+	}
+	try {
+		std::lock_guard lock(storageMutex);
+		storage.begin_transaction();
+		for (const auto &id : ids) {
+			storage.remove_all<SavedFileRow>(
+				where(column<SavedFileRow>(&SavedFileRow::id) == id));
+			storage.remove_all<SourceTagRow>(
+				where(column<SourceTagRow>(&SourceTagRow::source_id) == id));
+		}
+		storage.commit();
+		return true;
+	} catch (const std::exception &ex) {
+		try {
+			storage.rollback();
+		} catch (...) {
+		}
+		LogError(u"Failed to delete records: %1"_q.arg(QString::fromUtf8(ex.what())));
 		return false;
 	}
 }

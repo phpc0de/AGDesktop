@@ -268,6 +268,24 @@ void RelinkMovedEntry(const Entry &entry, const QString &newPath) {
 		u"shell watch relocated %1 -> %2"_q.arg(entry.saved_path, newPath));
 }
 
+bool DeleteRecordFile(const Entry &entry, bool toTrash) {
+	if (entry.saved_path.isEmpty()) {
+		return false;
+	}
+	auto gone = true;
+	if (QFileInfo::exists(entry.saved_path)) {
+		gone = toTrash
+			? QFile::moveToTrash(entry.saved_path)
+			: QFile::remove(entry.saved_path);
+		if (!gone) {
+			LogFailure(u"failed to delete %1"_q.arg(entry.saved_path));
+			return false;
+		}
+	}
+	QFile::remove(entry.saved_path + u".sexcat.json"_q);
+	return true;
+}
+
 void RelocateMissingEntries() {
 	auto index = CollectMissingIndex();
 	if (index.entries.empty()) {

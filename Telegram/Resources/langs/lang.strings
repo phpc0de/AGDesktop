@@ -9232,6 +9232,16 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_sexcat_relocate" = "Relocate...";
 "lng_sexcat_relocate_dir" = "Relocate by folder scan...";
 "lng_sexcat_relocate_lost" = "Relocate all lost files in folder...";
+"lng_sexcat_delete" = "Delete record";
+"lng_sexcat_delete_files" = "Delete record and file";
+"lng_sexcat_delete_group" = "Delete group records";
+"lng_sexcat_delete_group_files" = "Delete group records and files";
+"lng_sexcat_delete_confirm" = "Delete {count} records ({size})?";
+"lng_sexcat_delete_files_confirm" = "Delete {count} records and their files ({size})?";
+"lng_sexcat_delete_to_trash" = "Move to Recycle Bin";
+"lng_sexcat_delete_permanent" = "Delete Permanently";
+"lng_sexcat_deleted" = "Deleted {count} records";
+"lng_sexcat_deleted_files" = "Deleted {count} records and {count2} files";
 "lng_sexcat_autorelocate_done" = "Auto-relocated: {num}";
 "lng_sexcat_verify" = "Verify selected";
 "lng_sexcat_refresh" = "Refresh";
