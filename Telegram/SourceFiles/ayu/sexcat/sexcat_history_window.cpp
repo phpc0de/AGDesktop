@@ -775,7 +775,7 @@ private:
 			auto box = QMessageBox(this);
 			box.setText(tr::lng_sexcat_delete_files_confirm(
 				tr::now,
-				lt_count,
+				lt_count1,
 				QString::number(ids.size()),
 				lt_size,
 				sizeText));
@@ -799,7 +799,7 @@ private:
 				tr::lng_sexcat_delete(tr::now),
 				tr::lng_sexcat_delete_confirm(
 					tr::now,
-					lt_count,
+					lt_count1,
 					QString::number(ids.size()),
 					lt_size,
 					sizeText));
@@ -823,13 +823,13 @@ private:
 		Ui::Toast::Show(withFiles
 			? tr::lng_sexcat_deleted_files(
 				tr::now,
-				lt_count,
+				lt_count1,
 				QString::number(ids.size()),
 				lt_count2,
 				QString::number(filesDeleted))
 			: tr::lng_sexcat_deleted(
 				tr::now,
-				lt_count,
+				lt_count1,
 				QString::number(ids.size())));
 	}
 

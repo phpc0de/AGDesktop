@@ -803,7 +803,7 @@ void HandleLoadedDownload(not_null<const Data::DownloadedId*> id) {
 	if (const auto item = id->object ? id->object->item.get() : nullptr) {
 		// Restored downloads carry generated items, not a real source.
 		if (item->isRegular()) {
-			origin = OriginFromItem(item, QString());
+			origin = OriginFromItem(item, {});
 		}
 	}
 	ResolveHashAndPersist(
