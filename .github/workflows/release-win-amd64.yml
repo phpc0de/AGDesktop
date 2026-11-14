@@ -53,18 +53,21 @@ jobs:
           # WHY: an existing cache entry can never be overwritten, so the save
           # key carries run_id; a resumed partial cache must land under a new
           # key or its newly built stages are lost with the ephemeral runner.
-          key: thirdparty-win64-full-${{ github.run_id }}-${{ hashFiles('.gitmodules', 'Telegram/build/prepare/prepare.py', 'Telegram/build/qt_version.py') }}
+          # WHY: the key hashes only qt_version.py because prepare.py's
+          # per-stage cache_keys already invalidate individual stages; hashing
+          # the script here would rebuild everything on every edit.
+          key: thirdparty-win64-full-${{ github.run_id }}-${{ hashFiles('Telegram/build/qt_version.py') }}
           restore-keys: |
-            thirdparty-win64-full-${{ hashFiles('.gitmodules', 'Telegram/build/prepare/prepare.py', 'Telegram/build/qt_version.py') }}
+            thirdparty-win64-full-${{ hashFiles('Telegram/build/qt_version.py') }}
 
       - name: Restore Libraries cache
         id: cache-libs
         uses: actions/cache/restore@v4
         with:
           path: ${{ runner.workspace }}/Libraries/win64
-          key: libs-win64-full-${{ github.run_id }}-${{ hashFiles('.gitmodules', 'Telegram/build/prepare/prepare.py', 'Telegram/build/qt_version.py', 'Telegram/CMakeLists.txt') }}
+          key: libs-win64-full-${{ github.run_id }}-${{ hashFiles('Telegram/build/qt_version.py') }}
           restore-keys: |
-            libs-win64-full-${{ hashFiles('.gitmodules', 'Telegram/build/prepare/prepare.py', 'Telegram/build/qt_version.py', 'Telegram/CMakeLists.txt') }}
+            libs-win64-full-${{ hashFiles('Telegram/build/qt_version.py') }}
 
       - name: Prepare libraries
         id: prepare
@@ -73,7 +76,8 @@ jobs:
           Platform: x64
         run: |
           Set-Location Telegram/build/prepare
-          cmd /c "win.bat" 2>&1 | Tee-Object -FilePath "$env:RUNNER_TEMP/prepare.log"
+          # silent: reruns auto-rebuild stale stages; the getch prompt cannot run on CI
+          cmd /c "win.bat silent" 2>&1 | Tee-Object -FilePath "$env:RUNNER_TEMP/prepare.log"
           $code = $LASTEXITCODE
           Copy-Item "$env:RUNNER_TEMP/prepare.log" "$env:GITHUB_WORKSPACE/prepare.log" -ErrorAction SilentlyContinue
           exit $code
@@ -148,7 +152,8 @@ jobs:
               'NOT FOUND, BUILDING',
               'echo ERROR'
             )
-            $hits = @(Select-String -Path $log -Pattern 'error|failed|fatal' |
+            # WHY: a case-insensitive 'error' matched msys package names and msbuild's "0 Error(s)" noise
+            $hits = @(Select-String -Path $log -Pattern '\[ERROR\]|: FAILED|is not recognized|FullyQualifiedErrorId|fatal error|CMake Error|error C[0-9]+|error MSB[0-9]+|error LNK|LNK[0-9]{4}|Build FAILED' -CaseSensitive |
               Where-Object {
                 $line = $_.Line
                 -not ($skip | Where-Object { $line.Contains($_) })
@@ -207,17 +212,17 @@ jobs:
           # WHY: the save key carries run_id, so the exact lookup needs it
           # too; the hash-only restore-keys prefix matches the entry saved
           # by prepare-libs of the same or an earlier run.
-          key: thirdparty-win64-full-${{ github.run_id }}-${{ hashFiles('.gitmodules', 'Telegram/build/prepare/prepare.py', 'Telegram/build/qt_version.py') }}
+          key: thirdparty-win64-full-${{ github.run_id }}-${{ hashFiles('Telegram/build/qt_version.py') }}
           restore-keys: |
-            thirdparty-win64-full-${{ hashFiles('.gitmodules', 'Telegram/build/prepare/prepare.py', 'Telegram/build/qt_version.py') }}
+            thirdparty-win64-full-${{ hashFiles('Telegram/build/qt_version.py') }}
 
       - name: Restore Libraries cache
         uses: actions/cache/restore@v4
         with:
           path: ${{ runner.workspace }}/Libraries/win64
-          key: libs-win64-full-${{ github.run_id }}-${{ hashFiles('.gitmodules', 'Telegram/build/prepare/prepare.py', 'Telegram/build/qt_version.py', 'Telegram/CMakeLists.txt') }}
+          key: libs-win64-full-${{ github.run_id }}-${{ hashFiles('Telegram/build/qt_version.py') }}
           restore-keys: |
-            libs-win64-full-${{ hashFiles('.gitmodules', 'Telegram/build/prepare/prepare.py', 'Telegram/build/qt_version.py', 'Telegram/CMakeLists.txt') }}
+            libs-win64-full-${{ hashFiles('Telegram/build/qt_version.py') }}
 
       - name: Verify libraries
         shell: pwsh
