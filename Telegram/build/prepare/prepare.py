@@ -533,9 +533,11 @@ win:
 stage('jom', """
 win:
     # WHY: a degenerate download used to leave the stage green and only
-    # surfaced as openssl3 failing with 'jom' is not recognized.
+    # surfaced as openssl3 failing with 'jom' is not recognized; tar avoids
+    # PowerShell, whose PS7 module dir on CI shadows Expand-Archive for 5.1.
     curl -sS -L --fail --retry 3 --connect-timeout 30 -o jom.zip https://master.qt.io/official_releases/jom/jom_1_1_3.zip
-    powershell -Command "Expand-Archive ./jom.zip -DestinationPath .\\jom -Force"
+    mkdir jom
+    tar -xf jom.zip -C jom
     del jom.zip
     if not exist jom\\jom.exe exit /b 1
 """, 'ThirdParty')
