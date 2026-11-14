@@ -532,9 +532,12 @@ win:
 
 stage('jom', """
 win:
-    powershell -Command "iwr -OutFile ./jom.zip https://master.qt.io/official_releases/jom/jom_1_1_3.zip"
-    powershell -Command "Expand-Archive ./jom.zip"
+    # WHY: a degenerate download used to leave the stage green and only
+    # surfaced as openssl3 failing with 'jom' is not recognized.
+    curl -sS -L --fail --retry 3 --connect-timeout 30 -o jom.zip https://master.qt.io/official_releases/jom/jom_1_1_3.zip
+    powershell -Command "Expand-Archive ./jom.zip -DestinationPath .\\jom -Force"
     del jom.zip
+    if not exist jom\\jom.exe exit /b 1
 """, 'ThirdParty')
 
 if not mac or 'build-stackwalk' in options:
