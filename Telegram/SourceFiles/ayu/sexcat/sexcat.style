@@ -12,5 +12,7 @@ sexcatBadgeSize: 14px;
 sexcatBadgeShift: margins(6px, 6px, 6px, 6px);
 sexcatMediaFrameGoldWidth: 2px;
 sexcatMediaFrameOutlineWidth: 1px;
+sexcatGroupCancelSize: 34px;
+sexcatGroupCancelLine: 3px;
 
 sexcatHistoryWindowSize: size(960px, 640px);

@@ -1683,21 +1683,6 @@ void Widget::setupDownloadBar() {
 				}
 			}, _downloadBar->lifetime());
 
-			// Q50: one-click cancel for everything still downloading.
-			_downloadBar->menuRequests(
-			) | rpl::on_next([=](QPoint globalPos) {
-				auto &manager = Core::App().downloadManager();
-				if (!manager.loadingInProgress()) {
-					return;
-				}
-				const auto menu = new Ui::PopupMenu(this, st::popupMenuWithIcons);
-				menu->addAction(
-					tr::ayu_CancelAllDownloading(tr::now),
-					[] { Core::App().downloadManager().cancelAllLoading(); },
-					&st::menuIconCancel);
-				menu->popup(globalPos);
-			}, _downloadBar->lifetime());
-
 			if (_connecting) {
 				_connecting->raise();
 			}

@@ -42,6 +42,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 // [R:67494147] includes
 #include "ayu/sexcat/sexcat_database.h"
 #include "ayu/utils/ayu_log.h"
+#include "data/data_groups.h"
+#include "history/view/media/history_view_media.h"
 
 
 namespace Data {
@@ -63,6 +65,24 @@ constexpr auto ByItem = [](const auto &entry) {
 constexpr auto ByDocument = [](const auto &entry) {
 	return entry.object.document;
 };
+
+[[nodiscard]] bool ItemMediaLoading(not_null<const HistoryItem*> item) {
+	const auto media = item->media();
+	if (!media) {
+		return false;
+	}
+	if (const auto document = media->getDocument()) {
+		if (document->loading()) {
+			return true;
+		}
+	}
+	if (const auto photo = media->getPhoto()) {
+		if (photo->loading()) {
+			return true;
+		}
+	}
+	return false;
+}
 
 [[nodiscard]] uint64 PeerAccessHash(not_null<PeerData*> peer) {
 	if (const auto user = peer->asUser()) {
@@ -816,6 +836,56 @@ void DownloadManager::loadingStop(Main::Session *onlyInSession) {
 
 void DownloadManager::cancelAllLoading() {
 	loadingStop(nullptr);
+}
+
+std::vector<not_null<HistoryItem*>> DownloadManager::messageParts(
+		not_null<HistoryItem*> item) const {
+	if (const auto group = item->history()->owner().groups().find(item)) {
+		return group->items;
+	}
+	return { item };
+}
+
+bool DownloadManager::loadingInProgressForItem(not_null<HistoryItem*> item) {
+	for (const auto &part : messageParts(item)) {
+		if (ItemMediaLoading(part)) {
+			return true;
+		}
+		auto &data = sessionData(part);
+		const auto i = ranges::find(data.downloading, part, ByItem);
+		if (i != end(data.downloading)
+			&& !i->done
+			&& (i->externalCancel
+				|| (i->object.document && i->object.document->loading()))) {
+			return true;
+		}
+	}
+	return false;
+}
+
+void DownloadManager::cancelLoadingForItem(not_null<HistoryItem*> item) {
+	for (const auto &part : messageParts(item)) {
+		auto &data = sessionData(part);
+		const auto i = ranges::find(data.downloading, part, ByItem);
+		if (i != end(data.downloading)) {
+			if (!i->done) {
+				cancel(data, i);
+			}
+			continue;
+		}
+		if (ItemMediaLoading(part)) {
+			const auto media = part->media();
+			if (const auto document = media->getDocument()) {
+				if (document->loading()) {
+					document->cancel();
+				}
+			} else if (const auto photo = media->getPhoto()) {
+				if (photo->loading()) {
+					photo->cancel();
+				}
+			}
+		}
+	}
 }
 
 void DownloadManager::clearLoading() {

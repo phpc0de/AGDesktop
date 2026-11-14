@@ -9221,6 +9221,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_sexcat_open_folder" = "Open folder";
 "lng_sexcat_view_history" = "Open download history";
 "lng_sexcat_reverify" = "Re-verify";
+"lng_sexcat_cancel_message_downloading" = "Cancel downloads of this message";
 "lng_sexcat_history_title" = "Download History";
 "lng_sexcat_col_time" = "Time";
 "lng_sexcat_col_name" = "File name";

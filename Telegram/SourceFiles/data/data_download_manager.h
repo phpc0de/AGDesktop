@@ -124,6 +124,11 @@ public:
 	void deleteAll();
 	// Q50: cancels everything still downloading, finished entries stay.
 	void cancelAllLoading();
+	// WHY: an album downloads as separate sibling messages sharing one
+	// group id, so a message-level cancel or progress check has to
+	// resolve the whole group instead of a single msgId.
+	[[nodiscard]] bool loadingInProgressForItem(not_null<HistoryItem*> item);
+	void cancelLoadingForItem(not_null<HistoryItem*> item);
 	[[nodiscard]] bool loadedHasNonCloudFile() const;
 
 	[[nodiscard]] auto loadingList() const
@@ -175,6 +180,8 @@ private:
 	void cancel(
 		SessionData &data,
 		std::vector<DownloadingId>::iterator i);
+	[[nodiscard]] std::vector<not_null<HistoryItem*>> messageParts(
+		not_null<HistoryItem*> item) const;
 	void clearLoading();
 
 	[[nodiscard]] SessionData &sessionData(not_null<Main::Session*> session);

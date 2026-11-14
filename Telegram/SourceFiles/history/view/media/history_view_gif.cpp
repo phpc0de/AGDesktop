@@ -602,7 +602,8 @@ void Gif::validateRoundingMask(QSize size) const {
 
 bool Gif::downloadInCorner() const {
 	return _data->isVideoFile()
-		&& (_data->loading() || !autoplayEnabled())
+		&& !_data->loading()
+		&& !autoplayEnabled()
 		&& _realParent->allowsMediaDownloadControls()
 		&& _data->canBeStreamed()
 		&& !_data->inappPlaybackFailed();

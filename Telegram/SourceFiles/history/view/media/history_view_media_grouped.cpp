@@ -32,6 +32,12 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ayu/ayu_settings.h"
 #include "ayu/features/message_shot/message_shot.h"
 #include "ayu/sexcat/sexcat_badge.h"
+#include "core/application.h"
+#include "data/data_download_manager.h"
+#include "ui/widgets/labels.h"
+#include "styles/style_sexcat.h"
+
+#include <algorithm>
 
 
 namespace HistoryView {
@@ -40,6 +46,8 @@ namespace {
 [[nodiscard]] bool IsHostedInstantViewMedia(not_null<const Element*> parent) {
 	return parent->Get<InstantViewMediaRuntime>() != nullptr;
 }
+
+constexpr auto kSexcatSpinPeriod = crl::time(1000);
 
 std::vector<Ui::GroupMediaLayout> LayoutPlaylist(
 		const std::vector<QSize> &sizes) {
@@ -602,6 +610,58 @@ void GroupedMedia::draw(Painter &p, const PaintContext &context) const {
 			_parent->drawRightAction(p, context, fastShareLeft, fastShareTop, width());
 		}
 	}
+
+	if (cancelSpinnerVisible()
+		&& !AyuFeatures::MessageShot::isTakingShot()) {
+		auto ready = int64(0);
+		auto total = int64(0);
+		auto known = true;
+		auto &manager = Core::App().downloadManager();
+		for (const auto &part : _parts) {
+			const auto document = part.content->getDocument();
+			const auto state = manager.loadingExternalState(part.item.get());
+			if (state && !state->done) {
+				ready += state->ready;
+				total += state->total;
+			} else if (document && document->loading()) {
+				ready += document->loadOffset();
+				total += document->size;
+			} else if (const auto photo = part.content->getPhoto()) {
+				if (photo->loading()) {
+					known = false;
+				}
+			}
+		}
+		const auto st = context.st;
+		const auto sti = context.imageStyle();
+		const auto rect = cancelSpinnerRect();
+		const auto line = st::sexcatGroupCancelLine;
+		p.setPen(Qt::NoPen);
+		p.setBrush(st->msgDateImgBg());
+		p.drawEllipse(rect);
+		sti->historyFileThumbCancel.paintInCenter(p, rect);
+		auto hq = PainterHighQualityEnabler(p);
+		auto pen = QPen(st->msgDateImgFg());
+		pen.setWidth(line);
+		pen.setCapStyle(Qt::RoundCap);
+		p.setPen(pen);
+		p.setBrush(Qt::NoBrush);
+		const auto ring = rect.marginsRemoved(
+			QMargins(line, line, line, line));
+		if (known && total > 0) {
+			const auto progress = std::clamp(
+				ready / float64(total),
+				0.,
+				1.);
+			p.drawArc(ring, 90 * 16, -int(progress * (360 * 16)));
+		} else {
+			p.drawArc(
+				ring,
+				int((crl::now() % kSexcatSpinPeriod)
+					* (360 * 16) / float64(kSexcatSpinPeriod)),
+				120 * 16);
+		}
+	}
 }
 
 TextState GroupedMedia::getPartState(
@@ -624,6 +684,39 @@ TextState GroupedMedia::getPartState(
 	return TextState(_parent->data());
 }
 
+bool GroupedMedia::cancelSpinnerVisible() const {
+	if (_parent->media() != this) {
+		return false;
+	}
+	return Core::App().downloadManager().loadingInProgressForItem(
+		_parts.front().item);
+}
+
+QRect GroupedMedia::cancelSpinnerRect() const {
+	const auto groupPadding = groupedPadding();
+	const auto cell = _parts.back().geometry.translated(0, groupPadding.top());
+	const auto size = st::sexcatGroupCancelSize;
+	const auto shift = st::msgDateImgDelta + st::msgDateImgPadding.x();
+	const auto strip = st::msgDateImgDelta
+		+ 2 * st::msgDateImgPadding.y()
+		+ st::normalFont->height;
+	return QRect(
+		cell.x() + cell.width() - shift - size,
+		cell.y() + cell.height() - strip - size,
+		size,
+		size);
+}
+
+ClickHandlerPtr GroupedMedia::cancelSpinnerLink() const {
+	if (!_cancelDownloadLink) {
+		const auto item = _parts.front().item;
+		_cancelDownloadLink = std::make_shared<LambdaClickHandler>([=] {
+			Core::App().downloadManager().cancelLoadingForItem(item);
+		});
+	}
+	return _cancelDownloadLink;
+}
+
 PointState GroupedMedia::pointState(QPoint point) const {
 	if (!QRect(0, 0, width(), height()).contains(point)) {
 		return PointState::Outside;
@@ -641,6 +734,15 @@ PointState GroupedMedia::pointState(QPoint point) const {
 TextState GroupedMedia::textState(QPoint point, StateRequest request) const {
 	const auto groupPadding = groupedPadding();
 	const auto fullId = _parent->data()->fullId();
+	if (cancelSpinnerVisible()
+		&& cancelSpinnerRect().contains(point)) {
+		auto result = TextState(_parent->data());
+		result.link = cancelSpinnerLink();
+		result.customTooltip = true;
+		result.customTooltipText = tr::lng_sexcat_cancel_message_downloading(
+			tr::now);
+		return result;
+	}
 	if (SexCat::Badge::ShouldShowBadge(fullId.peer, fullId.msg)
 		&& SexCat::Badge::BadgeRect(QRect(0, 0, width(), height())).contains(point)) {
 		if (SexCat::Badge::SetHovered(fullId.peer, fullId.msg, true)) {

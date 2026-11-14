@@ -153,6 +153,9 @@ private:
 	TextState getPartState(
 		QPoint point,
 		StateRequest request) const;
+	[[nodiscard]] bool cancelSpinnerVisible() const;
+	[[nodiscard]] QRect cancelSpinnerRect() const;
+	[[nodiscard]] ClickHandlerPtr cancelSpinnerLink() const;
 
 	[[nodiscard]] Ui::BubbleRounding applyRoundingSides(
 		Ui::BubbleRounding already,
@@ -167,6 +170,7 @@ private:
 	Mode _mode = Mode::Grid;
 	bool _needBubble : 1 = false;
 	bool _purchasedPriceTag : 1 = false;
+	mutable ClickHandlerPtr _cancelDownloadLink;
 
 };
 
