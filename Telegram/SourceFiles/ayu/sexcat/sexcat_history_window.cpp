@@ -16,6 +16,7 @@
 #include "core/file_utilities.h"
 #include "data/data_peer.h"
 #include "data/data_session.h"
+#include "history/history_item.h"
 #include "lang/lang_keys.h"
 #include "main/main_account.h"
 #include "main/main_domain.h"
@@ -50,6 +51,7 @@
 #include <QTreeWidget>
 #include <QVBoxLayout>
 
+#include <algorithm>
 #include <map>
 #include <optional>
 
@@ -71,6 +73,7 @@ struct Row {
 	QString srcTitle;
 	PeerId srcPeerId = 0;
 	MsgId srcMsgId = 0;
+	int64 srcGroupId = 0;
 	int srcAttach = 0;
 	QString savedPath;
 	qint64 fileSize = 0;
@@ -338,10 +341,25 @@ private:
 			.file_size = row.fileSize,
 			.src_peer_id = int64(row.srcPeerId.value),
 			.src_msg_id = row.srcMsgId.bare,
+			.src_group_id = row.srcGroupId,
 			.src_title = row.srcTitle,
 			.src_attach = row.srcAttach,
 			.saved_at = TimeId(row.savedAt),
 		};
+	}
+
+	[[nodiscard]] static HistoryItem *FindLiveItem(
+			PeerId peerId,
+			MsgId msgId) {
+		for (const auto &account : Core::App().domain().orderedAccounts()) {
+			const auto session = account->maybeSession();
+			if (session && session->data().peerLoaded(peerId)) {
+				if (const auto item = session->data().message(peerId, msgId)) {
+					return item;
+				}
+			}
+		}
+		return nullptr;
 	}
 
 	void reload() {
@@ -353,6 +371,7 @@ private:
 				.srcTitle = entry.src_title,
 				.srcPeerId = PeerId(uint64(entry.src_peer_id)),
 				.srcMsgId = MsgId(entry.src_msg_id),
+				.srcGroupId = entry.src_group_id,
 				.srcAttach = entry.src_attach,
 				.savedPath = entry.saved_path,
 				.fileSize = entry.file_size,
@@ -361,6 +380,22 @@ private:
 			};
 			row.lost = !QFileInfo::exists(row.savedPath);
 			rows.push_back(std::move(row));
+		}
+		for (auto &row : rows) {
+			if (row.srcGroupId != 0
+				|| row.srcPeerId == PeerId(0)
+				|| row.srcMsgId.bare == 0) {
+				continue;
+			}
+			const auto item = FindLiveItem(row.srcPeerId, row.srcMsgId);
+			const auto groupId = item
+				? int64(item->groupId().value)
+				: int64(0);
+			if (groupId <= 0) {
+				continue;
+			}
+			row.srcGroupId = groupId;
+			Database::instance().UpdateRecordGroup(int64(row.id), groupId);
 		}
 		_rows = std::move(rows);
 		rebuildFilterBox();
@@ -451,10 +486,28 @@ private:
 			std::pair<int64, int64>,
 			std::vector<const Row *>>();
 		for (const auto *row : visible) {
-			groups[{ int64(row->srcPeerId.value), row->srcMsgId.bare }]
+			groups[{ int64(row->srcPeerId.value),
+				row->srcGroupId != 0
+					? row->srcGroupId
+					: row->srcMsgId.bare }]
 				.push_back(row);
 		}
+		auto ordered = std::vector<
+			std::pair<int64, std::vector<const Row *>>>();
 		for (const auto &[key, rows] : groups) {
+			auto firstMsg = rows.front()->srcMsgId.bare;
+			for (const auto *row : rows) {
+				if (row->srcMsgId.bare < firstMsg) {
+					firstMsg = row->srcMsgId.bare;
+				}
+			}
+			ordered.push_back({ firstMsg, rows });
+		}
+		std::sort(
+			ordered.begin(),
+			ordered.end(),
+			[](const auto &a, const auto &b) { return a.first < b.first; });
+		for (const auto &[firstMsg, rows] : ordered) {
 			auto *group = new QTreeWidgetItem(_tree);
 			fillGroupItem(group, rows);
 			group->setExpanded(true);

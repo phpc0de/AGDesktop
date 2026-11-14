@@ -34,6 +34,7 @@ struct SavedFileRow {
 	int64 file_size = 0;
 	int64 src_peer_id = 0;
 	int64 src_msg_id = 0;
+	int64 src_group_id = 0;
 	std::string src_title;
 	std::string src_tag;
 	int src_attach = 0;
@@ -89,7 +90,11 @@ auto storage = make_storage(
 		make_column("src_title", &SavedFileRow::src_title),
 		make_column("src_tag", &SavedFileRow::src_tag, default_value(std::string())),
 		make_column("src_attach", &SavedFileRow::src_attach),
-		make_column("saved_at", &SavedFileRow::saved_at)
+		make_column("saved_at", &SavedFileRow::saved_at),
+		make_column(
+			"src_group_id",
+			&SavedFileRow::src_group_id,
+			default_value(int64(0)))
 	),
 	make_table<SowTagRow>(
 		"sow_tag",
@@ -121,6 +126,7 @@ Entry EntryFromRow(SavedFileRow row) {
 	entry.file_size = row.file_size;
 	entry.src_peer_id = row.src_peer_id;
 	entry.src_msg_id = row.src_msg_id;
+	entry.src_group_id = row.src_group_id;
 	entry.src_title = QString::fromStdString(row.src_title);
 	entry.src_tag = QString::fromStdString(row.src_tag);
 	entry.src_attach = row.src_attach;
@@ -137,6 +143,7 @@ SavedFileRow RowFromEntry(const Entry &entry) {
 	row.file_size = entry.file_size;
 	row.src_peer_id = entry.src_peer_id;
 	row.src_msg_id = entry.src_msg_id;
+	row.src_group_id = entry.src_group_id;
 	row.src_title = entry.src_title.toStdString();
 	row.src_tag = entry.src_tag.toStdString();
 	row.src_attach = entry.src_attach;
@@ -152,6 +159,7 @@ void BackfillSourcelessRows(const QByteArray &sha256, const Entry &source) {
 			set(
 				c(&SavedFileRow::src_peer_id) = source.src_peer_id,
 				c(&SavedFileRow::src_msg_id) = source.src_msg_id,
+				c(&SavedFileRow::src_group_id) = source.src_group_id,
 				c(&SavedFileRow::src_title) = source.src_title.toStdString(),
 				c(&SavedFileRow::src_tag) = source.src_tag.toStdString(),
 				c(&SavedFileRow::src_attach) = source.src_attach),
@@ -286,6 +294,25 @@ bool Database::UpdateRowSha(int64 id, const QByteArray &sha256) {
 		return true;
 	} catch (const std::exception &ex) {
 		LogError(u"Failed to backfill sha256: %1"_q.arg(QString::fromUtf8(ex.what())));
+		return false;
+	}
+}
+
+bool Database::UpdateRecordGroup(int64 id, int64 groupId) {
+	if (!_enabled || id <= 0 || groupId <= 0) {
+		return false;
+	}
+	try {
+		std::lock_guard lock(storageMutex);
+		storage.update_all(
+			set(c(&SavedFileRow::src_group_id) = groupId),
+			where(
+				column<SavedFileRow>(&SavedFileRow::id) == id
+				and column<SavedFileRow>(&SavedFileRow::src_group_id)
+					== int64(0)));
+		return true;
+	} catch (const std::exception &ex) {
+		LogError(u"Failed to backfill group id: %1"_q.arg(QString::fromUtf8(ex.what())));
 		return false;
 	}
 }

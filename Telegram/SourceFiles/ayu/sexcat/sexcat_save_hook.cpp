@@ -306,6 +306,7 @@ void SaveSowTag(const QString &raw) {
 struct SourceOrigin {
 	int64 peerId = 0;
 	int64 msgId = 0;
+	int64 groupId = 0;
 	QString title;
 	QString tag;
 	QStringList tags;
@@ -330,6 +331,7 @@ struct SourceOrigin {
 		origin.title = peer->name();
 	}
 	origin.msgId = int64(item->id.bare);
+	origin.groupId = int64(item->groupId().value);
 	origin.attach = attachOverride ? attachOverride : ResolveAttachIndex(item);
 	if (origin.tags.isEmpty()) {
 		origin.tags = SourceTagsForItem(item);
@@ -345,6 +347,7 @@ struct SourceOrigin {
 		.file_size = fileSize,
 		.src_peer_id = origin.peerId,
 		.src_msg_id = origin.msgId,
+		.src_group_id = origin.groupId,
 		.src_title = origin.title,
 		.src_tag = origin.tag,
 		.src_attach = origin.attach,
@@ -406,6 +409,7 @@ void DedupeOrRecordHashed(
 			.file_size = fileSize,
 			.src_peer_id = origin.peerId,
 			.src_msg_id = origin.msgId,
+			.src_group_id = origin.groupId,
 			.src_title = origin.title,
 			.src_tag = origin.tag,
 			.src_attach = origin.attach,
@@ -443,6 +447,7 @@ int64 PersistRecord(
 		.file_size = fileSize,
 		.src_peer_id = origin.peerId,
 		.src_msg_id = origin.msgId,
+		.src_group_id = origin.groupId,
 		.src_title = origin.title,
 		.src_tag = origin.tag,
 		.src_attach = origin.attach,
@@ -494,6 +499,7 @@ void FinishHashedRecord(
 				.sha256 = sha,
 				.src_peer_id = origin.peerId,
 				.src_msg_id = origin.msgId,
+				.src_group_id = origin.groupId,
 				.src_title = origin.title,
 				.src_tag = origin.tag,
 				.src_attach = origin.attach,

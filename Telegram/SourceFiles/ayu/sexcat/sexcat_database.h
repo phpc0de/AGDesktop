@@ -27,6 +27,7 @@ struct Entry {
 	int64 file_size = 0;
 	int64 src_peer_id = 0; // PeerId bits packed like tdesktop PeerId::value
 	int64 src_msg_id = 0;
+	int64 src_group_id = 0;
 	QString src_title;
 	QString src_tag;
 	int src_attach = 0;
@@ -54,6 +55,7 @@ public:
 
 	[[nodiscard]] int64 RecordSaved(Entry entry);
 	[[nodiscard]] bool UpdateRowSha(int64 id, const QByteArray &sha256);
+	[[nodiscard]] bool UpdateRecordGroup(int64 id, int64 groupId);
 	[[nodiscard]] bool DropUnhashedRecord(int64 id);
 	[[nodiscard]] std::vector<Entry> LookupUnhashed(int limit);
 	[[nodiscard]] std::vector<Entry> LookupByHash(QByteArray sha256);
