@@ -500,7 +500,7 @@ win:
     SET CHERE_INVOKING=enabled_from_arguments
     SET MSYS2_PATH_TYPE=inherit
 
-    powershell -Command "iwr -OutFile ./msys64.exe https://github.com/msys2/msys2-installer/releases/download/2025-08-30/msys2-base-x86_64-20250830.sfx.exe"
+    curl -sS -L --fail --retry 3 --connect-timeout 30 -o ./msys64.exe https://github.com/msys2/msys2-installer/releases/download/2025-08-30/msys2-base-x86_64-20250830.sfx.exe
     msys64.exe
     del msys64.exe
 
@@ -527,7 +527,7 @@ win:
 stage('NuGet', """
 win:
     mkdir NuGet
-    powershell -Command "iwr -OutFile ./NuGet/nuget.exe https://dist.nuget.org/win-x86-commandline/latest/nuget.exe"
+    curl -sS -L --fail --retry 3 --connect-timeout 30 -o ./NuGet/nuget.exe https://dist.nuget.org/win-x86-commandline/latest/nuget.exe
 """, 'ThirdParty')
 
 stage('jom', """
@@ -556,7 +556,7 @@ mac:
 rustToolchain = '1.96.1'
 stage('rust', """
 win:
-    powershell -Command "iwr -OutFile ./rustup-init.exe https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe"
+    curl -sS -L --fail --retry 3 --connect-timeout 30 -o ./rustup-init.exe https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe
     SET "RUSTUP_HOME=%THIRDPARTY_DIR%\\rust\\rustup"
     SET "CARGO_HOME=%THIRDPARTY_DIR%\\rust\\cargo"
     rustup-init.exe -y --no-modify-path --profile minimal ^
