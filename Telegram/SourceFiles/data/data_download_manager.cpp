@@ -71,12 +71,12 @@ constexpr auto ByDocument = [](const auto &entry) {
 	if (!media) {
 		return false;
 	}
-	if (const auto document = media->getDocument()) {
+	if (const auto document = media->document()) {
 		if (document->loading()) {
 			return true;
 		}
 	}
-	if (const auto photo = media->getPhoto()) {
+	if (const auto photo = media->photo()) {
 		if (photo->loading()) {
 			return true;
 		}
@@ -875,11 +875,11 @@ void DownloadManager::cancelLoadingForItem(not_null<HistoryItem*> item) {
 		}
 		if (ItemMediaLoading(part)) {
 			const auto media = part->media();
-			if (const auto document = media->getDocument()) {
+			if (const auto document = media->document()) {
 				if (document->loading()) {
 					document->cancel();
 				}
-			} else if (const auto photo = media->getPhoto()) {
+			} else if (const auto photo = media->photo()) {
 				if (photo->loading()) {
 					photo->cancel();
 				}

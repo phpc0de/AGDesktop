@@ -545,9 +545,10 @@ std::vector<Entry> Database::Recent(
 		const auto peerLower = hasPeer ? *filter.src_peer_id : std::numeric_limits<int64>::min();
 		const auto peerUpper = hasPeer ? *filter.src_peer_id : std::numeric_limits<int64>::max();
 		const auto pattern = LikePattern(filter.search);
-		const auto liveClause = trashed
-			? column<SavedFileRow>(&SavedFileRow::deleted_at) != int64(0)
-			: column<SavedFileRow>(&SavedFileRow::deleted_at) == int64(0);
+		const auto deletedLower = trashed ? int64(1) : int64(0);
+		const auto deletedUpper = trashed
+			? std::numeric_limits<int64>::max()
+			: int64(0);
 		auto rows = hasTag
 			? storage.get_all<SavedFileRow>(
 				join<SourceTagRow>(
@@ -556,7 +557,10 @@ std::vector<Entry> Database::Recent(
 				where(
 					column<SourceTagRow>(&SourceTagRow::tag)
 						== filter.src_tag.toStdString()
-					and liveClause
+					and column<SavedFileRow>(&SavedFileRow::deleted_at)
+						>= deletedLower
+					and column<SavedFileRow>(&SavedFileRow::deleted_at)
+						<= deletedUpper
 					and (like(column<SavedFileRow>(&SavedFileRow::file_name), pattern, "\\")
 						or like(column<SavedFileRow>(&SavedFileRow::src_title), pattern, "\\"))
 				),
@@ -567,7 +571,10 @@ std::vector<Entry> Database::Recent(
 				where(
 					column<SavedFileRow>(&SavedFileRow::src_peer_id) >= peerLower
 					and column<SavedFileRow>(&SavedFileRow::src_peer_id) <= peerUpper
-					and liveClause
+					and column<SavedFileRow>(&SavedFileRow::deleted_at)
+						>= deletedLower
+					and column<SavedFileRow>(&SavedFileRow::deleted_at)
+						<= deletedUpper
 					and (like(column<SavedFileRow>(&SavedFileRow::file_name), pattern, "\\")
 						or like(column<SavedFileRow>(&SavedFileRow::src_title), pattern, "\\"))
 				),
@@ -602,12 +609,20 @@ int Database::TrashRecords(const std::vector<int64> &ids) {
 		auto changed = 0;
 		const auto now = int64(base::unixtime::now());
 		for (const auto &id : ids) {
-			changed += storage.update_all(
-				set(c(&SavedFileRow::deleted_at) = now),
+			const auto matched = storage.count<SavedFileRow>(
 				where(
 					column<SavedFileRow>(&SavedFileRow::id) == id
 					and column<SavedFileRow>(&SavedFileRow::deleted_at)
 						== int64(0)));
+			if (matched > 0) {
+				storage.update_all(
+					set(c(&SavedFileRow::deleted_at) = now),
+					where(
+						column<SavedFileRow>(&SavedFileRow::id) == id
+						and column<SavedFileRow>(&SavedFileRow::deleted_at)
+							== int64(0)));
+				changed += matched;
+			}
 		}
 		return changed;
 	} catch (const std::exception &ex) {
@@ -624,12 +639,20 @@ int Database::RestoreRecords(const std::vector<int64> &ids) {
 		std::lock_guard lock(storageMutex);
 		auto changed = 0;
 		for (const auto &id : ids) {
-			changed += storage.update_all(
-				set(c(&SavedFileRow::deleted_at) = int64(0)),
+			const auto matched = storage.count<SavedFileRow>(
 				where(
 					column<SavedFileRow>(&SavedFileRow::id) == id
 					and column<SavedFileRow>(&SavedFileRow::deleted_at)
 						!= int64(0)));
+			if (matched > 0) {
+				storage.update_all(
+					set(c(&SavedFileRow::deleted_at) = int64(0)),
+					where(
+						column<SavedFileRow>(&SavedFileRow::id) == id
+						and column<SavedFileRow>(&SavedFileRow::deleted_at)
+							!= int64(0)));
+				changed += matched;
+			}
 		}
 		return changed;
 	} catch (const std::exception &ex) {
