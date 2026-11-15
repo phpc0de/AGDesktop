@@ -28,6 +28,7 @@ struct Entry {
 	int64 src_peer_id = 0; // PeerId bits packed like tdesktop PeerId::value
 	int64 src_msg_id = 0;
 	int64 src_group_id = 0;
+	int64 deleted_at = 0;
 	QString src_title;
 	QString src_tag;
 	int src_attach = 0;
@@ -84,7 +85,14 @@ public:
 	[[nodiscard]] std::vector<Entry> Recent(
 		int limit,
 		Filter filter = {},
+		int offset = 0,
+		bool trashed = false);
+	[[nodiscard]] std::vector<Entry> RecentDeleted(
+		int limit,
+		Filter filter = {},
 		int offset = 0);
+	[[nodiscard]] int TrashRecords(const std::vector<int64> &ids);
+	[[nodiscard]] int RestoreRecords(const std::vector<int64> &ids);
 	[[nodiscard]] bool RecordTag(const QString &tag);
 	void ReplaceSourceTags(int64 sourceId, const QStringList &tags);
 	[[nodiscard]] QStringList SourceTags(int64 sourceId);

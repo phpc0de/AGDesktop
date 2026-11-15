@@ -54,6 +54,7 @@
 #include <algorithm>
 #include <map>
 #include <optional>
+#include <set>
 
 namespace SexCat {
 namespace {
@@ -153,6 +154,14 @@ public:
 		actions->addWidget(verify);
 		actions->addWidget(scan);
 		actions->addWidget(selectAll);
+		_deleteChecked = new QPushButton(this);
+		_restoreChecked = new QPushButton(this);
+		_destroyChecked = new QPushButton(this);
+		_binToggle = new QPushButton(this);
+		actions->addWidget(_deleteChecked);
+		actions->addWidget(_restoreChecked);
+		actions->addWidget(_destroyChecked);
+		actions->addWidget(_binToggle);
 		actions->addStretch(1);
 		root->addLayout(actions);
 
@@ -270,6 +279,21 @@ public:
 		connect(selectAll, &QPushButton::clicked, this, [=] {
 			_tree->selectAll();
 		});
+		connect(_binToggle, &QPushButton::clicked, this, [=] {
+			_binMode = !_binMode;
+			_checkedIds.clear();
+			refreshModeUi();
+			reload();
+		});
+		connect(_deleteChecked, &QPushButton::clicked, this, [=] {
+			deleteCheckedRows();
+		});
+		connect(_restoreChecked, &QPushButton::clicked, this, [=] {
+			restoreCheckedRows();
+		});
+		connect(_destroyChecked, &QPushButton::clicked, this, [=] {
+			destroyCheckedRows();
+		});
 		connect(_tree, &QTreeWidget::itemDoubleClicked, this, [=](
 				QTreeWidgetItem *item,
 				int) {
@@ -282,13 +306,14 @@ public:
 		connect(_tree, &QTreeWidget::itemClicked, this, [=](
 				QTreeWidgetItem *item,
 				int column) {
-			if (item && item->childCount() > 0 && RowIdOf(item) == 0) {
-				toggleGroupSelection(item);
-				return;
-			}
 			if (column == kColSource) {
 				jumpToSource(RowIdOf(item));
 			}
+		});
+		connect(_tree, &QTreeWidget::itemChanged, this, [=](
+				QTreeWidgetItem *item,
+				int column) {
+			handleItemChanged(item, column);
 		});
 		connect(_tree, &QWidget::customContextMenuRequested, this, [=](
 				const QPoint &pos) { showContextMenu(pos); });
@@ -300,6 +325,7 @@ public:
 			reload();
 		}, _lifetime);
 
+		refreshModeUi();
 		reload();
 		RelocateMissingEntries();
 	}
@@ -364,7 +390,10 @@ private:
 
 	void reload() {
 		auto rows = std::vector<Row>();
-		for (const auto &entry : Database::instance().Recent(kRecentLimit, {})) {
+		const auto entries = _binMode
+			? Database::instance().RecentDeleted(kRecentLimit, {})
+			: Database::instance().Recent(kRecentLimit, {});
+		for (const auto &entry : entries) {
 			auto row = Row{
 				.id = uint64(entry.id),
 				.fileName = entry.file_name,
@@ -398,6 +427,9 @@ private:
 			Database::instance().UpdateRecordGroup(int64(row.id), groupId);
 		}
 		_rows = std::move(rows);
+		for (auto it = _checkedIds.begin(); it != _checkedIds.end();) {
+			it = findRow(*it) ? std::next(it) : _checkedIds.erase(it);
+		}
 		rebuildFilterBox();
 		applyFilter();
 	}
@@ -520,16 +552,27 @@ private:
 	void fillGroupItem(
 			QTreeWidgetItem *item,
 			const std::vector<const Row *> &rows) {
+		_syncingChecks = true;
 		auto total = qint64(0);
 		auto lostCount = 0;
+		auto checkedCount = 0;
 		auto title = QString();
 		for (const auto *row : rows) {
 			total += row->fileSize;
 			lostCount += row->lost ? 1 : 0;
+			checkedCount += _checkedIds.contains(row->id) ? 1 : 0;
 			if (title.isEmpty()) {
 				title = row->srcTitle;
 			}
 		}
+		item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+		item->setCheckState(
+			kColTime,
+			checkedCount == 0
+				? Qt::Unchecked
+				: checkedCount == int(rows.size())
+					? Qt::Checked
+					: Qt::PartiallyChecked);
 		item->setData(
 			kColTime,
 			Qt::UserRole,
@@ -547,33 +590,111 @@ private:
 		for (auto column = 0; column != kColCount; ++column) {
 			item->setForeground(column, fg);
 		}
+		_syncingChecks = false;
 	}
 
-	void toggleGroupSelection(QTreeWidgetItem *group) {
-		const auto model = _tree->selectionModel();
-		const auto topRow = _tree->indexOfTopLevelItem(group);
-		if (topRow < 0) {
+	void handleItemChanged(QTreeWidgetItem *item, int column) {
+		if (_syncingChecks || column != kColTime || !item) {
 			return;
 		}
-		const auto groupIndex = _tree->model()->index(topRow, 0);
-		auto selection = QItemSelection();
-		auto allSelected = true;
-		for (auto i = 0; i != group->childCount(); ++i) {
-			const auto index = _tree->model()->index(i, 0, groupIndex);
-			if (!model->isSelected(index)) {
-				allSelected = false;
+		const auto id = RowIdOf(item);
+		const auto checked = item->checkState(kColTime) == Qt::Checked;
+		if (id > 0) {
+			setCheckedId(id, checked);
+			if (auto *group = item->parent()) {
+				recomputeGroupCheck(group);
 			}
-			selection.append(QItemSelectionRange(index));
+		} else {
+			_syncingChecks = true;
+			for (auto i = 0; i != item->childCount(); ++i) {
+				auto *child = item->child(i);
+				const auto childId = RowIdOf(child);
+				if (childId > 0) {
+					setCheckedId(childId, checked);
+					child->setCheckState(
+						kColTime,
+						checked ? Qt::Checked : Qt::Unchecked);
+				}
+			}
+			_syncingChecks = false;
 		}
-		model->select(
-			selection,
-			(allSelected
-				? QItemSelectionModel::Deselect
-				: QItemSelectionModel::Select)
-				| QItemSelectionModel::Rows);
+		syncCheckedUi();
+	}
+
+	void setCheckedId(uint64 id, bool checked) {
+		if (checked) {
+			_checkedIds.insert(id);
+		} else {
+			_checkedIds.erase(id);
+		}
+	}
+
+	void recomputeGroupCheck(QTreeWidgetItem *group) {
+		auto checked = 0;
+		for (auto i = 0; i != group->childCount(); ++i) {
+			if (_checkedIds.contains(RowIdOf(group->child(i)))) {
+				++checked;
+			}
+		}
+		_syncingChecks = true;
+		group->setCheckState(
+			kColTime,
+			checked == 0
+				? Qt::Unchecked
+				: checked == group->childCount()
+					? Qt::Checked
+					: Qt::PartiallyChecked);
+		_syncingChecks = false;
+	}
+
+	void checkGroup(QTreeWidgetItem *group, bool checked) {
+		_syncingChecks = true;
+		group->setCheckState(
+			kColTime,
+			checked ? Qt::Checked : Qt::Unchecked);
+		_syncingChecks = false;
+		handleItemChanged(group, kColTime);
+	}
+
+	void refreshModeUi() {
+		_binToggle->setText(_binMode
+			? tr::lng_sexcat_back_to_history(tr::now)
+			: tr::lng_sexcat_recycle_bin(tr::now));
+		_deleteChecked->setVisible(!_binMode);
+		_restoreChecked->setVisible(_binMode);
+		_destroyChecked->setVisible(_binMode);
+		syncCheckedUi();
+	}
+
+	void syncCheckedUi() {
+		const auto count = QString::number(_checkedIds.size());
+		_deleteChecked->setText(tr::lng_sexcat_delete_checked(
+			tr::now,
+			lt_count1,
+			count));
+		_restoreChecked->setText(tr::lng_sexcat_restore_checked(
+			tr::now,
+			lt_count1,
+			count));
+		_destroyChecked->setText(tr::lng_sexcat_destroy_checked(
+			tr::now,
+			lt_count1,
+			count));
+		const auto enabled = !_checkedIds.empty();
+		_deleteChecked->setEnabled(enabled);
+		_restoreChecked->setEnabled(enabled);
+		_destroyChecked->setEnabled(enabled);
 	}
 
 	void fillItem(QTreeWidgetItem *item, const Row &row) {
+		// WHY: setFlags/setCheckState re-enter itemChanged mid-rebuild.
+		_syncingChecks = true;
+		item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+		item->setCheckState(
+			kColTime,
+			_checkedIds.contains(row.id)
+				? Qt::Checked
+				: Qt::Unchecked);
 		item->setData(
 			kColTime,
 			Qt::UserRole,
@@ -608,6 +729,7 @@ private:
 		for (auto column = 0; column != kColCount; ++column) {
 			item->setForeground(column, fg);
 		}
+		_syncingChecks = false;
 	}
 
 	void refreshRow(uint64 id) {
@@ -817,6 +939,47 @@ private:
 		});
 	}
 
+	struct FileDeleteOutcome {
+		std::vector<int64> done;
+		int filesDeleted = 0;
+		int failed = 0;
+	};
+
+	[[nodiscard]] int askFileDisposal(const QString &text) {
+		auto box = QMessageBox(this);
+		box.setText(text);
+		const auto trash = box.addButton(
+			tr::lng_sexcat_delete_to_trash(tr::now),
+			QMessageBox::ActionRole);
+		const auto permanent = box.addButton(
+			tr::lng_sexcat_delete_permanent(tr::now),
+			QMessageBox::DestructiveRole);
+		box.addButton(QMessageBox::Cancel);
+		box.exec();
+		const auto clicked = box.clickedButton();
+		if (clicked == trash) {
+			return 1;
+		}
+		return clicked == permanent ? 2 : 0;
+	}
+
+	[[nodiscard]] FileDeleteOutcome deleteFilesFor(
+			const std::vector<int64> &ids,
+			bool toTrash) {
+		auto outcome = FileDeleteOutcome();
+		for (const auto &id : ids) {
+			if (const auto row = findRow(uint64(id))) {
+				if (DeleteRecordFile(EntryFromRow(*row), toTrash)) {
+					++outcome.filesDeleted;
+					outcome.done.push_back(id);
+				} else {
+					++outcome.failed;
+				}
+			}
+		}
+		return outcome;
+	}
+
 	void deleteRows(std::vector<int64> ids, bool withFiles) {
 		if (ids.empty()) {
 			return;
@@ -828,29 +991,19 @@ private:
 			}
 		}
 		const auto sizeText = Ui::FormatSizeText(total);
-		auto toTrash = false;
+		auto outcome = FileDeleteOutcome();
 		if (withFiles) {
-			auto box = QMessageBox(this);
-			box.setText(tr::lng_sexcat_delete_files_confirm(
-				tr::now,
-				lt_count1,
-				QString::number(ids.size()),
-				lt_size,
-				sizeText));
-			const auto trash = box.addButton(
-				tr::lng_sexcat_delete_to_trash(tr::now),
-				QMessageBox::ActionRole);
-			const auto permanent = box.addButton(
-				tr::lng_sexcat_delete_permanent(tr::now),
-				QMessageBox::DestructiveRole);
-			box.addButton(QMessageBox::Cancel);
-			box.exec();
-			const auto clicked = box.clickedButton();
-			if (clicked == trash) {
-				toTrash = true;
-			} else if (clicked != permanent) {
+			const auto disposal = askFileDisposal(
+				tr::lng_sexcat_delete_files_confirm(
+					tr::now,
+					lt_count1,
+					QString::number(ids.size()),
+					lt_size,
+					sizeText));
+			if (disposal == 0) {
 				return;
 			}
+			outcome = deleteFilesFor(ids, disposal == 1);
 		} else {
 			const auto answer = QMessageBox::question(
 				this,
@@ -866,31 +1019,101 @@ private:
 			}
 		}
 		// WHY: files go first, so a failure leaves the records retryable.
-		auto filesDeleted = 0;
-		if (withFiles) {
-			for (const auto &id : ids) {
-				if (const auto row = findRow(uint64(id))) {
-					if (DeleteRecordFile(EntryFromRow(*row), toTrash)) {
-						++filesDeleted;
-					}
-				}
+		const auto moved = Database::instance().TrashRecords(
+			withFiles ? outcome.done : ids);
+		reload();
+		syncCheckedUi();
+		if (moved > 0) {
+			Ui::Toast::Show(withFiles
+				? tr::lng_sexcat_trashed_files(
+					tr::now,
+					lt_count1,
+					QString::number(moved),
+					lt_count2,
+					QString::number(outcome.filesDeleted))
+				: tr::lng_sexcat_trashed(
+					tr::now,
+					lt_count1,
+					QString::number(moved)));
+		}
+		if (outcome.failed > 0) {
+			Ui::Toast::Show(tr::lng_sexcat_trash_failed(
+				tr::now,
+				lt_count1,
+				QString::number(outcome.failed)));
+		}
+	}
+
+	void deleteCheckedRows() {
+		auto ids = std::vector<int64>(
+			_checkedIds.begin(),
+			_checkedIds.end());
+		deleteRows(std::move(ids), false);
+	}
+
+	void restoreCheckedRows() {
+		auto ids = std::vector<int64>(
+			_checkedIds.begin(),
+			_checkedIds.end());
+		if (ids.empty()) {
+			return;
+		}
+		const auto restored = Database::instance().RestoreRecords(ids);
+		reload();
+		syncCheckedUi();
+		if (restored > 0) {
+			Ui::Toast::Show(tr::lng_sexcat_restored(
+				tr::now,
+				lt_count1,
+				QString::number(restored)));
+		}
+	}
+
+	void destroyRows(std::vector<int64> ids) {
+		if (ids.empty()) {
+			return;
+		}
+		auto total = qint64(0);
+		for (const auto &id : ids) {
+			if (const auto row = findRow(uint64(id))) {
+				total += row->fileSize;
 			}
 		}
-		const auto recordsDeleted = Database::instance().DeleteRecords(ids);
-		reload();
-		if (recordsDeleted) {
-			Ui::Toast::Show(withFiles
-				? tr::lng_sexcat_deleted_files(
-					tr::now,
-					lt_count1,
-					QString::number(ids.size()),
-					lt_count2,
-					QString::number(filesDeleted))
-				: tr::lng_sexcat_deleted(
-					tr::now,
-					lt_count1,
-					QString::number(ids.size())));
+		const auto disposal = askFileDisposal(
+			tr::lng_sexcat_destroy_confirm(
+				tr::now,
+				lt_count1,
+				QString::number(ids.size()),
+				lt_size,
+				Ui::FormatSizeText(total)));
+		if (disposal == 0) {
+			return;
 		}
+		auto outcome = deleteFilesFor(ids, disposal == 1);
+		Database::instance().DeleteRecords(outcome.done);
+		reload();
+		syncCheckedUi();
+		if (!outcome.done.empty()) {
+			Ui::Toast::Show(tr::lng_sexcat_destroyed(
+				tr::now,
+				lt_count1,
+				QString::number(outcome.done.size()),
+				lt_count2,
+				QString::number(outcome.filesDeleted)));
+		}
+		if (outcome.failed > 0) {
+			Ui::Toast::Show(tr::lng_sexcat_trash_failed(
+				tr::now,
+				lt_count1,
+				QString::number(outcome.failed)));
+		}
+	}
+
+	void destroyCheckedRows() {
+		auto ids = std::vector<int64>(
+			_checkedIds.begin(),
+			_checkedIds.end());
+		destroyRows(std::move(ids));
 	}
 
 	void deleteGroupRows(QTreeWidgetItem *group, bool withFiles) {
@@ -961,11 +1184,39 @@ private:
 
 	void showContextMenu(const QPoint &pos) {
 		auto *item = _tree->itemAt(pos);
+		if (_binMode) {
+			if (!item || RowIdOf(item) <= 0) {
+				return;
+			}
+			const auto id = RowIdOf(item);
+			auto *menu = new QMenu(this);
+			menu->setAttribute(Qt::WA_DeleteOnClose);
+			menu->addAction(tr::lng_sexcat_restore_record(tr::now), [=] {
+				const auto restored = Database::instance()
+					.RestoreRecords({ int64(id) });
+				reload();
+				syncCheckedUi();
+				if (restored > 0) {
+					Ui::Toast::Show(tr::lng_sexcat_restored(
+						tr::now,
+						lt_count1,
+						QString::number(restored)));
+				}
+			});
+			menu->addAction(tr::lng_sexcat_destroy_record(tr::now), [=] {
+				destroyRows({ int64(id) });
+			});
+			menu->popup(_tree->viewport()->mapToGlobal(pos));
+			return;
+		}
 		if (item && item->childCount() > 0 && RowIdOf(item) == 0) {
 			auto *group = new QMenu(this);
 			group->setAttribute(Qt::WA_DeleteOnClose);
 			group->addAction(tr::lng_sexcat_select_all(tr::now), [=] {
-				toggleGroupSelection(item);
+				checkGroup(item, true);
+			});
+			group->addAction(tr::lng_sexcat_deselect_group(tr::now), [=] {
+				checkGroup(item, false);
 			});
 			group->addSeparator();
 			group->addAction(tr::lng_sexcat_delete_group(tr::now), [=] {
@@ -1033,9 +1284,16 @@ private:
 	QCheckBox *_textExt = nullptr;
 	QCheckBox *_imageExt = nullptr;
 	QLineEdit *_customExt = nullptr;
+	QPushButton *_binToggle = nullptr;
+	QPushButton *_deleteChecked = nullptr;
+	QPushButton *_restoreChecked = nullptr;
+	QPushButton *_destroyChecked = nullptr;
 	QTreeWidget *_tree = nullptr;
 	std::vector<Row> _rows;
 	std::vector<PeerId> _filterPeerIds;
+	bool _binMode = false;
+	bool _syncingChecks = false;
+	std::set<uint64> _checkedIds;
 	rpl::lifetime _lifetime;
 
 };

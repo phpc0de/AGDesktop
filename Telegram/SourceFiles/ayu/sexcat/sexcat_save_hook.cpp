@@ -377,12 +377,22 @@ void DedupeOrRecordHashed(
 	// WHY: same-sha content must not grow the library, but a fresh
 	// copy still becomes the live carrier when every older one is gone.
 	const auto hits = Database::instance().LookupByHash(sha);
+	auto liveHits = std::vector<Entry>();
+	auto trashed = false;
+	for (const auto &hit : hits) {
+		if (hit.deleted_at != 0) {
+			trashed = true;
+		} else {
+			liveHits.push_back(hit);
+		}
+	}
+	const auto restorable = trashed && liveHits.empty();
 	auto live = false;
 	// probing every duplicate would walk the disk on each save
 	for (auto i = 0;
-		i < kMaxDuplicatePathProbes && i < int(hits.size());
+		i < kMaxDuplicatePathProbes && i < int(liveHits.size());
 		++i) {
-		if (QFileInfo::exists(hits[i].saved_path)) {
+		if (QFileInfo::exists(liveHits[i].saved_path)) {
 			live = true;
 			break;
 		}
@@ -392,8 +402,8 @@ void DedupeOrRecordHashed(
 			Database::instance().DropUnhashedRecord(pendingId);
 		}
 		LogFailure(u"duplicate content, record skipped: "_q + savedPath);
-	} else if (!hits.empty()) {
-		Database::instance().Relink(hits.front().id, savedPath);
+	} else if (!liveHits.empty()) {
+		Database::instance().Relink(liveHits.front().id, savedPath);
 		if (pendingId > 0) {
 			Database::instance().DropUnhashedRecord(pendingId);
 		}
@@ -430,7 +440,12 @@ void DedupeOrRecordHashed(
 		PeerId(uint64(origin.peerId)),
 		MsgId(origin.msgId));
 	if (announce) {
-		ShowSavedToast();
+		if (restorable) {
+			Ui::Toast::Show(
+				tr::lng_sexcat_previously_downloaded(tr::now));
+		} else {
+			ShowSavedToast();
+		}
 	}
 }
 
@@ -477,11 +492,21 @@ void FinishHashedRecord(
 	// WHY: same-sha content must not grow the library, but a fresh
 	// copy still becomes the live carrier when every older one is gone.
 	const auto hits = Database::instance().LookupByHash(sha);
+	auto liveHits = std::vector<Entry>();
+	auto trashed = false;
+	for (const auto &hit : hits) {
+		if (hit.deleted_at != 0) {
+			trashed = true;
+		} else {
+			liveHits.push_back(hit);
+		}
+	}
+	const auto restorable = trashed && liveHits.empty();
 	auto live = false;
 	for (auto i = 0;
-		i < kMaxDuplicatePathProbes && i < int(hits.size());
+		i < kMaxDuplicatePathProbes && i < int(liveHits.size());
 		++i) {
-		if (QFileInfo::exists(hits[i].saved_path)) {
+		if (QFileInfo::exists(liveHits[i].saved_path)) {
 			live = true;
 			break;
 		}
@@ -489,11 +514,15 @@ void FinishHashedRecord(
 	if (live) {
 		Database::instance().DropUnhashedRecord(rowId);
 		LogFailure(u"duplicate content, pending record dropped: "_q + savedPath);
-	} else if (!hits.empty()) {
-		Database::instance().Relink(hits.front().id, savedPath);
+	} else if (!liveHits.empty()) {
+		Database::instance().Relink(liveHits.front().id, savedPath);
 		Database::instance().DropUnhashedRecord(rowId);
 		LogFailure(u"duplicate content relinked to new copy: "_q + savedPath);
 	} else if (Database::instance().UpdateRowSha(rowId, sha)) {
+		if (restorable) {
+			Ui::Toast::Show(
+				tr::lng_sexcat_previously_downloaded(tr::now));
+		}
 		if (origin.known()) {
 			auto source = Entry{
 				.sha256 = sha,

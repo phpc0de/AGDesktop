@@ -39,6 +39,7 @@ struct SavedFileRow {
 	std::string src_tag;
 	int src_attach = 0;
 	int64 saved_at = 0;
+	int64 deleted_at = 0;
 };
 
 struct SowTagRow {
@@ -94,6 +95,10 @@ auto storage = make_storage(
 		make_column(
 			"src_group_id",
 			&SavedFileRow::src_group_id,
+			default_value(int64(0))),
+		make_column(
+			"deleted_at",
+			&SavedFileRow::deleted_at,
 			default_value(int64(0)))
 	),
 	make_table<SowTagRow>(
@@ -131,6 +136,7 @@ Entry EntryFromRow(SavedFileRow row) {
 	entry.src_tag = QString::fromStdString(row.src_tag);
 	entry.src_attach = row.src_attach;
 	entry.saved_at = row.saved_at;
+	entry.deleted_at = row.deleted_at;
 	return entry;
 }
 
@@ -148,6 +154,7 @@ SavedFileRow RowFromEntry(const Entry &entry) {
 	row.src_tag = entry.src_tag.toStdString();
 	row.src_attach = entry.src_attach;
 	row.saved_at = entry.saved_at;
+	row.deleted_at = entry.deleted_at;
 	return row;
 }
 
@@ -404,6 +411,7 @@ std::optional<Entry> Database::FindByPath(
 				column<SavedFileRow>(&SavedFileRow::saved_path)
 					== savedPath.toStdString()
 				and column<SavedFileRow>(&SavedFileRow::file_size) == fileSize
+				and column<SavedFileRow>(&SavedFileRow::deleted_at) == int64(0)
 			),
 			order_by(column<SavedFileRow>(&SavedFileRow::id)).desc(),
 			sqlite_orm::limit(1)
@@ -427,6 +435,7 @@ std::optional<Entry> Database::LookupByPath(const QString &savedPath) {
 			where(
 				column<SavedFileRow>(&SavedFileRow::saved_path)
 					== savedPath.toStdString()
+				and column<SavedFileRow>(&SavedFileRow::deleted_at) == int64(0)
 			),
 			order_by(column<SavedFileRow>(&SavedFileRow::id)).desc(),
 			sqlite_orm::limit(1)
@@ -450,7 +459,8 @@ std::vector<Entry> Database::LookupByPathPrefix(const QString &prefix) {
 			where(
 				like(
 					column<SavedFileRow>(&SavedFileRow::saved_path),
-					prefix.toStdString() + '%')),
+					prefix.toStdString() + '%')
+				and column<SavedFileRow>(&SavedFileRow::deleted_at) == int64(0)),
 			order_by(column<SavedFileRow>(&SavedFileRow::id)).desc());
 		auto result = std::vector<Entry>();
 		result.reserve(rows.size());
@@ -504,6 +514,7 @@ std::vector<Entry> Database::LookupBySource(PeerId peer, MsgId msg) {
 			where(
 				column<SavedFileRow>(&SavedFileRow::src_peer_id) == int64(peer.value)
 				and column<SavedFileRow>(&SavedFileRow::src_msg_id) == msg.bare
+				and column<SavedFileRow>(&SavedFileRow::deleted_at) == int64(0)
 			),
 			order_by(column<SavedFileRow>(&SavedFileRow::id)).desc()
 		);
@@ -519,7 +530,11 @@ std::vector<Entry> Database::LookupBySource(PeerId peer, MsgId msg) {
 	}
 }
 
-std::vector<Entry> Database::Recent(int limit, Filter filter, int offset) {
+std::vector<Entry> Database::Recent(
+		int limit,
+		Filter filter,
+		int offset,
+		bool trashed) {
 	if (!_enabled || limit <= 0 || offset < 0) {
 		return {};
 	}
@@ -530,6 +545,9 @@ std::vector<Entry> Database::Recent(int limit, Filter filter, int offset) {
 		const auto peerLower = hasPeer ? *filter.src_peer_id : std::numeric_limits<int64>::min();
 		const auto peerUpper = hasPeer ? *filter.src_peer_id : std::numeric_limits<int64>::max();
 		const auto pattern = LikePattern(filter.search);
+		const auto liveClause = trashed
+			? column<SavedFileRow>(&SavedFileRow::deleted_at) != int64(0)
+			: column<SavedFileRow>(&SavedFileRow::deleted_at) == int64(0);
 		auto rows = hasTag
 			? storage.get_all<SavedFileRow>(
 				join<SourceTagRow>(
@@ -538,6 +556,7 @@ std::vector<Entry> Database::Recent(int limit, Filter filter, int offset) {
 				where(
 					column<SourceTagRow>(&SourceTagRow::tag)
 						== filter.src_tag.toStdString()
+					and liveClause
 					and (like(column<SavedFileRow>(&SavedFileRow::file_name), pattern, "\\")
 						or like(column<SavedFileRow>(&SavedFileRow::src_title), pattern, "\\"))
 				),
@@ -548,6 +567,7 @@ std::vector<Entry> Database::Recent(int limit, Filter filter, int offset) {
 				where(
 					column<SavedFileRow>(&SavedFileRow::src_peer_id) >= peerLower
 					and column<SavedFileRow>(&SavedFileRow::src_peer_id) <= peerUpper
+					and liveClause
 					and (like(column<SavedFileRow>(&SavedFileRow::file_name), pattern, "\\")
 						or like(column<SavedFileRow>(&SavedFileRow::src_title), pattern, "\\"))
 				),
@@ -563,6 +583,58 @@ std::vector<Entry> Database::Recent(int limit, Filter filter, int offset) {
 	} catch (const std::exception &ex) {
 		LogError(u"Failed to read recent saved files: %1"_q.arg(QString::fromUtf8(ex.what())));
 		return {};
+	}
+}
+
+std::vector<Entry> Database::RecentDeleted(
+		int limit,
+		Filter filter,
+		int offset) {
+	return Recent(limit, std::move(filter), offset, true);
+}
+
+int Database::TrashRecords(const std::vector<int64> &ids) {
+	if (!_enabled || ids.empty()) {
+		return 0;
+	}
+	try {
+		std::lock_guard lock(storageMutex);
+		auto changed = 0;
+		const auto now = int64(base::unixtime::now());
+		for (const auto &id : ids) {
+			changed += storage.update_all(
+				set(c(&SavedFileRow::deleted_at) = now),
+				where(
+					column<SavedFileRow>(&SavedFileRow::id) == id
+					and column<SavedFileRow>(&SavedFileRow::deleted_at)
+						== int64(0)));
+		}
+		return changed;
+	} catch (const std::exception &ex) {
+		LogError(u"Failed to trash records: %1"_q.arg(QString::fromUtf8(ex.what())));
+		return 0;
+	}
+}
+
+int Database::RestoreRecords(const std::vector<int64> &ids) {
+	if (!_enabled || ids.empty()) {
+		return 0;
+	}
+	try {
+		std::lock_guard lock(storageMutex);
+		auto changed = 0;
+		for (const auto &id : ids) {
+			changed += storage.update_all(
+				set(c(&SavedFileRow::deleted_at) = int64(0)),
+				where(
+					column<SavedFileRow>(&SavedFileRow::id) == id
+					and column<SavedFileRow>(&SavedFileRow::deleted_at)
+						!= int64(0)));
+		}
+		return changed;
+	} catch (const std::exception &ex) {
+		LogError(u"Failed to restore records: %1"_q.arg(QString::fromUtf8(ex.what())));
+		return 0;
 	}
 }
 
@@ -582,6 +654,7 @@ std::optional<Entry> Database::FindSavedSource(
 				and column<SavedFileRow>(&SavedFileRow::src_msg_id) == msg.bare
 				and column<SavedFileRow>(&SavedFileRow::src_attach) == attach
 				and column<SavedFileRow>(&SavedFileRow::file_size) == fileSize
+				and column<SavedFileRow>(&SavedFileRow::deleted_at) == int64(0)
 			),
 			order_by(column<SavedFileRow>(&SavedFileRow::id)).desc(),
 			sqlite_orm::limit(1)
@@ -607,6 +680,7 @@ int64 Database::RecordPendingPosition(const Entry &source) {
 				and column<SavedFileRow>(&SavedFileRow::src_msg_id) == source.src_msg_id
 				and column<SavedFileRow>(&SavedFileRow::src_attach) == source.src_attach
 				and column<SavedFileRow>(&SavedFileRow::file_size) == source.file_size
+				and column<SavedFileRow>(&SavedFileRow::deleted_at) == int64(0)
 			),
 			sqlite_orm::limit(1)
 		);
@@ -660,6 +734,7 @@ int64 Database::ConsumePendingPosition(
 				and column<SavedFileRow>(&SavedFileRow::src_msg_id) == source.src_msg_id
 				and column<SavedFileRow>(&SavedFileRow::src_attach) == source.src_attach
 				and column<SavedFileRow>(&SavedFileRow::sha256) == emptySha
+				and column<SavedFileRow>(&SavedFileRow::deleted_at) == int64(0)
 			),
 			order_by(column<SavedFileRow>(&SavedFileRow::id)).desc(),
 			sqlite_orm::limit(1)
