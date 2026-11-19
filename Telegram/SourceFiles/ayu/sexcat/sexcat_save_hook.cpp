@@ -253,7 +253,7 @@ struct DescriptionParts {
 };
 
 [[nodiscard]] QString TakeBracketField(QString &text, const QString &label) {
-	const auto open = text.indexOf(u"【" + label + u"】");
+	const auto open = text.indexOf(u"【"_q + label + u"】"_q);
 	if (open < 0) {
 		return {};
 	}
@@ -269,10 +269,10 @@ struct DescriptionParts {
 
 [[nodiscard]] DescriptionParts RefineDescription(const QString &raw) {
 	auto text = raw;
-	auto title = TakeBracketField(text, u"片名");
-	auto code = TakeBracketField(text, u"番号");
+	auto title = TakeBracketField(text, u"片名"_q);
+	auto code = TakeBracketField(text, u"番号"_q);
 	if (code.isEmpty()) {
-		code = TakeBracketField(text, u"番號");
+		code = TakeBracketField(text, u"番號"_q);
 	}
 	static const auto synopsis = QRegularExpression(
 		u"剧情简介|劇情簡介|內容簡介"_q);
@@ -282,8 +282,8 @@ struct DescriptionParts {
 	static const auto junk = QRegularExpression(
 		u"(来源|來源)[:：]\\s*\\S*|加入我的频道\\s*[@～～]?\\S*|更多精彩TG\\S*|@[A-Za-z0-9_]{3,32}"_q);
 	text.remove(junk);
-	text.remove(u"标题:");
-	text.remove(u"標題:");
+	text.remove(u"标题:"_q);
+	text.remove(u"標題:"_q);
 	if (code.isEmpty()) {
 		static const auto pattern = QRegularExpression(
 			u"(?<![A-Za-z0-9])([A-Z]{2,6}-\\d{2,4}(?:-[A-Za-z]+)*)(?![A-Za-z0-9])"_q);
@@ -309,7 +309,7 @@ struct DescriptionParts {
 	const auto digits = m.hasMatch() ? m.captured(2) : QString();
 	if (digits.isEmpty()
 		|| (digits.size() == 4
-			&& (digits.startsWith(u"19") || digits.startsWith(u"20")))) {
+			&& (digits.startsWith(u"19"_q) || digits.startsWith(u"20"_q)))) {
 		return {};
 	}
 	return m.captured(1).toUpper() + u'-' + digits;
