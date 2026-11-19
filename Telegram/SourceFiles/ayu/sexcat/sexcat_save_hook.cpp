@@ -43,6 +43,7 @@
 #include <QFileInfo>
 #include <QMenu>
 #include <QRegularExpression>
+#include <algorithm>
 #include <map>
 #include <optional>
 #include <set>
@@ -142,6 +143,23 @@ constexpr auto kMaxRetroTagChoices = 32;
 	return cleaned.mid(start, end - start);
 }
 
+[[nodiscard]] QString SqueezeSpaces(const QString &raw) {
+	auto out = QString();
+	auto pending = false;
+	for (const auto ch : raw) {
+		if (ch.isSpace()) {
+			pending = true;
+		} else {
+			if (pending && !out.isEmpty()) {
+				out += u' ';
+			}
+			pending = false;
+			out += ch;
+		}
+	}
+	return out;
+}
+
 [[nodiscard]] QString CleanSowTag(const QString &raw) {
 	auto text = raw;
 	while (!text.isEmpty() && text.at(0) == u'#') {
@@ -218,27 +236,90 @@ struct HashtagParts {
 		last = offset + length;
 	}
 	raw += text.text.mid(last);
-	auto squeezed = QString();
-	auto pendingSpace = false;
-	for (const auto ch : raw) {
-		if (ch.isSpace()) {
-			pendingSpace = true;
-		} else {
-			if (pendingSpace && !squeezed.isEmpty()) {
-				squeezed += u' ';
-			}
-			pendingSpace = false;
-			squeezed += ch;
-		}
-	}
-	return { .tags = std::move(tags), .description = CleanSaveNameText(squeezed) };
+	return { .tags = std::move(tags), .description = CleanSaveNameText(SqueezeSpaces(raw)) };
 }
 
-// Tags of the item and its album siblings; the description is the first
-// caption text left after hashtag removal (album captions sit on the
-// first item, videos alone carry none).
-[[nodiscard]] HashtagParts AugmentNameParts(HistoryItem *item) {
-	auto result = HashtagParts{};
+struct NameParts {
+	QStringList tags;
+	QString title;
+	QString code;
+	int partIndex = 0;
+	int partCount = 0;
+};
+
+struct DescriptionParts {
+	QString title;
+	QString code;
+};
+
+[[nodiscard]] QString TakeBracketField(QString &text, const QString &label) {
+	const auto open = text.indexOf(u"【" + label + u"】");
+	if (open < 0) {
+		return {};
+	}
+	const auto valueStart = open + label.size() + 2;
+	auto end = text.indexOf(u'【', valueStart);
+	if (end < 0) {
+		end = text.size();
+	}
+	const auto value = SqueezeSpaces(text.mid(valueStart, end - valueStart));
+	text.remove(open, end - open);
+	return value;
+}
+
+[[nodiscard]] DescriptionParts RefineDescription(const QString &raw) {
+	auto text = raw;
+	auto title = TakeBracketField(text, u"片名");
+	auto code = TakeBracketField(text, u"番号");
+	if (code.isEmpty()) {
+		code = TakeBracketField(text, u"番號");
+	}
+	static const auto synopsis = QRegularExpression(
+		u"剧情简介|劇情簡介|內容簡介"_q);
+	if (const auto i = synopsis.match(text).capturedStart(); i >= 0) {
+		text = text.left(i);
+	}
+	static const auto junk = QRegularExpression(
+		u"(来源|來源)[:：]\\s*\\S*|加入我的频道\\s*[@～～]?\\S*|更多精彩TG\\S*|@[A-Za-z0-9_]{3,32}"_q);
+	text.remove(junk);
+	text.remove(u"标题:");
+	text.remove(u"標題:");
+	if (code.isEmpty()) {
+		static const auto pattern = QRegularExpression(
+			u"(?<![A-Za-z0-9])([A-Z]{2,6}-\\d{2,4}(?:-[A-Za-z]+)*)(?![A-Za-z0-9])"_q);
+		const auto m = pattern.match(text);
+		if (m.hasMatch()) {
+			code = m.captured(1);
+			text.remove(m.capturedStart(), m.capturedLength());
+		}
+	}
+	return {
+		.title = title.isEmpty()
+			? CleanSaveNameText(SqueezeSpaces(text))
+			: title,
+		.code = code,
+	};
+}
+
+// years in upload names are not codes
+[[nodiscard]] QString CodeFromOriginal(const QString &original) {
+	static const auto pattern = QRegularExpression(
+		u"(?:^|[_\\s])([A-Za-z]{2,6})_(\\d{2,4})(?=[_.\\s-]|$)"_q);
+	const auto m = pattern.match(original);
+	const auto digits = m.hasMatch() ? m.captured(2) : QString();
+	if (digits.isEmpty()
+		|| (digits.size() == 4
+			&& (digits.startsWith(u"19") || digits.startsWith(u"20")))) {
+		return {};
+	}
+	return m.captured(1).toUpper() + u'-' + digits;
+}
+
+// Tags of the item and its album siblings; the title and code come from
+// the first caption text left after hashtag removal (album captions sit
+// on the first item, videos alone carry none).
+[[nodiscard]] NameParts AugmentNameParts(HistoryItem *item) {
+	auto result = NameParts{};
 	if (!item || !item->isRegular()) {
 		return result;
 	}
@@ -249,17 +330,26 @@ struct HashtagParts {
 				result.tags.push_back(tag);
 			}
 		}
-		if (result.description.isEmpty() && !parts.description.isEmpty()) {
-			result.description = parts.description;
+		if (result.title.isEmpty() && !parts.description.isEmpty()) {
+			const auto refined = RefineDescription(parts.description);
+			result.title = refined.title;
+			if (result.code.isEmpty()) {
+				result.code = refined.code;
+			}
 		}
 	};
 	collect(item);
 	if (const auto group = item->history()->owner().groups().find(item)) {
+		auto index = 0;
 		for (const auto &groupItem : group->items) {
-			if (&*groupItem != item) {
+			if (&*groupItem == item) {
+				result.partIndex = index;
+			} else {
 				collect(groupItem.get());
 			}
+			++index;
 		}
+		result.partCount = int(group->items.size());
 	}
 	return result;
 }
@@ -656,8 +746,12 @@ void ResolveHashAndPersist(
 	return std::nullopt;
 }
 
-constexpr auto kMaxAugmentedNameLength = 240;
 constexpr auto kAugmentedNameTries = 100;
+constexpr auto kMaxNameTags = 3;
+constexpr auto kMaxDialogTitleNameLength = 120;
+constexpr auto kMinNameLimit = 40;
+constexpr auto kMaxPathComponent = 255;
+constexpr auto kMaxWinPath = 260;
 
 [[nodiscard]] bool IsReservedWindowsName(const QString &name) {
 	static const auto reserved = [] {
@@ -681,46 +775,95 @@ constexpr auto kAugmentedNameTries = 100;
 	return false;
 }
 
-// Q49 naming: "#tags -description-original" with absent segments and
-// their separators dropped.
+[[nodiscard]] QString WithPartMarker(const QString &name, int index) {
+	const auto dot = name.lastIndexOf(u'.');
+	const auto stem = (dot > 0) ? name.left(dot) : name;
+	const auto ext = (dot > 0) ? name.mid(dot) : QString();
+	return stem + u" part%1"_q.arg(index) + ext;
+}
+
+// WHY: Windows caps the whole target path, not the name alone, so the
+// budget comes from the target directory; trimming order is title,
+// then tags, then the original stem — never a whole abandon.
+[[nodiscard]] int NameLimitForDir(const QString &dir) {
+	const auto used = dir.isEmpty() ? 0 : int(dir.size()) + 1;
+	return std::clamp(kMaxWinPath - used, kMinNameLimit, kMaxPathComponent);
+}
+
+// Q49 naming: "code #tags - title - original" with absent segments and
+// their separators dropped; the budget trims, it does not skip.
 [[nodiscard]] QString BuildAugmentedName(
 		const QString &original,
-		const HashtagParts &parts) {
-	if (original.isEmpty()) {
+		const NameParts &parts,
+		int limit,
+		bool withPart) {
+	if (original.isEmpty()
+		|| limit < 8
+		|| (parts.tags.isEmpty()
+			&& parts.title.isEmpty()
+			&& parts.code.isEmpty())) {
 		return {};
 	}
-	if (parts.tags.isEmpty() && parts.description.isEmpty()) {
-		return {};
-	}
-	// Idempotence: never stack this prefix a second time.
-	const auto prefix = parts.tags.isEmpty()
-		? parts.description
-		: u"#%1"_q.arg(parts.tags.first());
-	if (original.startsWith(prefix)) {
-		return {};
-	}
-	auto segments = QStringList();
-	if (!parts.tags.isEmpty()) {
-		auto tags = QStringList();
-		for (const auto &tag : parts.tags) {
-			tags.push_back(u"#%1"_q.arg(tag));
+	const auto keptTags = parts.tags.mid(0, kMaxNameTags);
+	const auto headOf = [&](int count) {
+		auto head = QStringList();
+		if (!parts.code.isEmpty()) {
+			head.push_back(parts.code);
 		}
-		segments.push_back(tags.join(u' '));
+		for (auto i = 0; i != count; ++i) {
+			head.push_back(u"#%1"_q.arg(keptTags.at(i)));
+		}
+		return head.join(u' ');
+	};
+	const auto fullHead = headOf(int(keptTags.size()));
+	const auto prefix = !fullHead.isEmpty() ? fullHead : parts.title;
+	if (!prefix.isEmpty() && original.startsWith(prefix)) {
+		return {};
 	}
-	if (!parts.description.isEmpty()) {
-		segments.push_back(parts.description);
-	}
-	auto text = segments.join(u" -"_q);
-	if (IsReservedWindowsName(text)) {
-		text = u"_"_q + text;
-	}
-	auto name = text + u'-' + original;
-	if (name.size() > kMaxAugmentedNameLength) {
-		const auto keep = kMaxAugmentedNameLength - original.size() - 1;
-		if (keep <= 0) {
+	auto originalName = (withPart && parts.partCount > 1)
+		? WithPartMarker(original, parts.partIndex + 1)
+		: original;
+	const auto join = [&](int tagCount, const QString &title) {
+		const auto head = headOf(tagCount);
+		auto segments = QStringList();
+		if (!head.isEmpty()) {
+			segments.push_back(head);
+		}
+		if (!title.isEmpty()) {
+			segments.push_back(title);
+		}
+		segments.push_back(originalName);
+		return segments.join(u" - "_q);
+	};
+	auto tagCount = int(keptTags.size());
+	auto title = parts.title;
+	auto name = join(tagCount, title);
+	while (name.size() > limit) {
+		const auto restSize = join(tagCount, QString()).size();
+		const auto avail = limit - restSize - 3;
+		if (!title.isEmpty() && avail >= 8) {
+			title = title.left(avail).trimmed();
+			name = join(tagCount, title);
+			break;
+		}
+		if (tagCount > 0) {
+			--tagCount;
+			name = join(tagCount, title);
+			continue;
+		}
+		const auto dot = originalName.lastIndexOf(u'.');
+		const auto stem = (dot > 0) ? originalName.left(dot) : originalName;
+		const auto ext = (dot > 0) ? originalName.mid(dot) : QString();
+		const auto keep = limit - (restSize - originalName.size()) - 1;
+		if (keep < 4) {
 			return {};
 		}
-		name = text.left(keep) + u'-' + original;
+		originalName = stem.left(keep) + ext;
+		name = join(0, QString());
+		break;
+	}
+	if (IsReservedWindowsName(name)) {
+		name = u"_"_q + name;
 	}
 	return name;
 }
@@ -748,7 +891,15 @@ constexpr auto kAugmentedNameTries = 100;
 	}
 	const auto info = QFileInfo(savedPath);
 	const auto original = info.fileName();
-	const auto candidate = BuildAugmentedName(original, AugmentNameParts(item));
+	auto parts = AugmentNameParts(item);
+	if (parts.code.isEmpty()) {
+		parts.code = CodeFromOriginal(original);
+	}
+	const auto candidate = BuildAugmentedName(
+		original,
+		parts,
+		NameLimitForDir(info.dir().path()),
+		true);
 	if (candidate.isEmpty()) {
 		return savedPath;
 	}
@@ -777,7 +928,8 @@ constexpr auto kAugmentedNameTries = 100;
 [[nodiscard]] QString BuildCaptionedNameFor(
 		not_null<DocumentData*> document,
 		const QString &original,
-		FullMsgId contextId) {
+		FullMsgId contextId,
+		int limit) {
 	auto item = contextId
 		? document->owner().message(contextId)
 		: nullptr;
@@ -795,9 +947,11 @@ constexpr auto kAugmentedNameTries = 100;
 		LogFailure(u"augment %1 skipped: no source item"_q.arg(original));
 		return {};
 	}
-	const auto candidate = BuildAugmentedName(
-		original,
-		AugmentNameParts(item));
+	auto parts = AugmentNameParts(item);
+	if (parts.code.isEmpty()) {
+		parts.code = CodeFromOriginal(original);
+	}
+	const auto candidate = BuildAugmentedName(original, parts, limit, true);
 	if (candidate.isEmpty()) {
 		LogFailure(u"augment %1 skipped: no caption text"_q.arg(original));
 	}
@@ -1117,8 +1271,12 @@ QString AugmentedPhotoSavePath(
 		int index,
 		HistoryItem *item) {
 	const auto base = u"photo_%1.jpg"_q.arg(index);
-	const auto parts = item ? AugmentNameParts(item) : HashtagParts{};
-	const auto candidate = BuildAugmentedName(base, parts);
+	const auto parts = item ? AugmentNameParts(item) : NameParts{};
+	const auto candidate = BuildAugmentedName(
+		base,
+		parts,
+		NameLimitForDir(dir),
+		false);
 	if (candidate.isEmpty()) {
 		return QDir(dir).filePath(base);
 	}
@@ -1130,7 +1288,11 @@ QString AugmentedPhotoSavePath(
 QString AugmentedDocumentName(
 		not_null<DocumentData*> document,
 		FullMsgId contextId) {
-	return BuildCaptionedNameFor(document, document->filename(), contextId);
+	return BuildCaptionedNameFor(
+		document,
+		document->filename(),
+		contextId,
+		kMaxDialogTitleNameLength);
 }
 
 QString AdjustDocumentSaveTarget(
@@ -1147,7 +1309,8 @@ QString AdjustDocumentSaveTarget(
 	const auto candidate = BuildCaptionedNameFor(
 		document,
 		base.fileName(),
-		contextId);
+		contextId,
+		NameLimitForDir(base.dir().path()));
 	if (candidate.isEmpty()) {
 		return targetPath;
 	}
