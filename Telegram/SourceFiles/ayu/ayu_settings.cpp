@@ -665,6 +665,12 @@ void AyuSettings::setSexcatEnabled(bool val) {
 	save();
 }
 
+void AyuSettings::setSexcatHistorySort(int val) {
+	if (_sexcatHistorySort.current() == val) return;
+	_sexcatHistorySort = val;
+	save();
+}
+
 void AyuSettings::setHideFromBlocked(bool val) {
 	if (_hideFromBlocked.current() == val) return;
 	_hideFromBlocked = val;
@@ -1211,6 +1217,7 @@ void to_json(nlohmann::json &j, const AyuSettings &s) {
 		{"showUnavailableChannels", s._showUnavailableChannels.current()},
 		{"experimentalForward", s._experimentalForward.current()},
 		{"sexcatEnabled", s._sexcatEnabled.current()},
+		{"sexcatHistorySort", s._sexcatHistorySort.current()},
 		{"hideFromBlocked", s._hideFromBlocked.current()},
 		{"semiTransparentDeletedMessages", s._semiTransparentDeletedMessages.current()},
 		{"disableAds", s._disableAds.current()},
@@ -1362,6 +1369,7 @@ void from_json(const nlohmann::json &j, AyuSettings &s) {
 	s._showUnavailableChannels = j.value("showUnavailableChannels", defaults._showUnavailableChannels.current());
 	s._experimentalForward = j.value("experimentalForward", defaults._experimentalForward.current());
 	s._sexcatEnabled = j.value("sexcatEnabled", defaults._sexcatEnabled.current());
+	s._sexcatHistorySort = j.value("sexcatHistorySort", defaults._sexcatHistorySort.current());
 	s._hideFromBlocked = j.value("hideFromBlocked", defaults._hideFromBlocked.current());
 	s._semiTransparentDeletedMessages = j.value("semiTransparentDeletedMessages", defaults._semiTransparentDeletedMessages.current());
 	s._disableAds = j.value("disableAds", defaults._disableAds.current());

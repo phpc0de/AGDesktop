@@ -296,6 +296,8 @@ public:
 	void setExperimentalForward(bool val);
 	[[nodiscard]] bool experimentalForward() const { return _experimentalForward.current(); }
 	[[nodiscard]] bool sexcatEnabled() const { return _sexcatEnabled.current(); }
+	void setSexcatHistorySort(int val);
+	[[nodiscard]] int sexcatHistorySort() const { return _sexcatHistorySort.current(); }
 	[[nodiscard]] bool hideFromBlocked() const { return _hideFromBlocked.current(); }
 	[[nodiscard]] bool semiTransparentDeletedMessages() const { return _semiTransparentDeletedMessages.current(); }
 	[[nodiscard]] bool disableAds() const { return _disableAds.current(); }
@@ -674,6 +676,7 @@ private:
 	rpl::variable<bool> _showUnavailableChannels = false;
 	rpl::variable<bool> _experimentalForward = false;
 	rpl::variable<bool> _sexcatEnabled = true;
+	rpl::variable<int> _sexcatHistorySort = 0;
 	rpl::variable<bool> _hideFromBlocked = false;
 	rpl::variable<bool> _semiTransparentDeletedMessages = false;
 	rpl::variable<bool> _disableAds = true;

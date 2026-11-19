@@ -9261,6 +9261,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_sexcat_autorelocate_done" = "Auto-relocated: {num}";
 "lng_sexcat_verify" = "Verify selected";
 "lng_sexcat_refresh" = "Refresh";
+"lng_sexcat_sort_time" = "Time (newest)";
+"lng_sexcat_sort_name" = "Name (A-Z)";
+"lng_sexcat_sort_size" = "Size (largest)";
+"lng_sexcat_sort_source" = "Source";
 "lng_sexcat_settings_toggle" = "Record downloaded files";
 "lng_sexcat_hashing" = "Hashing...";
 "lng_sexcat_filter_all" = "All conversations";

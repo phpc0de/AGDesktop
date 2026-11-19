@@ -6,6 +6,7 @@
 // Copyright @Radolyn, 2026
 #include "ayu/sexcat/sexcat_history_window.h"
 
+#include "ayu/ayu_settings.h"
 #include "ayu/sexcat/sexcat_database.h"
 #include "ayu/sexcat/sexcat_folder_scan.h"
 #include "ayu/sexcat/sexcat_hash_store.h"
@@ -123,11 +124,24 @@ public:
 		auto *root = new QVBoxLayout(this);
 		auto *top = new QHBoxLayout();
 		_filter = new QComboBox(this);
+		_sort = new QComboBox(this);
+		_sort->addItems({
+			tr::lng_sexcat_sort_time(tr::now),
+			tr::lng_sexcat_sort_name(tr::now),
+			tr::lng_sexcat_sort_size(tr::now),
+			tr::lng_sexcat_sort_source(tr::now)});
+		const auto savedMode = AyuSettings::getInstance().sexcatHistorySort();
+		_sortMode = (savedMode >= 0 && savedMode < 4) ? savedMode : 0;
+		{
+			QSignalBlocker blocker(_sort);
+			_sort->setCurrentIndex(_sortMode);
+		}
 		_search = new QLineEdit(this);
 		_search->setPlaceholderText(tr::lng_dlg_filter(tr::now));
 		auto *refresh = new QPushButton(
 			tr::lng_sexcat_refresh(tr::now),
 			this);
+		top->addWidget(_sort);
 		top->addWidget(_filter, 1);
 		top->addWidget(_search, 2);
 		top->addWidget(refresh);
@@ -205,6 +219,15 @@ public:
 			qOverload<int>(&QComboBox::currentIndexChanged),
 			this,
 			[=](int) { applyFilter(); });
+		connect(
+			_sort,
+			qOverload<int>(&QComboBox::currentIndexChanged),
+			this,
+			[=](int index) {
+				_sortMode = index;
+				AyuSettings::getInstance().setSexcatHistorySort(index);
+				applyFilter();
+			});
 		connect(_textExt, &QCheckBox::toggled, this, [=](bool) {
 			applyFilter();
 		});
@@ -524,22 +547,70 @@ private:
 					: row->srcMsgId.bare }]
 				.push_back(row);
 		}
-		auto ordered = std::vector<
-			std::pair<int64, std::vector<const Row *>>>();
+		auto ordered = std::vector<std::vector<const Row *>>();
 		for (const auto &[key, rows] : groups) {
-			auto firstMsg = rows.front()->srcMsgId.bare;
+			auto sorted = rows;
+			std::sort(
+				sorted.begin(),
+				sorted.end(),
+				[](const Row *a, const Row *b) {
+					if (a->savedAt != b->savedAt) {
+						return a->savedAt < b->savedAt;
+					}
+					return a->srcMsgId.bare < b->srcMsgId.bare;
+				});
+			ordered.push_back(std::move(sorted));
+		}
+		const auto anchor = [](const std::vector<const Row *> &rows) {
+			auto latest = rows.front()->savedAt;
 			for (const auto *row : rows) {
-				if (row->srcMsgId.bare < firstMsg) {
-					firstMsg = row->srcMsgId.bare;
+				if (row->savedAt > latest) {
+					latest = row->savedAt;
 				}
 			}
-			ordered.push_back({ firstMsg, rows });
-		}
+			return latest;
+		};
+		const auto groupSize = [](const std::vector<const Row *> &rows) {
+			auto total = qint64(0);
+			for (const auto *row : rows) {
+				total += row->fileSize;
+			}
+			return total;
+		};
 		std::sort(
 			ordered.begin(),
 			ordered.end(),
-			[](const auto &a, const auto &b) { return a.first < b.first; });
-		for (const auto &[firstMsg, rows] : ordered) {
+			[&](const std::vector<const Row *> &a,
+				const std::vector<const Row *> &b) {
+				const auto anchorA = anchor(a);
+				const auto anchorB = anchor(b);
+				switch (_sortMode) {
+				case 1:
+					if (a.front()->fileName
+						!= b.front()->fileName) {
+						return a.front()->fileName.compare(
+							b.front()->fileName,
+							Qt::CaseInsensitive) < 0;
+					}
+					break;
+				case 2:
+					if (groupSize(a) != groupSize(b)) {
+						return groupSize(a) > groupSize(b);
+					}
+					break;
+				case 3:
+					if (a.front()->srcTitle != b.front()->srcTitle) {
+						return a.front()->srcTitle.compare(
+							b.front()->srcTitle,
+							Qt::CaseInsensitive) < 0;
+					}
+					break;
+				default:
+					break;
+				}
+				return anchorA > anchorB;
+			});
+		for (const auto &rows : ordered) {
 			auto *group = new QTreeWidgetItem(_tree);
 			fillGroupItem(group, rows);
 			group->setExpanded(true);
@@ -1279,6 +1350,8 @@ private:
 		menu->popup(_tree->viewport()->mapToGlobal(pos));
 	}
 
+	QComboBox *_sort = nullptr;
+	int _sortMode = 0;
 	QComboBox *_filter = nullptr;
 	QLineEdit *_search = nullptr;
 	QCheckBox *_textExt = nullptr;
