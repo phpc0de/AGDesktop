@@ -275,12 +275,12 @@ struct DescriptionParts {
 		code = TakeBracketField(text, u"番號"_q);
 	}
 	static const auto synopsis = QRegularExpression(
-		u"剧情简介|劇情簡介|內容簡介"_q);
+		u"剧情简介|劇情簡介|內容簡介|资源简介|資源簡介"_q);
 	if (const auto i = synopsis.match(text).capturedStart(); i >= 0) {
 		text = text.left(i);
 	}
 	static const auto junk = QRegularExpression(
-		u"(来源|來源)[:：]\\s*\\S*|加入我的频道\\s*[@～～]?\\S*|更多精彩TG\\S*|@[A-Za-z0-9_]{3,32}"_q);
+		u"(来源|來源)[:：]\\s*\\S*|加入我的频道\\s*[@～～]?\\S*|更多精彩TG\\S*|更多完整版\\S*|点击置顶\\S*|点击提取\\S*|https?://\\S+|@[A-Za-z0-9_]{3,32}"_q);
 	text.remove(junk);
 	text.remove(u"标题:"_q);
 	text.remove(u"標題:"_q);
@@ -747,7 +747,7 @@ void ResolveHashAndPersist(
 }
 
 constexpr auto kAugmentedNameTries = 100;
-constexpr auto kMaxNameTags = 3;
+constexpr auto kMaxNameTags = 8;
 constexpr auto kMaxDialogTitleNameLength = 120;
 constexpr auto kMinNameLimit = 40;
 constexpr auto kMaxPathComponent = 255;
@@ -815,14 +815,25 @@ constexpr auto kMaxWinPath = 260;
 		}
 		return head.join(u' ');
 	};
-	const auto fullHead = headOf(int(keptTags.size()));
-	const auto prefix = !fullHead.isEmpty() ? fullHead : parts.title;
-	if (!prefix.isEmpty() && original.startsWith(prefix)) {
-		return {};
-	}
 	auto originalName = (withPart && parts.partCount > 1)
 		? WithPartMarker(original, parts.partIndex + 1)
 		: original;
+	// WHY: some channels upload files named with the caption's own
+	// hashtag list, so the head duplicates the original segment and the
+	// duplicate check would skip a needed rename; only the extension is
+	// kept from such names.
+	auto hashes = 0;
+	for (const auto ch : originalName) {
+		if (ch == u'#') {
+			++hashes;
+		}
+	}
+	const auto tagListOriginal = hashes >= 2;
+	const auto fullHead = headOf(int(keptTags.size()));
+	const auto prefix = !fullHead.isEmpty() ? fullHead : parts.title;
+	if (!prefix.isEmpty() && !tagListOriginal && original.startsWith(prefix)) {
+		return {};
+	}
 	const auto join = [&](int tagCount, const QString &title) {
 		const auto head = headOf(tagCount);
 		auto segments = QStringList();
@@ -832,7 +843,18 @@ constexpr auto kMaxWinPath = 260;
 		if (!title.isEmpty()) {
 			segments.push_back(title);
 		}
-		segments.push_back(originalName);
+		if (tagListOriginal) {
+			if (segments.isEmpty()) {
+				segments.push_back(originalName);
+			} else {
+				const auto dot = originalName.lastIndexOf(u'.');
+				if (dot > 0) {
+					segments.back() += originalName.mid(dot);
+				}
+			}
+		} else {
+			segments.push_back(originalName);
+		}
 		return segments.join(u" - "_q);
 	};
 	auto tagCount = int(keptTags.size());
@@ -850,6 +872,9 @@ constexpr auto kMaxWinPath = 260;
 			--tagCount;
 			name = join(tagCount, title);
 			continue;
+		}
+		if (tagListOriginal) {
+			break;
 		}
 		const auto dot = originalName.lastIndexOf(u'.');
 		const auto stem = (dot > 0) ? originalName.left(dot) : originalName;
@@ -1141,12 +1166,29 @@ void RecordPhotoSaveAttempt(
 	const auto item = contextId
 		? photo->owner().message(contextId)
 		: nullptr;
+	auto path = savedPath;
+	const auto parts = item ? AugmentNameParts(item) : NameParts{};
+	const auto candidate = BuildAugmentedName(
+		info.fileName(),
+		parts,
+		NameLimitForDir(info.dir().path()),
+		false);
+	if (!candidate.isEmpty()) {
+		const auto target = UniqueAugmentedTarget(info, candidate);
+		if (target != savedPath) {
+			if (QFile::rename(savedPath, target)) {
+				path = target;
+			} else {
+				LogFailure(u"failed to rename saved photo to %1"_q.arg(target));
+			}
+		}
+	}
 	auto origin = OriginFromItem(item, sourceTags, attachIndex);
 	if (!Database::instance().Enabled()) {
-		LogFailure(u"database unavailable, photo save not recorded: "_q + savedPath);
+		LogFailure(u"database unavailable, photo save not recorded: "_q + path);
 		return;
 	}
-	ResolveHashAndPersist(savedPath, info.size(), std::move(origin), true);
+	ResolveHashAndPersist(path, info.size(), std::move(origin), true);
 }
 
 void MarkDocumentSaveAs(
