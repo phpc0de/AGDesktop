@@ -25,6 +25,8 @@
 #include "history/history.h"
 #include "history/history_item.h"
 #include "lang_auto.h"
+#include "main/main_account.h"
+#include "main/main_domain.h"
 #include "main/main_session.h"
 #include "rpl/rpl.h"
 #include "storage/storage_account.h"
@@ -775,15 +777,19 @@ constexpr auto kMaxWinPath = 260;
 	for (const auto &tag : parts.tags.mid(0, kMaxNameTags)) {
 		tags.push_back(u"#%1"_q.arg(tag));
 	}
-	// exact idempotency: re-appending to grammar-named stems only grows them
+	// exact idempotency: conforming names carry every non-empty segment,
+	// so legacy tags-first names still re-wrap to the current grammar
 	const auto tagSegment = tags.join(u' ');
-	if ((!parts.title.isEmpty() && stem.split(u" - "_q).contains(parts.title))
-		|| (!tagSegment.isEmpty()
-			&& stem.split(u" - "_q).contains(tagSegment))) {
+	const auto segments = stem.split(u" - "_q);
+	if ((parts.title.isEmpty() || segments.contains(parts.title))
+		&& (tagSegment.isEmpty() || segments.contains(tagSegment))) {
 		return {};
 	}
 	if (withPart && parts.partCount > 1) {
-		stem += u" part%1"_q.arg(parts.partIndex + 1);
+		const auto marker = u" part%1"_q.arg(parts.partIndex + 1);
+		if (!stem.endsWith(marker)) {
+			stem += marker;
+		}
 	}
 	if (IsReservedWindowsName(stem)) {
 		stem = u"_"_q + stem;
@@ -821,6 +827,12 @@ constexpr auto kMaxWinPath = 260;
 				|| blob.endsWith(u'-')
 				|| blob.endsWith(u'.'))) {
 			blob.chop(1);
+		}
+		while (!blob.isEmpty()
+			&& (blob.startsWith(u' ')
+				|| blob.startsWith(u'-')
+				|| blob.startsWith(u'.'))) {
+			blob.remove(0, 1);
 		}
 	}
 	const auto result = assembled(blob, tagCount);
@@ -1462,6 +1474,17 @@ void AddSowTagMenuActions(
 }
 
 int RepairUnaddressableEntries(std::vector<Entry> &entries) {
+	const auto findLiveItem = [](PeerId peerId, MsgId msgId) {
+		for (const auto &account : Core::App().domain().orderedAccounts()) {
+			const auto session = account->maybeSession();
+			if (session && session->data().peerLoaded(peerId)) {
+				if (const auto item = session->data().message(peerId, msgId)) {
+					return item;
+				}
+			}
+		}
+		return static_cast<HistoryItem *>(nullptr);
+	};
 	const auto unaddressable = [](const QString &path) {
 		for (auto i = 0; i < path.size(); ++i) {
 			const auto ch = path.at(i);
@@ -1482,23 +1505,63 @@ int RepairUnaddressableEntries(std::vector<Entry> &entries) {
 	auto repaired = 0;
 	for (auto &entry : entries) {
 		const auto path = entry.saved_path;
-		if (!unaddressable(path)) {
-			continue;
-		}
 		const auto info = QFileInfo(path);
+		const auto broken = unaddressable(path);
 		if (!info.exists()) {
-			LogFailure(u"repair skipped, missing: "_q + path);
+			if (broken) {
+				LogFailure(u"repair skipped, missing: "_q + path);
+			}
 			continue;
 		}
 		const auto limit = NameLimitForDir(info.dir().path());
 		auto name = CleanSaveNameText(SqueezeSpaces(info.fileName()));
-		const auto dot = name.lastIndexOf(u'.');
-		const auto ext = (dot > 0) ? name.mid(dot) : QString();
-		if (name.size() > limit && limit - int(ext.size()) - 1 >= 4) {
-			name = LeftAtCodePoint(name.left(dot), limit - int(ext.size()) - 1)
-				+ ext;
+		if (broken) {
+			const auto dot = name.lastIndexOf(u'.');
+			const auto ext = (dot > 0) ? name.mid(dot) : QString();
+			if (name.size() > limit && limit - int(ext.size()) - 1 >= 4) {
+				name = LeftAtCodePoint(name.left(dot), limit - int(ext.size()) - 1)
+					+ ext;
+			}
 		}
-		const auto target = UniqueAugmentedTarget(info, name);
+		auto item = findLiveItem(
+			PeerId(uint64(entry.src_peer_id)),
+			MsgId(entry.src_msg_id));
+		if (item && !item->isRegular()) {
+			item = nullptr;
+		}
+		const auto parts = item ? AugmentNameParts(item) : NameParts{};
+		const auto entryDocument = [&]() -> DocumentData * {
+			if (!item || !item->media()) {
+				return nullptr;
+			}
+			const auto document = item->media()->document();
+			if (!document
+				|| document->filename().isEmpty()
+				|| uint64(document->size) != uint64(entry.file_size)) {
+				return nullptr;
+			}
+			return document;
+		}();
+		auto candidate = entryDocument
+			? BuildAugmentedName(
+				entryDocument->filename(),
+				parts,
+				limit,
+				true)
+			: QString();
+		const auto legacy = name.startsWith(u'#');
+		if (candidate.isEmpty() && (broken || legacy)) {
+			candidate = BuildAugmentedName(name, parts, limit, true);
+		}
+		if (candidate.isEmpty() && broken && name != info.fileName()) {
+			candidate = name;
+		}
+		if (candidate.isEmpty()
+			|| candidate == info.fileName()
+			|| (candidate.startsWith(u'#') && !broken)) {
+			continue;
+		}
+		const auto target = UniqueAugmentedTarget(info, candidate);
 		if (!QFile::rename(path, target)) {
 			LogFailure(u"repair failed: "_q + path);
 			continue;
@@ -1506,7 +1569,7 @@ int RepairUnaddressableEntries(std::vector<Entry> &entries) {
 		Database::instance().Relink(entry.id, target);
 		entry.saved_path = target;
 		entry.file_name = QFileInfo(target).fileName();
-		LogFailure(u"repaired unaddressable name: "_q + path);
+		LogFailure(u"repaired entry name: "_q + path);
 		++repaired;
 	}
 	return repaired;

@@ -101,7 +101,8 @@ void NotifyDuplicateSkipped(
 	const QString &toFile,
 	not_null<DocumentData*> document);
 
-// Renames saved files Windows can no longer address; entries update in place.
+// Renames saved files that are unaddressable or predate the grammar;
+// entries update in place.
 [[nodiscard]] int RepairUnaddressableEntries(std::vector<Entry> &entries);
 
 // Sow-list menu: save a #hashtag from the message, the one under the
