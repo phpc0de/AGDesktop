@@ -564,3 +564,4 @@
 - **发散守卫四条（模拟逐一抓出）**：①幂等语义 OR→**AND**（旧名 tags 段恰好匹配会被误判"已合规"永不迁移）；②候选名 == 现名 → 跳过（否则 UniqueAugmentedTarget 把当前文件自身当碰撞，每次 reload 在 `名 (2)` 间震荡）；③`#` 开头的迁移候选拒收（legacy-stem 重建名仍 `#` 开头 → blob 截断进 stem 后全 blob 对不上段 → 每次 reload 重包漂移），仅 broken 路径豁免（修破优先于迁形）；④ blob 头部同步裁剪（tag 段残留 ` -MUDR-255` 形态出双横线）。
 - **验证**：Python 全流程 4 轮 reload 收敛——ex1/2/3 各 1 改名后稳定（213/213/161u、无孤立代理、无双横线）；fresh 新语法名 4 轮零改名；无 caption 的 legacy 保持（语法不凭空造名）；服务端 `#` 名合规 no-op；broken+无 item 一次性清洗后稳定；状态机词法平衡、`git diff --check` 干净、Entry.file_size 字段核实。未构建。
 - **手测口径**：更新后打开下载历史 → 旧 `#` 开头名自动迁成 `<真实原始名> - <简介> - <tags>.<ext>`（消息还在且 document 尺寸匹配时）；消息已删/尺寸不匹配则旧名保留，重保存时 heal 兜底；toast 计数含迁移量。
+- **发布**：v7.2.9-ayu.36（R1–R5 全部三提交 + photo 命名埋点，轻量 tag 触发构建 Action）。
