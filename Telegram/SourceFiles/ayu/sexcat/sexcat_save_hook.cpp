@@ -1513,6 +1513,13 @@ int RepairUnaddressableEntries(std::vector<Entry> &entries) {
 			}
 			continue;
 		}
+		// WHY: every Relink re-fires the window reload synchronously, so a
+		// pass that renames without bounds recurses; steady-state rows must
+		// cost one stat and stop.
+		const auto legacy = info.fileName().startsWith(u'#');
+		if (!broken && !legacy) {
+			continue;
+		}
 		const auto limit = NameLimitForDir(info.dir().path());
 		auto name = CleanSaveNameText(SqueezeSpaces(info.fileName()));
 		if (broken) {
@@ -1549,7 +1556,6 @@ int RepairUnaddressableEntries(std::vector<Entry> &entries) {
 				limit,
 				true)
 			: QString();
-		const auto legacy = name.startsWith(u'#');
 		if (candidate.isEmpty() && (broken || legacy)) {
 			candidate = BuildAugmentedName(name, parts, limit, true);
 		}

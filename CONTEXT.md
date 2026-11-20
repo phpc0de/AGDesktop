@@ -571,3 +571,9 @@
 - **补洞（R6）**：无剧情简介段的短帖里 `标签： #tags` 行残留简介 + tag 段重复——junk 表补 `(标签|標簽|標籤)[:：]\s*(#[^\s#]+\s*)*`（标签字 + 成串 hashtag token；**来源： 保持原 `\S*` 单 token 语义**——首版误把两者并成 hashtag 语义会漏吃 `/hsck/290852` 路径，已即时纠正）；非 hashtag 值只剔标签字、值保留；无标签行的行内 hashtag 不受影响。
 - **回归**：Q53 blob 逐字不变（`新版破解MMMB-195 五十路母の尻に興奮してしまい…4時間2`）、无简介变体 80u 幂等、传统 標籤： 生效、词法平衡 + `git diff --check` 干净。未构建未发布（随下次发布带上）。
 - **R6b 构建修复（发布 v7.2.9-ayu.37）**：.36 构建两处 C2039（Qt5.15 MSVC：QString::back() 命中非 const 重载返 QCharRef 无 isHighSurrogate → LeftAtCodePoint 改 out.at(size()-1)；FullMsgId 无 bare 成员 → photo 日志改 contextId.msg.bare）；顺带摘掉六个 fire-and-forget DB 写方法（Relink/DropUnhashedRecord/UpdateRowSha/BackfillSourceByHash/RecordPendingPosition/RecordTag）的 [[nodiscard]]，清 13 条 C4834（纯契约修正零行为变化）。
+
+## 40. R7 修复循环风暴（.38）
+- **症状**：.36/.37 打开下载历史即无响应、Explorer 文件反复跳动、命名不收敛。
+- **根因**：Relink → _newSaved.fire_copy 是同栈同步 fire → reload 在 rename 调用栈内重入；K 个改名 × 每次嵌套全量扫描（regex+QFileInfo×N）= O(K×N) 冻结；同文档重复记录的碰撞后缀名（"X (2)"）每轮被再改名 " (3)"/" (4)"… = 无界递归（.36 语义模拟 depth>400 不收敛）。
+- **修法**：①repair 只处理 broken/legacy 条目（steady-state 一条一次 stat 即停）；②窗口 reload 重入（_repairPass）直接 return，外层轮收尾全部重建。模拟：新语义 depth=2 收敛，旧语义无界。
+- 发布 v7.2.9-ayu.38。

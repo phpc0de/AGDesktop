@@ -116,3 +116,9 @@ R1–R3 交付（v7.2.9-ayu.22）后实测仍"下载文件就是原名字"（用
 - 更新后首次打开下载历史，旧 `#` 开头名一次性迁成 `<真实原始名> - <简介> - <tags>.<ext>`，此后 no-op 稳定，无 reload 漂移。
 - 消息已删除 / document 尺寸不匹配的旧名保持原样（语法不凭空造名），重保存时由 heal 兜底。
 - 幂等 AND 语义对全新保存零影响（fresh 名两段皆在）。
+
+### Amendment 5 — 修复不得在 rename 的调用栈里重入（R7）
+Relink 的 _newSaved 是同步 fire：修复器每个 rename 都会在窗口 reload 的栈内触发嵌套 reload。
+历史修复因此有两条铁律：(1) 只处理 broken 或 legacy 条目——steady-state 每条只做一次 stat 就停；
+(2) 窗口 reload 重入（_repairPass）直接 return，外层轮负责全部重建。
+违反任一条 → O(K×N) UI 冻结或无界递归（.36/.37 实测）。碰撞后缀名视作已命名，永不追赶。

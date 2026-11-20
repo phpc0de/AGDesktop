@@ -412,11 +412,16 @@ private:
 	}
 
 	void reload() {
+		if (_repairPass) {
+			return; // nested reload from Relink: the outer pass rebuilds all
+		}
 		auto rows = std::vector<Row>();
 		auto entries = _binMode
 			? Database::instance().RecentDeleted(kRecentLimit, {})
 			: Database::instance().Recent(kRecentLimit, {});
+		_repairPass = true;
 		const auto repaired = SexCat::RepairUnaddressableEntries(entries);
+		_repairPass = false;
 		if (repaired > 0) {
 			Ui::Toast::Show(tr::lng_sexcat_names_repaired(
 				tr::now,
@@ -1373,6 +1378,7 @@ private:
 	std::vector<PeerId> _filterPeerIds;
 	bool _binMode = false;
 	bool _syncingChecks = false;
+	bool _repairPass = false;
 	std::set<uint64> _checkedIds;
 	rpl::lifetime _lifetime;
 
