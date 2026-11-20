@@ -163,7 +163,7 @@ constexpr auto kMaxRetroTagChoices = 32;
 		return text;
 	}
 	auto out = text.left(limit);
-	if (!out.isEmpty() && out.back().isHighSurrogate()) {
+	if (!out.isEmpty() && out.at(out.size() - 1).isHighSurrogate()) {
 		out.chop(1);
 	}
 	return out;
@@ -1119,7 +1119,7 @@ void RecordPhotoSaveAttempt(
 		LogFailure(u"photo %1 skipped: %2 (ctx %3)"_q.arg(
 			info.fileName(),
 			item ? u"nothing to add"_q : u"no source item"_q,
-			QString::number(contextId.bare)));
+			QString::number(contextId.msg.bare)));
 	} else {
 		const auto target = UniqueAugmentedTarget(info, candidate);
 		if (target != savedPath) {

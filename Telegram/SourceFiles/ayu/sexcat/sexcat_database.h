@@ -55,12 +55,12 @@ public:
 	Database &operator=(const Database &other) = delete;
 
 	[[nodiscard]] int64 RecordSaved(Entry entry);
-	[[nodiscard]] bool UpdateRowSha(int64 id, const QByteArray &sha256);
+	bool UpdateRowSha(int64 id, const QByteArray &sha256);
 	[[nodiscard]] bool UpdateRecordGroup(int64 id, int64 groupId);
-	[[nodiscard]] bool DropUnhashedRecord(int64 id);
+	bool DropUnhashedRecord(int64 id);
 	[[nodiscard]] std::vector<Entry> LookupUnhashed(int limit);
 	[[nodiscard]] std::vector<Entry> LookupByHash(QByteArray sha256);
-	[[nodiscard]] bool BackfillSourceByHash(
+	bool BackfillSourceByHash(
 		const QByteArray &sha256,
 		const Entry &source);
 	[[nodiscard]] std::vector<Entry> LookupBySource(PeerId peer, MsgId msg);
@@ -75,13 +75,13 @@ public:
 		int64 fileSize);
 	// Q80: pending rows are written at download start and match the
 	// (peer, msg, attach) position before any sha exists.
-	[[nodiscard]] int64 RecordPendingPosition(const Entry &source);
+	int64 RecordPendingPosition(const Entry &source);
 	[[nodiscard]] int64 ConsumePendingPosition(
 		const Entry &source,
 		const QString &savedPath);
 	void DropPendingPosition(const Entry &source);
 	[[nodiscard]] std::vector<Entry> LookupByPathPrefix(const QString &prefix);
-	[[nodiscard]] bool Relink(int64 id, const QString &newPath);
+	bool Relink(int64 id, const QString &newPath);
 	[[nodiscard]] std::vector<Entry> Recent(
 		int limit,
 		Filter filter = {},
@@ -93,7 +93,7 @@ public:
 		int offset = 0);
 	[[nodiscard]] int TrashRecords(const std::vector<int64> &ids);
 	[[nodiscard]] int RestoreRecords(const std::vector<int64> &ids);
-	[[nodiscard]] bool RecordTag(const QString &tag);
+	bool RecordTag(const QString &tag);
 	void ReplaceSourceTags(int64 sourceId, const QStringList &tags);
 	[[nodiscard]] QStringList SourceTags(int64 sourceId);
 	[[nodiscard]] std::vector<TagSummary> TagSummaries(int limit);
