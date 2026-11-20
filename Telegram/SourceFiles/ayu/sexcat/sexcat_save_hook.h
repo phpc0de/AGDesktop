@@ -7,6 +7,7 @@
 #pragma once
 
 #include "ui/basic_click_handlers.h"
+#include "ayu/sexcat/sexcat_database.h"
 #include "data/data_types.h"
 
 #include <QByteArray>
@@ -79,9 +80,9 @@ void EnsureDownloadListener();
 	int index,
 	HistoryItem *item);
 
-// Q49: augmented "#tags -description-original" name, or empty when the
-// naming rules don't apply. The source item comes from contextId or the
-// latest save-as marker of this document.
+// Q49: augmented "<original> - <caption> - <#tags>" name, or empty when
+// the naming rules don't apply. The source item comes from contextId or
+// the latest save-as marker of this document.
 [[nodiscard]] QString AugmentedDocumentName(
 	not_null<DocumentData*> document,
 	FullMsgId contextId = {});
@@ -99,6 +100,9 @@ void EnsureDownloadListener();
 void NotifyDuplicateSkipped(
 	const QString &toFile,
 	not_null<DocumentData*> document);
+
+// Renames saved files Windows can no longer address; entries update in place.
+[[nodiscard]] int RepairUnaddressableEntries(std::vector<Entry> &entries);
 
 // Sow-list menu: save a #hashtag from the message, the one under the
 // cursor (link), or the selected text as a tag name. Adds nothing when

@@ -413,9 +413,16 @@ private:
 
 	void reload() {
 		auto rows = std::vector<Row>();
-		const auto entries = _binMode
+		auto entries = _binMode
 			? Database::instance().RecentDeleted(kRecentLimit, {})
 			: Database::instance().Recent(kRecentLimit, {});
+		const auto repaired = SexCat::RepairUnaddressableEntries(entries);
+		if (repaired > 0) {
+			Ui::Toast::Show(tr::lng_sexcat_names_repaired(
+				tr::now,
+				lt_count,
+				repaired));
+		}
 		for (const auto &entry : entries) {
 			auto row = Row{
 				.id = uint64(entry.id),

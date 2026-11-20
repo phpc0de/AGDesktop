@@ -122,12 +122,23 @@ constexpr auto kMaxRetroTagChoices = 32;
 	static const auto illegal = u"\\/:*?\"<>|"_q;
 	auto cleaned = QString();
 	cleaned.reserve(raw.size());
-	for (const auto ch : raw) {
-		if (ch.category() == QChar::Other_Control || illegal.contains(ch)) {
+	auto index = 0;
+	while (index < raw.size()) {
+		const auto ch = raw.at(index);
+		if (ch.isHighSurrogate()
+			&& index + 1 < raw.size()
+			&& raw.at(index + 1).isLowSurrogate()) {
+			cleaned += ch;
+			cleaned += raw.at(index + 1);
+			++index;
+		} else if (ch.category() == QChar::Other_Control
+			|| ch.isSurrogate()
+			|| illegal.contains(ch)) {
 			cleaned += u' ';
 		} else {
 			cleaned += ch;
 		}
+		++index;
 	}
 	const auto isEdgeJunk = [](QChar ch) {
 		return ch == u' ' || ch == u'.';
@@ -141,6 +152,19 @@ constexpr auto kMaxRetroTagChoices = 32;
 		--end;
 	}
 	return cleaned.mid(start, end - start);
+}
+
+// WHY: a cut inside a surrogate pair leaves a lone half in the name,
+// which Windows can create but Explorer and players cannot address.
+[[nodiscard]] QString LeftAtCodePoint(const QString &text, int limit) {
+	if (limit >= text.size()) {
+		return text;
+	}
+	auto out = text.left(limit);
+	if (!out.isEmpty() && out.back().isHighSurrogate()) {
+		out.chop(1);
+	}
+	return out;
 }
 
 [[nodiscard]] QString SqueezeSpaces(const QString &raw) {
@@ -166,7 +190,7 @@ constexpr auto kMaxRetroTagChoices = 32;
 		text.remove(0, 1);
 	}
 	text = CleanSaveNameText(text);
-	return text.left(kMaxSowTagLength);
+	return LeftAtCodePoint(text, kMaxSowTagLength);
 }
 
 void ShowSowTagToast(const QString &tag) {
@@ -193,7 +217,7 @@ void ShowSowTagToast(const QString &tag) {
 			break;
 		}
 	}
-	return CleanSaveNameText(text).left(kMaxSowTagLength);
+	return LeftAtCodePoint(CleanSaveNameText(text), kMaxSowTagLength);
 }
 
 struct HashtagParts {
@@ -738,8 +762,12 @@ constexpr auto kMaxWinPath = 260;
 		int limit,
 		bool withPart) {
 	const auto dot = original.lastIndexOf(u'.');
-	auto stem = (dot > 0) ? original.left(dot) : original;
-	const auto ext = (dot > 0) ? original.mid(dot) : QString();
+	auto stem = CleanSaveNameText((dot > 0) ? original.left(dot) : original);
+	auto ext = (dot > 0) ? original.mid(dot) : QString();
+	if (!ext.isEmpty()) {
+		const auto content = CleanSaveNameText(ext.mid(1));
+		ext = content.isEmpty() ? QString() : u'.' + content;
+	}
 	if (stem.isEmpty()) {
 		return {};
 	}
@@ -787,7 +815,7 @@ constexpr auto kMaxWinPath = 260;
 	auto blob = parts.title;
 	if (!blob.isEmpty()) {
 		const auto budget = limit - fixed.size() - int(u" - "_q.size());
-		blob = (budget >= 2) ? blob.left(budget) : QString();
+		blob = (budget >= 2) ? LeftAtCodePoint(blob, budget) : QString();
 		while (!blob.isEmpty()
 			&& (blob.endsWith(u' ')
 				|| blob.endsWith(u'-')
@@ -1431,6 +1459,57 @@ void AddSowTagMenuActions(
 		}
 	}
 	AddRetroTagMenuActions(menu, item);
+}
+
+int RepairUnaddressableEntries(std::vector<Entry> &entries) {
+	const auto unaddressable = [](const QString &path) {
+		for (auto i = 0; i < path.size(); ++i) {
+			const auto ch = path.at(i);
+			if (ch.isHighSurrogate()) {
+				if (i + 1 >= path.size() || !path.at(i + 1).isLowSurrogate()) {
+					return true;
+				}
+				++i;
+			} else if (ch.isLowSurrogate()) {
+				return true;
+			}
+		}
+		const auto name = QFileInfo(path).fileName();
+		return path.size() > kMaxWinPath - 1
+			|| name.endsWith(u' ')
+			|| name.endsWith(u'.');
+	};
+	auto repaired = 0;
+	for (auto &entry : entries) {
+		const auto path = entry.saved_path;
+		if (!unaddressable(path)) {
+			continue;
+		}
+		const auto info = QFileInfo(path);
+		if (!info.exists()) {
+			LogFailure(u"repair skipped, missing: "_q + path);
+			continue;
+		}
+		const auto limit = NameLimitForDir(info.dir().path());
+		auto name = CleanSaveNameText(SqueezeSpaces(info.fileName()));
+		const auto dot = name.lastIndexOf(u'.');
+		const auto ext = (dot > 0) ? name.mid(dot) : QString();
+		if (name.size() > limit && limit - int(ext.size()) - 1 >= 4) {
+			name = LeftAtCodePoint(name.left(dot), limit - int(ext.size()) - 1)
+				+ ext;
+		}
+		const auto target = UniqueAugmentedTarget(info, name);
+		if (!QFile::rename(path, target)) {
+			LogFailure(u"repair failed: "_q + path);
+			continue;
+		}
+		Database::instance().Relink(entry.id, target);
+		entry.saved_path = target;
+		entry.file_name = QFileInfo(target).fileName();
+		LogFailure(u"repaired unaddressable name: "_q + path);
+		++repaired;
+	}
+	return repaired;
 }
 
 } // namespace SexCat

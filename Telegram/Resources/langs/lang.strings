@@ -9216,6 +9216,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_sexcat_videos_selected#one" = "{count} video selected";
 "lng_sexcat_videos_selected#other" = "{count} videos selected";
 "lng_sexcat_already_saved" = "Already in library, download skipped: {path}";
+"lng_sexcat_names_repaired#one" = "Repaired {count} broken file name";
+"lng_sexcat_names_repaired#other" = "Repaired {count} broken file names";
 "lng_sexcat_rename_failed" = "Could not rename saved file to {path}";
 "lng_sexcat_nothing_selected" = "No videos selected";
 "lng_sexcat_open_folder" = "Open folder";
