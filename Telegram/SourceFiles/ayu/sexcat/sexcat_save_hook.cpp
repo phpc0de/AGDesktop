@@ -242,38 +242,13 @@ struct HashtagParts {
 struct NameParts {
 	QStringList tags;
 	QString title;
-	QString code;
 	int partIndex = 0;
 	int partCount = 0;
 };
 
-struct DescriptionParts {
-	QString title;
-	QString code;
-};
-
-[[nodiscard]] QString TakeBracketField(QString &text, const QString &label) {
-	const auto open = text.indexOf(u"【"_q + label + u"】"_q);
-	if (open < 0) {
-		return {};
-	}
-	const auto valueStart = open + label.size() + 2;
-	auto end = text.indexOf(u'【', valueStart);
-	if (end < 0) {
-		end = text.size();
-	}
-	const auto value = SqueezeSpaces(text.mid(valueStart, end - valueStart));
-	text.remove(open, end - open);
-	return value;
-}
-
-[[nodiscard]] DescriptionParts RefineDescription(const QString &raw) {
+// Q49: boilerplate-stripped caption text, cleaned for a filename.
+[[nodiscard]] QString NameBlobFrom(const QString &raw) {
 	auto text = raw;
-	auto title = TakeBracketField(text, u"片名"_q);
-	auto code = TakeBracketField(text, u"番号"_q);
-	if (code.isEmpty()) {
-		code = TakeBracketField(text, u"番號"_q);
-	}
 	static const auto synopsis = QRegularExpression(
 		u"剧情简介|劇情簡介|內容簡介|资源简介|資源簡介"_q);
 	if (const auto i = synopsis.match(text).capturedStart(); i >= 0) {
@@ -284,38 +259,12 @@ struct DescriptionParts {
 	text.remove(junk);
 	text.remove(u"标题:"_q);
 	text.remove(u"標題:"_q);
-	if (code.isEmpty()) {
-		static const auto pattern = QRegularExpression(
-			u"(?<![A-Za-z0-9])([A-Z]{2,6}-\\d{2,4}(?:-[A-Za-z]+)*)(?![A-Za-z0-9])"_q);
-		const auto m = pattern.match(text);
-		if (m.hasMatch()) {
-			code = m.captured(1);
-			text.remove(m.capturedStart(), m.capturedLength());
-		}
-	}
-	return {
-		.title = title.isEmpty()
-			? CleanSaveNameText(SqueezeSpaces(text))
-			: title,
-		.code = code,
-	};
+	text.remove(u"标题："_q);
+	text.remove(u"標題："_q);
+	return CleanSaveNameText(SqueezeSpaces(text));
 }
 
-// years in upload names are not codes
-[[nodiscard]] QString CodeFromOriginal(const QString &original) {
-	static const auto pattern = QRegularExpression(
-		u"(?:^|[_\\s])([A-Za-z]{2,6})_(\\d{2,4})(?=[_.\\s-]|$)"_q);
-	const auto m = pattern.match(original);
-	const auto digits = m.hasMatch() ? m.captured(2) : QString();
-	if (digits.isEmpty()
-		|| (digits.size() == 4
-			&& (digits.startsWith(u"19"_q) || digits.startsWith(u"20"_q)))) {
-		return {};
-	}
-	return m.captured(1).toUpper() + u'-' + digits;
-}
-
-// Tags of the item and its album siblings; the title and code come from
+// Tags of the item and its album siblings; the blob comes from
 // the first caption text left after hashtag removal (album captions sit
 // on the first item, videos alone carry none).
 [[nodiscard]] NameParts AugmentNameParts(HistoryItem *item) {
@@ -331,11 +280,7 @@ struct DescriptionParts {
 			}
 		}
 		if (result.title.isEmpty() && !parts.description.isEmpty()) {
-			const auto refined = RefineDescription(parts.description);
-			result.title = refined.title;
-			if (result.code.isEmpty()) {
-				result.code = refined.code;
-			}
+			result.title = NameBlobFrom(parts.description);
 		}
 	};
 	collect(item);
@@ -775,13 +720,6 @@ constexpr auto kMaxWinPath = 260;
 	return false;
 }
 
-[[nodiscard]] QString WithPartMarker(const QString &name, int index) {
-	const auto dot = name.lastIndexOf(u'.');
-	const auto stem = (dot > 0) ? name.left(dot) : name;
-	const auto ext = (dot > 0) ? name.mid(dot) : QString();
-	return stem + u" part%1"_q.arg(index) + ext;
-}
-
 // WHY: Windows caps the whole target path, not the name alone, so the
 // budget comes from the target directory; trimming order is title,
 // then tags, then the original stem — never a whole abandon.
@@ -790,107 +728,75 @@ constexpr auto kMaxWinPath = 260;
 	return std::clamp(kMaxWinPath - used, kMinNameLimit, kMaxPathComponent);
 }
 
-// Q49 naming: "code #tags - title - original" with absent segments and
-// their separators dropped; the budget trims, it does not skip.
+// Q49 naming: "<stem> - <blob> - <#tags>.<ext>", absent segments and
+// their separators dropped; the blob is the only soft segment.
+// WHY: Windows takes the extension from the last dot, so the original
+// name's extension stays pinned at the very end.
 [[nodiscard]] QString BuildAugmentedName(
 		const QString &original,
 		const NameParts &parts,
 		int limit,
 		bool withPart) {
-	if (original.isEmpty()
-		|| limit < 8
-		|| (parts.tags.isEmpty()
-			&& parts.title.isEmpty()
-			&& parts.code.isEmpty())) {
+	const auto dot = original.lastIndexOf(u'.');
+	auto stem = (dot > 0) ? original.left(dot) : original;
+	const auto ext = (dot > 0) ? original.mid(dot) : QString();
+	if (stem.isEmpty()) {
 		return {};
 	}
-	const auto keptTags = parts.tags.mid(0, kMaxNameTags);
-	const auto headOf = [&](int count) {
-		auto head = QStringList();
-		if (!parts.code.isEmpty()) {
-			head.push_back(parts.code);
-		}
-		for (auto i = 0; i != count; ++i) {
-			head.push_back(u"#%1"_q.arg(keptTags.at(i)));
-		}
-		return head.join(u' ');
-	};
-	auto originalName = (withPart && parts.partCount > 1)
-		? WithPartMarker(original, parts.partIndex + 1)
-		: original;
-	// WHY: some channels upload files named with the caption's own
-	// hashtag list, so the head duplicates the original segment and the
-	// duplicate check would skip a needed rename; only the extension is
-	// kept from such names.
-	auto hashes = 0;
-	for (const auto ch : originalName) {
-		if (ch == u'#') {
-			++hashes;
-		}
+	auto tags = QStringList();
+	for (const auto &tag : parts.tags.mid(0, kMaxNameTags)) {
+		tags.push_back(u"#%1"_q.arg(tag));
 	}
-	const auto tagListOriginal = hashes >= 2;
-	const auto fullHead = headOf(int(keptTags.size()));
-	const auto prefix = !fullHead.isEmpty() ? fullHead : parts.title;
-	if (!prefix.isEmpty() && !tagListOriginal && original.startsWith(prefix)) {
+	// exact idempotency: re-appending to grammar-named stems only grows them
+	const auto tagSegment = tags.join(u' ');
+	if ((!parts.title.isEmpty() && stem.split(u" - "_q).contains(parts.title))
+		|| (!tagSegment.isEmpty()
+			&& stem.split(u" - "_q).contains(tagSegment))) {
 		return {};
 	}
-	const auto join = [&](int tagCount, const QString &title) {
-		const auto head = headOf(tagCount);
-		auto segments = QStringList();
-		if (!head.isEmpty()) {
-			segments.push_back(head);
-		}
-		if (!title.isEmpty()) {
-			segments.push_back(title);
-		}
-		if (tagListOriginal) {
-			if (segments.isEmpty()) {
-				segments.push_back(originalName);
-			} else {
-				const auto dot = originalName.lastIndexOf(u'.');
-				if (dot > 0) {
-					segments.back() += originalName.mid(dot);
-				}
-			}
-		} else {
-			segments.push_back(originalName);
-		}
-		return segments.join(u" - "_q);
-	};
-	auto tagCount = int(keptTags.size());
-	auto title = parts.title;
-	auto name = join(tagCount, title);
-	while (name.size() > limit) {
-		const auto restSize = join(tagCount, QString()).size();
-		const auto avail = limit - restSize - 3;
-		if (!title.isEmpty() && avail >= 8) {
-			title = title.left(avail).trimmed();
-			name = join(tagCount, title);
-			break;
+	if (withPart && parts.partCount > 1) {
+		stem += u" part%1"_q.arg(parts.partIndex + 1);
+	}
+	if (IsReservedWindowsName(stem)) {
+		stem = u"_"_q + stem;
+	}
+	const auto assembled = [&](const QString &blob, int tagCount) {
+		auto segments = QStringList{ stem };
+		if (!blob.isEmpty()) {
+			segments.push_back(blob);
 		}
 		if (tagCount > 0) {
-			--tagCount;
-			name = join(tagCount, title);
-			continue;
+			segments.push_back(tags.mid(0, tagCount).join(u' '));
 		}
-		if (tagListOriginal) {
-			break;
-		}
-		const auto dot = originalName.lastIndexOf(u'.');
-		const auto stem = (dot > 0) ? originalName.left(dot) : originalName;
-		const auto ext = (dot > 0) ? originalName.mid(dot) : QString();
-		const auto keep = limit - (restSize - originalName.size()) - 1;
+		return segments.join(u" - "_q) + ext;
+	};
+	auto tagCount = int(tags.size());
+	while (tagCount > 0
+		&& assembled(QString(), tagCount).size() > limit) {
+		--tagCount;
+	}
+	auto fixed = assembled(QString(), tagCount);
+	if (fixed.size() > limit) {
+		const auto keep = limit - ext.size() - 1;
 		if (keep < 4) {
 			return {};
 		}
-		originalName = stem.left(keep) + ext;
-		name = join(0, QString());
-		break;
+		stem = stem.left(keep).trimmed();
+		fixed = assembled(QString(), tagCount);
 	}
-	if (IsReservedWindowsName(name)) {
-		name = u"_"_q + name;
+	auto blob = parts.title;
+	if (!blob.isEmpty()) {
+		const auto budget = limit - fixed.size() - int(u" - "_q.size());
+		blob = (budget >= 2) ? blob.left(budget) : QString();
+		while (!blob.isEmpty()
+			&& (blob.endsWith(u' ')
+				|| blob.endsWith(u'-')
+				|| blob.endsWith(u'.'))) {
+			blob.chop(1);
+		}
 	}
-	return name;
+	const auto result = assembled(blob, tagCount);
+	return (result == original) ? QString() : result;
 }
 
 [[nodiscard]] QString UniqueAugmentedTarget(
@@ -916,16 +822,14 @@ constexpr auto kMaxWinPath = 260;
 	}
 	const auto info = QFileInfo(savedPath);
 	const auto original = info.fileName();
-	auto parts = AugmentNameParts(item);
-	if (parts.code.isEmpty()) {
-		parts.code = CodeFromOriginal(original);
-	}
+	const auto parts = AugmentNameParts(item);
 	const auto candidate = BuildAugmentedName(
 		original,
 		parts,
 		NameLimitForDir(info.dir().path()),
 		true);
 	if (candidate.isEmpty()) {
+		LogFailure(u"augment %1 skipped: nothing to add"_q.arg(original));
 		return savedPath;
 	}
 	const auto target = UniqueAugmentedTarget(info, candidate);
@@ -972,13 +876,10 @@ constexpr auto kMaxWinPath = 260;
 		LogFailure(u"augment %1 skipped: no source item"_q.arg(original));
 		return {};
 	}
-	auto parts = AugmentNameParts(item);
-	if (parts.code.isEmpty()) {
-		parts.code = CodeFromOriginal(original);
-	}
+	const auto parts = AugmentNameParts(item);
 	const auto candidate = BuildAugmentedName(original, parts, limit, true);
 	if (candidate.isEmpty()) {
-		LogFailure(u"augment %1 skipped: no caption text"_q.arg(original));
+		LogFailure(u"augment %1 skipped: nothing to add"_q.arg(original));
 	}
 	return candidate;
 }
@@ -1177,7 +1078,7 @@ void RecordPhotoSaveAttempt(
 	if (candidate.isEmpty()) {
 		LogFailure(u"photo %1 skipped: %2 (ctx %3)"_q.arg(
 			info.fileName(),
-			item ? u"no caption text"_q : u"no source item"_q,
+			item ? u"nothing to add"_q : u"no source item"_q,
 			QString::number(contextId.bare)));
 	} else {
 		const auto target = UniqueAugmentedTarget(info, candidate);
@@ -1302,7 +1203,7 @@ QStringList SourceTagsForItem(HistoryItem *item) {
 	return AugmentNameParts(item).tags;
 }
 
-// Q49: nameless videos still need a digit stem for the augmentation.
+// Q49: augmentation needs a non-empty name even without a server one.
 QString FallbackDocumentName(not_null<DocumentData*> document) {
 	auto name = document->filename();
 	if (!name.isEmpty()) {
@@ -1384,14 +1285,22 @@ QString AdjustDocumentSaveTarget(
 		|| !QFileInfo::exists(hit->saved_path)) {
 		return toFile;
 	}
-	auto contextId = FullMsgId();
-	if (const auto i = PendingMap().find(document.get());
-		i != end(PendingMap())) {
-		contextId = i->second.contextId;
+	auto item = document->owner().message(
+		PeerId(uint64(hit->src_peer_id)),
+		MsgId(hit->src_msg_id));
+	if (!item || !item->isRegular()) {
+		auto contextId = FullMsgId();
+		if (const auto i = PendingMap().find(document.get());
+			i != end(PendingMap())) {
+			contextId = i->second.contextId;
+		}
+		item = contextId ? document->owner().message(contextId) : nullptr;
 	}
-	const auto item = contextId
-		? document->owner().message(contextId)
-		: nullptr;
+	if (!item || !item->isRegular()) {
+		LogFailure(u"duplicate heal skipped: no source item for "_q
+			+ hit->saved_path);
+		return toFile;
+	}
 	const auto renamed = MaybeAugmentedSavePath(
 		hit->saved_path,
 		document,
