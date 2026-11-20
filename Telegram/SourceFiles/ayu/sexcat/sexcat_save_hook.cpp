@@ -1161,6 +1161,7 @@ void RecordPhotoSaveAttempt(
 	}
 	const auto info = QFileInfo(savedPath);
 	if (savedPath.isEmpty() || !info.exists() || info.isDir()) {
+		LogFailure(u"photo save skipped: missing file %1"_q.arg(savedPath));
 		return;
 	}
 	const auto item = contextId
@@ -1173,11 +1174,19 @@ void RecordPhotoSaveAttempt(
 		parts,
 		NameLimitForDir(info.dir().path()),
 		false);
-	if (!candidate.isEmpty()) {
+	if (candidate.isEmpty()) {
+		LogFailure(u"photo %1 skipped: %2 (ctx %3)"_q.arg(
+			info.fileName(),
+			item ? u"no caption text"_q : u"no source item"_q,
+			QString::number(contextId.bare)));
+	} else {
 		const auto target = UniqueAugmentedTarget(info, candidate);
 		if (target != savedPath) {
 			if (QFile::rename(savedPath, target)) {
 				path = target;
+				LogFailure(u"photo name augmented: %1 -> %2"_q.arg(
+					info.fileName(),
+					target));
 			} else {
 				LogFailure(u"failed to rename saved photo to %1"_q.arg(target));
 			}
