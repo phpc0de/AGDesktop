@@ -281,7 +281,7 @@ struct NameParts {
 		text = text.left(i);
 	}
 	static const auto junk = QRegularExpression(
-		u"(来源|來源)[:：]\\s*\\S*|加入我的频道\\s*[@～～]?\\S*|更多精彩TG\\S*|更多完整版\\S*|点击置顶\\S*|点击提取\\S*|https?://\\S+|@[A-Za-z0-9_]{3,32}"_q);
+		u"(来源|來源)[:：]\\s*\\S*|(标签|標簽|標籤)[:：]\\s*(#[^\\s#]+\\s*)*|加入我的频道\\s*[@～～]?\\S*|更多精彩TG\\S*|更多完整版\\S*|点击置顶\\S*|点击提取\\S*|https?://\\S+|@[A-Za-z0-9_]{3,32}"_q);
 	text.remove(junk);
 	text.remove(u"标题:"_q);
 	text.remove(u"標題:"_q);
