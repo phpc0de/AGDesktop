@@ -129,3 +129,15 @@ repair 的每个 rename 都是一次 shell 重命名事件：救援器会把它�
 （HandleDeleted/HandleCreated）一律不启动；(2) 窗口对 newSaved 爆发做 singleShot(0) 合并，
 一轮事件只重建一次；(3) 对 Win32 无法寻址的旧路径（超长/孤立代理对），rename 必须退到
 \\?\ 原生命名空间——否则该类条目永远不可迁移，每次打开都重复无效工。
+
+### Amendment 7 — 无活消息的旧名靠 stem 重建，存在性以 NT 命名空间为准（R9）
+BuildAugmentedName 的幂等检查依赖 caption parts：消息已删的条目 parts 恒空，幂等恒真，
+候选恒空——R5 的迁移通道对 message-gone 条目是死代码，排水终点名仍是 `#tags`-first 形态。
+因此：(1) 候选链在 doc 分支后增加 legacy 分支——现名 `#` 开头且无 doc 可依时，用
+BuildLegacyRebuildName 从现名本身重建：剥开头 `#tag` 连串入尾部 tags 段，其余整体作 stem
+（无 blob），溢出 tags 连 `#` 拼回 stem 尾、永不回头部，产出形状幂等的真语法名；
+(2) 存在性判定不得只信 QFileInfo——常规 Win32 寻址不了超长/孤立代理对路径，会把真实存在
+的文件报成 missing（正是最需要修复的条目），失败时退到 \\?\ NT 命名空间 stat；
+(3) missing 日志每 entry 每 app 会话只打一次，修复日志必须带目标名与来源分支
+（doc/legacy/wrap/clean），否则几千行排水日志无法归因。
+违反 (1) → 旧名永不修复；违反 (2) → missing 假报刷屏；违反 (3) → 不可诊断。

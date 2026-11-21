@@ -844,6 +844,115 @@ constexpr auto kMaxWinPath = 260;
 	return (result == original) ? QString() : result;
 }
 
+// WHY: the idempotency check inside BuildAugmentedName needs caption
+// parts, so names whose message is gone never re-wrap and stay tags-first;
+// peeling the leading hashtag run rebuilds them, spilling excess tags
+// to the stem tail so the result cannot start with '#' again.
+[[nodiscard]] QString BuildLegacyRebuildName(
+		const QString &original,
+		const NameParts &parts,
+		int limit,
+		bool withPart) {
+	const auto dot = original.lastIndexOf(u'.');
+	auto rest = CleanSaveNameText((dot > 0) ? original.left(dot) : original);
+	auto ext = (dot > 0) ? original.mid(dot) : QString();
+	if (!ext.isEmpty()) {
+		const auto content = CleanSaveNameText(ext.mid(1));
+		ext = content.isEmpty() ? QString() : u'.' + content;
+	}
+	if (rest.isEmpty()) {
+		return {};
+	}
+	auto peeled = QStringList();
+	auto spillTokens = QStringList();
+	auto tokens = rest.split(u' ', Qt::SkipEmptyParts);
+	while (!tokens.isEmpty()
+		&& tokens.front().startsWith(u'#')
+		&& tokens.front().size() <= kMaxSowTagLength) {
+		const auto token = tokens.takeFirst();
+		peeled.push_back(token.mid(1));
+		spillTokens.push_back(token);
+	}
+	if (peeled.isEmpty()) {
+		return {};
+	}
+	auto spill = QStringList();
+	auto rawTags = QStringList();
+	if (parts.tags.isEmpty()) {
+		if (int(peeled.size()) > kMaxNameTags) {
+			spill = spillTokens.mid(kMaxNameTags);
+			peeled = peeled.mid(0, kMaxNameTags);
+		}
+		rawTags = peeled;
+	} else {
+		spill = spillTokens;
+		rawTags = parts.tags;
+	}
+	rest = tokens.join(u' ');
+	if (rest.isEmpty()) {
+		return {};
+	}
+	if (!spill.isEmpty()) {
+		rest += u' ' + spill.join(u' ');
+	}
+	if (withPart && parts.partCount > 1) {
+		const auto marker = u" part%1"_q.arg(parts.partIndex + 1);
+		if (!rest.endsWith(marker)) {
+			rest += marker;
+		}
+	}
+	if (IsReservedWindowsName(rest)) {
+		rest = u"_"_q + rest;
+	}
+	auto tags = QStringList();
+	for (const auto &tag : rawTags.mid(0, kMaxNameTags)) {
+		tags.push_back(u"#%1"_q.arg(tag));
+	}
+	const auto assembled = [&](const QString &blob, int tagCount) {
+		auto segments = QStringList{ rest };
+		if (!blob.isEmpty()) {
+			segments.push_back(blob);
+		}
+		if (tagCount > 0) {
+			segments.push_back(tags.mid(0, tagCount).join(u' '));
+		}
+		return segments.join(u" - "_q) + ext;
+	};
+	auto tagCount = int(tags.size());
+	while (tagCount > 0
+		&& assembled(QString(), tagCount).size() > limit) {
+		--tagCount;
+	}
+	auto fixed = assembled(QString(), tagCount);
+	if (fixed.size() > limit) {
+		const auto keep = limit - ext.size() - 1;
+		if (keep < 4) {
+			return {};
+		}
+		rest = LeftAtCodePoint(rest, keep).trimmed();
+		fixed = assembled(QString(), tagCount);
+	}
+	auto blob = parts.title;
+	if (!blob.isEmpty()) {
+		const auto budget = limit - fixed.size() - int(u" - "_q.size());
+		blob = (budget >= 2) ? LeftAtCodePoint(blob, budget) : QString();
+		while (!blob.isEmpty()
+			&& (blob.endsWith(u' ')
+				|| blob.endsWith(u'-')
+				|| blob.endsWith(u'.'))) {
+			blob.chop(1);
+		}
+		while (!blob.isEmpty()
+			&& (blob.startsWith(u' ')
+				|| blob.startsWith(u'-')
+				|| blob.startsWith(u'.'))) {
+			blob.remove(0, 1);
+		}
+	}
+	const auto result = assembled(blob, tagCount);
+	return (result == original) ? QString() : result;
+}
+
 [[nodiscard]] QString UniqueAugmentedTarget(
 		const QFileInfo &info,
 		const QString &candidate) {
@@ -1490,6 +1599,15 @@ bool ShellRescueSuppressed() {
 		|| crl::now() < RepairQuietUntil;
 }
 
+[[nodiscard]] QString ExtendedPathForm(const QString &path) {
+	auto native = QDir::toNativeSeparators(
+		QFileInfo(path).absoluteFilePath());
+	if (!native.startsWith(u"\\\\?\\"_q)) {
+		native.prepend(u"\\\\?\\"_q);
+	}
+	return native;
+}
+
 [[nodiscard]] bool RenameSavePath(const QString &from, const QString &to) {
 	if (QFile::rename(from, to)) {
 		return true;
@@ -1498,18 +1616,30 @@ bool ShellRescueSuppressed() {
 	// WHY: pre-grammar saves can carry paths Win32 cannot address (over
 	// 260 units or lone surrogates) while the raw NT namespace still can,
 	// so the \\?\ prefix is the only way to migrate those names.
-	const auto extended = [](const QString &path) {
-		auto native = QDir::toNativeSeparators(
-			QFileInfo(path).absoluteFilePath());
-		if (!native.startsWith(u"\\\\?\\"_q)) {
-			native.prepend(u"\\\\?\\"_q);
-		}
-		return native;
-	};
 	return MoveFileExW(
-		reinterpret_cast<const wchar_t*>(extended(from).utf16()),
-		reinterpret_cast<const wchar_t*>(extended(to).utf16()),
+		reinterpret_cast<const wchar_t*>(ExtendedPathForm(from).utf16()),
+		reinterpret_cast<const wchar_t*>(ExtendedPathForm(to).utf16()),
 		0) != FALSE;
+#else // Q_OS_WIN
+	return false;
+#endif // Q_OS_WIN
+}
+
+std::set<int64> &MissingLogged() {
+	static std::set<int64> ids;
+	return ids;
+}
+
+[[nodiscard]] bool SavePathExists(const QString &path) {
+	if (QFileInfo::exists(path)) {
+		return true;
+	}
+#ifdef Q_OS_WIN
+	// QFileInfo stats through regular Win32 addressing and misses
+	// unaddressable paths; only the raw NT namespace can confirm them.
+	return GetFileAttributesW(
+		reinterpret_cast<const wchar_t*>(ExtendedPathForm(path).utf16())
+	) != INVALID_FILE_ATTRIBUTES;
 #else // Q_OS_WIN
 	return false;
 #endif // Q_OS_WIN
@@ -1550,8 +1680,8 @@ int RepairUnaddressableEntries(std::vector<Entry> &entries) {
 		const auto path = entry.saved_path;
 		const auto info = QFileInfo(path);
 		const auto broken = unaddressable(path);
-		if (!info.exists()) {
-			if (broken) {
+		if (!SavePathExists(path)) {
+			if (MissingLogged().insert(entry.id).second) {
 				LogFailure(u"repair skipped, missing: "_q + path);
 			}
 			continue;
@@ -1592,6 +1722,7 @@ int RepairUnaddressableEntries(std::vector<Entry> &entries) {
 			}
 			return document;
 		}();
+		auto branch = u"clean"_q;
 		auto candidate = entryDocument
 			? BuildAugmentedName(
 				entryDocument->filename(),
@@ -1599,8 +1730,19 @@ int RepairUnaddressableEntries(std::vector<Entry> &entries) {
 				limit,
 				true)
 			: QString();
+		if (!candidate.isEmpty()) {
+			branch = u"doc"_q;
+		} else if (legacy) {
+			candidate = BuildLegacyRebuildName(name, parts, limit, true);
+			if (!candidate.isEmpty()) {
+				branch = u"legacy"_q;
+			}
+		}
 		if (candidate.isEmpty() && (broken || legacy)) {
 			candidate = BuildAugmentedName(name, parts, limit, true);
+			if (!candidate.isEmpty()) {
+				branch = u"wrap"_q;
+			}
 		}
 		if (candidate.isEmpty() && broken && name != info.fileName()) {
 			candidate = name;
@@ -1618,7 +1760,8 @@ int RepairUnaddressableEntries(std::vector<Entry> &entries) {
 		Database::instance().Relink(entry.id, target);
 		entry.saved_path = target;
 		entry.file_name = QFileInfo(target).fileName();
-		LogFailure(u"repaired entry name: "_q + path);
+		LogFailure(u"repair: "_q + path + u" -> "_q
+			+ QFileInfo(target).fileName() + u" ("_q + branch + u')');
 		++repaired;
 	}
 	RepairActive = false;
