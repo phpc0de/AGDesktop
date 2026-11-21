@@ -41,12 +41,16 @@
 #include "window/window_controller.h"
 #include "window/window_session_controller.h"
 
+#include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QMenu>
 #include <QRegularExpression>
 #include <algorithm>
 #include <atomic>
+#ifdef Q_OS_WIN
+#include <qt_windows.h>
+#endif // Q_OS_WIN
 #include <map>
 #include <optional>
 #include <set>
@@ -1486,6 +1490,31 @@ bool ShellRescueSuppressed() {
 		|| crl::now() < RepairQuietUntil;
 }
 
+[[nodiscard]] bool RenameSavePath(const QString &from, const QString &to) {
+	if (QFile::rename(from, to)) {
+		return true;
+	}
+#ifdef Q_OS_WIN
+	// WHY: pre-grammar saves can carry paths Win32 cannot address (over
+	// 260 units or lone surrogates) while the raw NT namespace still can,
+	// so the \\?\ prefix is the only way to migrate those names.
+	const auto extended = [](const QString &path) {
+		auto native = QDir::toNativeSeparators(
+			QFileInfo(path).absoluteFilePath());
+		if (!native.startsWith(u"\\\\?\\"_q)) {
+			native.prepend(u"\\\\?\\"_q);
+		}
+		return native;
+	};
+	return MoveFileExW(
+		reinterpret_cast<const wchar_t*>(extended(from).utf16()),
+		reinterpret_cast<const wchar_t*>(extended(to).utf16()),
+		0) != FALSE;
+#else // Q_OS_WIN
+	return false;
+#endif // Q_OS_WIN
+}
+
 int RepairUnaddressableEntries(std::vector<Entry> &entries) {
 	const auto findLiveItem = [](PeerId peerId, MsgId msgId) {
 		for (const auto &account : Core::App().domain().orderedAccounts()) {
@@ -1582,7 +1611,7 @@ int RepairUnaddressableEntries(std::vector<Entry> &entries) {
 			continue;
 		}
 		const auto target = UniqueAugmentedTarget(info, candidate);
-		if (!QFile::rename(path, target)) {
+		if (!RenameSavePath(path, target)) {
 			LogFailure(u"repair failed: "_q + path);
 			continue;
 		}
