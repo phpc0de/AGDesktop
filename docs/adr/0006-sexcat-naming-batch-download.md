@@ -122,3 +122,10 @@ Relink 的 _newSaved 是同步 fire：修复器每个 rename 都会在窗口 rel
 历史修复因此有两条铁律：(1) 只处理 broken 或 legacy 条目——steady-state 每条只做一次 stat 就停；
 (2) 窗口 reload 重入（_repairPass）直接 return，外层轮负责全部重建。
 违反任一条 → O(K×N) UI 冻结或无界递归（.36/.37 实测）。碰撞后缀名视作已命名，永不追赶。
+
+### Amendment 6 — 修复改名必须与 shell 救援互斥，且走 NT 命名空间（R8）
+repair 的每个 rename 都是一次 shell 重命名事件：救援器会把它当作用户搬动文件，触发全盘扫描与
+批量 Relink，反灌窗口 reload 形成三组件风暴。因此：(1) repair 进行中及结束后 10s 内，救援
+（HandleDeleted/HandleCreated）一律不启动；(2) 窗口对 newSaved 爆发做 singleShot(0) 合并，
+一轮事件只重建一次；(3) 对 Win32 无法寻址的旧路径（超长/孤立代理对），rename 必须退到
+\\?\ 原生命名空间——否则该类条目永远不可迁移，每次打开都重复无效工。

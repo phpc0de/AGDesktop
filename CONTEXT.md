@@ -577,3 +577,8 @@
 - **根因**：Relink → _newSaved.fire_copy 是同栈同步 fire → reload 在 rename 调用栈内重入；K 个改名 × 每次嵌套全量扫描（regex+QFileInfo×N）= O(K×N) 冻结；同文档重复记录的碰撞后缀名（"X (2)"）每轮被再改名 " (3)"/" (4)"… = 无界递归（.36 语义模拟 depth>400 不收敛）。
 - **修法**：①repair 只处理 broken/legacy 条目（steady-state 一条一次 stat 即停）；②窗口 reload 重入（_repairPass）直接 return，外层轮收尾全部重建。模拟：新语义 depth=2 收敛，旧语义无界。
 - 发布 v7.2.9-ayu.38。
+
+## 41. R8 救援风暴 + 不可寻址名迁移（.39）
+- **.38 为何 0 效果**：改名→Relink→同栈 reload 重入只占冻结的一部分；主导机制是 repair 的每次改名都会唤醒 shell-watch（SHCNE_RENAMEITEM/DELETE）→ 全盘救援扫描（20000 文件/10s）→ 批量 Relink → 每条同步 fire 进窗口 reload → 再改名 → 再扫描，三组件互喂。而"命名没有修复"的根因：>260/孤立代理对的旧路径 `QFile::rename` 本身就失败——Qt 寻址不了这些文件，每次打开白烧工且名字永不变。
+- **修法**：①repair 期间+10s 宽限内压制 shell 救援（ShellRescueSuppressed，HandleDeleted/HandleCreated 直接 bail）；②窗口 newSaved handler 用 singleShot(0) 合并爆发事件为一次 reload；③Windows 下 rename 失败时用 `\\\?\` 前缀 MoveFileExW 兜底（NT 命名空间可寻址超长/代理对名）→ 坏名真正可迁移，首次打开一次性收敛，此后打开零成本。
+- 发布 v7.2.9-ayu.39。
