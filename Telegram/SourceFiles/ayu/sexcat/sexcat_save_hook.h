@@ -105,6 +105,9 @@ void NotifyDuplicateSkipped(
 // entries update in place.
 [[nodiscard]] int RepairUnaddressableEntries(std::vector<Entry> &entries);
 
+// True while history repair (and briefly after) renames files itself.
+[[nodiscard]] bool ShellRescueSuppressed();
+
 // Sow-list menu: save a #hashtag from the message, the one under the
 // cursor (link), or the selected text as a tag name. Adds nothing when
 // there is nothing to save.

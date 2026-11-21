@@ -8,6 +8,7 @@
 
 #include "ayu/sexcat/sexcat_database.h"
 #include "ayu/sexcat/sexcat_hash_store.h"
+#include "ayu/sexcat/sexcat_save_hook.h"
 #include "ayu/ui/toasts.h"
 #include "ayu/utils/ayu_log.h"
 #include "core/application.h"
@@ -473,6 +474,9 @@ crl::time &LastRescueAt() {
 }
 
 void HandleDeleted(const QString &path) {
+	if (SexCat::ShellRescueSuppressed()) {
+		return;
+	}
 	if (path.isEmpty() || QFileInfo::exists(path)) {
 		return;
 	}
@@ -491,6 +495,9 @@ void HandleDeleted(const QString &path) {
 }
 
 void HandleCreated(const QString &path) {
+	if (SexCat::ShellRescueSuppressed()) {
+		return;
+	}
 	if (path.isEmpty()
 		|| QFileInfo(path).isDir()
 		|| Database::instance().LookupByPath(path)) {

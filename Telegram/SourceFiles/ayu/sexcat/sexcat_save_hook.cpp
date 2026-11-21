@@ -46,6 +46,7 @@
 #include <QMenu>
 #include <QRegularExpression>
 #include <algorithm>
+#include <atomic>
 #include <map>
 #include <optional>
 #include <set>
@@ -1473,6 +1474,18 @@ void AddSowTagMenuActions(
 	AddRetroTagMenuActions(menu, item);
 }
 
+// WHY: the shell watcher rescues watched files that vanish or rename,
+// and history repair does exactly that by the hundreds; every rescue
+// rescans drives and its relinks re-enter the window mid-pass.
+std::atomic<bool> RepairActive = false;
+std::atomic<crl::time> RepairQuietUntil = 0;
+constexpr auto kRepairRescueGrace = crl::time(10'000);
+
+bool ShellRescueSuppressed() {
+	return RepairActive
+		|| crl::now() < RepairQuietUntil;
+}
+
 int RepairUnaddressableEntries(std::vector<Entry> &entries) {
 	const auto findLiveItem = [](PeerId peerId, MsgId msgId) {
 		for (const auto &account : Core::App().domain().orderedAccounts()) {
@@ -1503,6 +1516,7 @@ int RepairUnaddressableEntries(std::vector<Entry> &entries) {
 			|| name.endsWith(u'.');
 	};
 	auto repaired = 0;
+	RepairActive = true;
 	for (auto &entry : entries) {
 		const auto path = entry.saved_path;
 		const auto info = QFileInfo(path);
@@ -1578,6 +1592,8 @@ int RepairUnaddressableEntries(std::vector<Entry> &entries) {
 		LogFailure(u"repaired entry name: "_q + path);
 		++repaired;
 	}
+	RepairActive = false;
+	RepairQuietUntil = crl::now() + kRepairRescueGrace;
 	return repaired;
 }
 

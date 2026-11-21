@@ -49,6 +49,7 @@
 #include <QPointer>
 #include <QPushButton>
 #include <QSignalBlocker>
+#include <QTimer>
 #include <QTreeWidget>
 #include <QVBoxLayout>
 
@@ -345,7 +346,14 @@ public:
 		// table refreshes itself instead of waiting for a manual pass.
 		Database::instance().newSaved(
 		) | rpl::on_next([=] {
-			reload();
+			if (_reloadScheduled) {
+				return;
+			}
+			_reloadScheduled = true;
+			QTimer::singleShot(0, this, [=] {
+				_reloadScheduled = false;
+				reload(); // coalesce burst relinks into one reload
+			});
 		}, _lifetime);
 
 		refreshModeUi();
@@ -1379,6 +1387,7 @@ private:
 	bool _binMode = false;
 	bool _syncingChecks = false;
 	bool _repairPass = false;
+	bool _reloadScheduled = false;
 	std::set<uint64> _checkedIds;
 	rpl::lifetime _lifetime;
 
