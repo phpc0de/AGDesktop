@@ -609,3 +609,10 @@
 - 帽论死后 .40"全失效"剩余解释（随删除令作废，不再追）：DB saved_path ≠ 盘上实际路径（missing 一次化后静默跳过）/ rename 失败（repair failed: 行）/ 实跑 exe 非 .40。旧名迁移回人工（Amendment 8）。
 - 图片命名 bug 未裁决：保存链路自 .35 零逻辑改动；需用户贴保存一张带简介+标签图片后的 photo 日志行（`photo ... skipped: no source item` / `nothing to add` / `photo name augmented: %1 -> %2` / `failed to rename saved photo`）。
 - GVH-838 人工修复：PowerShell 命令已交付——通配定位（#开头 + GVH-838 + .mp4）、stem/tags 程序化变换（剥 #-run、`-` 拆粘连、@handle 剥离）、NameLimit 动态预算 + 配对安全截断、`\\?\` 前缀 [System.IO.File]::Move、无中文字面量、ASCII 输出。
+
+## 46. R12 相册动作恢复照片 + 三路径命名取证（用户补充令）
+- 用户令（m00703）：①另存为/全部视频下载/指定文件夹全部下载三路径要修好自动重命名；②指定文件夹全部下载变成只下载视频。
+- 投拆②根因（deterministic）：commit 42d79820cd（v7.2.9-ayu.26）把 AddDownloadAlbumAction 拆成 videos-only（AlbumAll/AlbumAs 都只带 docs，照片走新增 ayu_DownloadAlbumPhotos）。用户反悔当时裁决 → 恢复：ayu_DownloadAlbumAs 重新携带 docs+photos 并移出 !docs.empty() 守卫（纯照片相册也有"保存全部到文件夹"入口），AlbumAll 维持仅视频（文案"Download all videos"如实），AlbumPhotos 与视频选择器不动；文案恢复 pre-.26 的 "Save all album files as..."。批量照片命名链本来就是好的（saveImages→AugmentedPhotoSavePath 写入时定名 + RecordPhotoSaveAttempt）——用户看到的"照片不重命名"实际是照片根本没被下载。
+- 投拆①取证（三路径命名链静态全通）：批量视频 = saveDocuments→FallbackDocumentName→AdjustDocumentSaveTarget（BuildCaptionedNameFor→BuildAugmentedName）→document->save(origin,target)（data_document.cpp:1281 已加载直接落盘 target + NotifyDocumentSaved，未加载 loader.setFileName）；另存为批量同理；overlay 另存为写盘后 RecordSaveAttempt→MaybeAugmentedSavePath post-save 改名。AugmentNameParts 已含同组 caption 回收（album captions sit on the first item），相册第 2..N 项不缺 parts。
+- 修的两处真洞：①overlay 另存为对话框默认名 = location.name()（缓存名）而非语法名（对比 data_file_click_handler.cpp:148 的 Q49 预填）→ 补 AugmentedDocumentName 预填，所有保存对话框统一开在语法名上；②MaybeAugmentedSavePath 的无来源消息分支是命名链唯一无日志 bail → 补 `augment %1 skipped: no source item`（与 BuildCaptionedNameFor 措辞一致），字段级失败从此全可归因。
+- 若实测三路径仍不改名：贴 sexcat 日志（save target augmented / augment ... skipped / photo ... skipped / photo name augmented）即可定位具体分支。

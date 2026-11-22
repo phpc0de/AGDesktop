@@ -552,6 +552,9 @@ void AddDownloadAlbumAction(
 	if (docs.empty() && photos.empty()) {
 		return;
 	}
+	// WHY: the folder save is the only album entry that carries photos
+	// and videos together; the videos-only split dropped mixed-album
+	// photos from it and was rescinded by the user.
 	if (!docs.empty()) {
 		AddAction(
 			menu,
@@ -561,15 +564,17 @@ void AddDownloadAlbumAction(
 			[] {},
 			tr::ayu_DownloadAlbumAll(tr::now),
 			&st::menuIconDownload);
-		AddAction(
-			menu,
-			window,
-			docs,
-			{},
-			[] {},
-			tr::ayu_DownloadAlbumAs(tr::now),
-			&st::menuIconDownload,
-			true);
+	}
+	AddAction(
+		menu,
+		window,
+		docs,
+		photos,
+		[] {},
+		tr::ayu_DownloadAlbumAs(tr::now),
+		&st::menuIconDownload,
+		true);
+	if (!docs.empty()) {
 		AddDownloadVideosSelector(menu, window, docs);
 	}
 	if (!photos.empty()) {
