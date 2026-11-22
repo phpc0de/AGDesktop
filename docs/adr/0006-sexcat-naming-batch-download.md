@@ -149,3 +149,11 @@ BuildLegacyRebuildName 从现名本身重建：剥开头 `#tag` 连串入尾部 
 （PowerShell + \\?\ 前缀 Move）；语法只在保存/下载时生效。窗口的 newSaved
 singleShot(0) 去抖保留：它与修复无关，是所有爆发 relink 的公共降噪。
 违反本条 → 重新引入一个无法收敛的自动改名系统。
+
+### Amendment 9 — 保存对话框与跳过原因必须可见（R12）
+overlay 的另存为对话框此前打开时是缓存名，用户在对话框里看到的不是语法名（点击处理器早已
+Q49 预填）。因此：(1) overlay 文档另存为用 AugmentedDocumentName 预填默认名——所有保存
+对话框统一开在语法名上；(2) 命名链不允许存在无日志的跳过分支——MaybeAugmentedSavePath 的
+无来源消息分支补日志，与 BuildCaptionedNameFor 的措辞对齐；字段级"没改名"必须能从日志
+归因到具体分支。违反 (1) → 用户以对话框默认名判定"命名失效"；违反 (2) → 三路径命名
+问题永远停在猜。

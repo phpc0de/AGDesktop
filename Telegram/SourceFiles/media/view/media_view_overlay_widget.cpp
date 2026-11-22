@@ -3317,6 +3317,14 @@ void OverlayWidget::saveAs() {
 			if (name.isEmpty()) {
 				name = pattern.isEmpty() ? u".unknown"_q : pattern.replace('*', QString());
 			}
+			// Q49: the overlay save dialog opens with the captioned name too.
+			if (_message) {
+				if (const auto augmented = SexCat::AugmentedDocumentName(
+					_document,
+					_message->fullId()); !augmented.isEmpty()) {
+					name = augmented;
+				}
+			}
 
 			if (pattern.isEmpty()) {
 				filter = QString();

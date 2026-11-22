@@ -857,6 +857,8 @@ constexpr auto kMaxWinPath = 260;
 		not_null<DocumentData*> document,
 		HistoryItem *item) {
 	if (!item || !item->isRegular()) {
+		LogFailure(u"augment %1 skipped: no source item"_q.arg(
+			QFileInfo(savedPath).fileName()));
 		return savedPath;
 	}
 	const auto info = QFileInfo(savedPath);
