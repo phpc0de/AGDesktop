@@ -141,3 +141,11 @@ BuildLegacyRebuildName 从现名本身重建：剥开头 `#tag` 连串入尾部 
 (3) missing 日志每 entry 每 app 会话只打一次，修复日志必须带目标名与来源分支
 （doc/legacy/wrap/clean），否则几千行排水日志无法归因。
 违反 (1) → 旧名永不修复；违反 (2) → missing 假报刷屏；违反 (3) → 不可诊断。
+
+### Amendment 8 — 下载历史修复通道整体撤销（R10，用户令）
+经 .37–.40 四轮修复仍无法在生产里可靠收敛（冻结→风暴→排水假死），用户下令删除
+`RepairUnaddressableEntries` 及全部配套（救援压制、NT 重命名兜底、旧名 stem 重建、
+分支日志）。决定：历史窗口只读——库内记录与盘上文件不再自动改名；旧名迁移回人工
+（PowerShell + \\?\ 前缀 Move）；语法只在保存/下载时生效。窗口的 newSaved
+singleShot(0) 去抖保留：它与修复无关，是所有爆发 relink 的公共降噪。
+违反本条 → 重新引入一个无法收敛的自动改名系统。

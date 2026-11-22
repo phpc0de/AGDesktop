@@ -589,3 +589,23 @@
 - **R9 实施（用户"开工"授权）**：①`BuildLegacyRebuildName`（sexcat_save_hook.cpp:850）stem-only 旧名重建——剥开头 `#tag` 连串（≤kMaxSowTagLength）进尾部 tags 段、其余整体作 stem（无 blob）、>8 溢出段连同 `#` 原样拼回 stem 尾（永不回头部 → 不再 `#` 开头），形状幂等；②候选链带分支标签 `repair: <old> -> <new> (doc|legacy|wrap|clean)`——doc=活 item 服务端名、legacy=stem-only 重建、wrap=带 parts 重包、clean=broken 清理名（用户点名要可诊断性）；③`SavePathExists`（:1634）——`QFileInfo::exists` 失败后走 `\\?\` NT 命名空间 stat：不可寻址路径（>259/孤立代理对）此前被误报 missing，最该修的文件恰恰修不到（用户实测更正）；missing 日志改每 entry 会话内只打一次（`MissingLogged` set，:1629）；stem 截断用 `LeftAtCodePoint` 防劈代理对。
 - **仿真验证**（out/sim/r9_sim.py，UTF-16 单元模型）：S1 283u 不可寻址 # 旧名真实存在——.39 语义 missing 死循环 0 改名，新语义首轮 legacy 分支修好、二轮稳定；S2 寻址 # 旧名——.39 永停 `#`-first，新语义产出语法名；S3 doc-recovery 回归 ✓；S4 全 `#` token stem 落 `(3) - #tags` 合法稳定；S5 >8 tags 溢出拼回尾部保 `#`；S8 partN 守卫 + 重喂幂等 ✓。
 - 发布 v7.2.9-ayu.40。
+
+## 43. R10 删除下载历史修复补丁（用户令）
+- **用户三问（.40 实测）**：Q1 剩一个 `#AI解码 … -GVH-838 …` 旧文件没修，点名要 PowerShell 命令手修；Q2 "删除命名修正补丁"；Q3 "你改了什么东西，现在自动重命名全部失效"。
+- **取证（git diff 9e9e40d3b5..HEAD，.36 发布点至今）**：保存链路（MaybeAugmentedSavePath/BuildAugmentedName/AdjustDocumentSaveTarget/UniqueAugmentedTarget）零行为改动——只有 Qt5 兼容写法（`out.at(size()-1)` 替 `back()`）、photo 日志行（`contextId.msg.bare`）、DB 写方法摘 `[[nodiscard]]` 三类。下载时自动命名不可能被 .37–.40 弄坏。
+- **"全部失效"解释**：repair 只遍历 `Recent(kRecentLimit=2000)`；积压排水后每次打开 0 改名 = 看似全死。剩下未修文件（Q1）属不可寻址类（>259 路径），.39 语义把它当 missing 永久跳过——修它的 NT 通道在 .40，若跑的还是 .39（或 .40 构建未更新）则永远不动。
+- **Q2 执行（commit "Remove the download history repair pass"）**：删 `RepairUnaddressableEntries` 整函数 + `BuildLegacyRebuildName`/`ExtendedPathForm`/`RenameSavePath`/`MissingLogged`/`SavePathExists`/`ShellRescueSuppressed`/`RepairActive`/`RepairQuietUntil`/`kRepairRescueGrace` + 头文件两个 decl + shell_watch 两处 bail + include；窗口删 repair 调用、`_repairPass` 守卫/成员、repaired toast；**保留** newSaved singleShot(0) 去抖（对真实用户爆发 relink 仍有益）与 RelocateMissingEntries 救援。save_hook.cpp 同步摘 `<atomic>`、qt_windows.h、main_account/main_domain（repair 专属）；QDir/<set> 留（保存链路在用）。历史窗口从此零改名；旧名迁移转人工（Q1 PS 命令）。
+
+## 44. R11 .40"全失效"裁决 + 图片链路取证（grill）
+- **陈旧工件论排除**：GitHub Actions .40 run success（2026-11-21T07:03:44Z），head_sha c5124bde7396 = 本地 tag v7.2.9-ayu.40 提交，父链含 R9（38abfecb32）→ .40 exe 必含 R9 修复代码。.39→.40 diff = 严格超集（legacy 分支纯加法、NT-stat 门只扩覆盖）→ **代码上 .40 不可能比 .39 少改名**。
+- **主嫌疑：2000 条帽**：窗口 reload 用 `Recent(kRecentLimit=2000)`（sexcat_history_window.cpp:64,425-426），Database::Recent = `order_by(SavedFileRow.id).desc() + limit(2000)`（sexcat_database.cpp:533,:35-36）→ **repair 只见最新 2000 条记录**，更老记录任何版本都进不了修复循环。解释一切：.39"好"=积压排水轮（窗口内改名可见）；.40"死"=排水完成后窗口内已干净、剩余旧名全在帽外 → 0 改名；Q1 的 GVH-838（最老记录）帽外永不修。
+- **日志判据**：repair 日志 sink = `Ayu::Log::Write(u"sexcat"_q)`（sexcat_save_hook.cpp:78、sexcat_shell_watch.cpp:44）。.40 判别式：日志行 `repair: <old> -> <new> (doc|legacy|wrap|clean)` = R9 在跑；`repair failed:` = rename 失败（NT 兜底也没过）；`repair skipped, missing:` = NT stat 仍判不存在。
+- **图片链路（"以前可以的"取证）**：save-hook 图片保存路径自 .35 零逻辑改动（只加过日志行）。.35 的 BuildAugmentedName 有 `parts.code`（RefineDescription 取【番号】括号字段 + `[A-Z]{2,6}-\d{2,4}` 正则、CodeFromOriginal 取文件名）——R1 语法重做删掉 code 字段；但带简介/标签文字的图片现版仍会 wrap 改名（title/tags 非空）。图片保存全路径有日志：`photo %1 skipped: no source item`（无来源消息）/ `nothing to add`（parts 空）/ `photo name augmented: %1 -> %2`（成功）/ `failed to rename saved photo`。裁决需用户贴 photo 行。
+- **Q2 删除令状态**：工作树未提交（-325 行，4 文件）。新事实（.39 修复好用、.40 严格超集、帽嫌疑）与"补丁坏了"认知冲突 → 删除是否仍执行待用户重新裁决。
+
+## 45. R11 用户三答 + 删除令执行（R10 定案）
+- 用户三答：①记录数 <2000 → 2000 帽论死；②"以前可以的"图片 = 带简介+标签的（按代码应改名，未裁决，需 photo 日志行）；③删除令确认执行（照删）。
+- 删除已落地（本 commit）：repair 全套 -327 行（RepairUnaddressableEntries/BuildLegacyRebuildName/SavePathExists/MissingLogged/ExtendedPathForm/RenameSavePath/ShellRescueSuppressed/RepairActive/RepairQuietUntil/kRepairRescueGrace + 窗口守卫与调用 + shell_watch 两处 bail）；保留 newSaved singleShot(0) 去抖、RelocateMissingEntries、shell watch 主体。
+- 帽论死后 .40"全失效"剩余解释（随删除令作废，不再追）：DB saved_path ≠ 盘上实际路径（missing 一次化后静默跳过）/ rename 失败（repair failed: 行）/ 实跑 exe 非 .40。旧名迁移回人工（Amendment 8）。
+- 图片命名 bug 未裁决：保存链路自 .35 零逻辑改动；需用户贴保存一张带简介+标签图片后的 photo 日志行（`photo ... skipped: no source item` / `nothing to add` / `photo name augmented: %1 -> %2` / `failed to rename saved photo`）。
+- GVH-838 人工修复：PowerShell 命令已交付——通配定位（#开头 + GVH-838 + .mp4）、stem/tags 程序化变换（剥 #-run、`-` 拆粘连、@handle 剥离）、NameLimit 动态预算 + 配对安全截断、`\\?\` 前缀 [System.IO.File]::Move、无中文字面量、ASCII 输出。
