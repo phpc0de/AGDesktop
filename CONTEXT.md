@@ -616,3 +616,4 @@
 - 投拆①取证（三路径命名链静态全通）：批量视频 = saveDocuments→FallbackDocumentName→AdjustDocumentSaveTarget（BuildCaptionedNameFor→BuildAugmentedName）→document->save(origin,target)（data_document.cpp:1281 已加载直接落盘 target + NotifyDocumentSaved，未加载 loader.setFileName）；另存为批量同理；overlay 另存为写盘后 RecordSaveAttempt→MaybeAugmentedSavePath post-save 改名。AugmentNameParts 已含同组 caption 回收（album captions sit on the first item），相册第 2..N 项不缺 parts。
 - 修的两处真洞：①overlay 另存为对话框默认名 = location.name()（缓存名）而非语法名（对比 data_file_click_handler.cpp:148 的 Q49 预填）→ 补 AugmentedDocumentName 预填，所有保存对话框统一开在语法名上；②MaybeAugmentedSavePath 的无来源消息分支是命名链唯一无日志 bail → 补 `augment %1 skipped: no source item`（与 BuildCaptionedNameFor 措辞一致），字段级失败从此全可归因。
 - 若实测三路径仍不改名：贴 sexcat 日志（save target augmented / augment ... skipped / photo ... skipped / photo name augmented）即可定位具体分支。
+- 发布 v7.2.9-ayu.41。
