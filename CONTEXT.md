@@ -623,3 +623,4 @@
 - 结构性根因：照片另存为是唯一全靠 post-save rename 的流程——右键菜单 SavePhotoToFile 与 overlay 两处（照片/圆视频）的对话框默认名仍是 filedialogDefaultName("photo", ...)；文档三路径已由 Q49/Amendment 9 预填（字段验证有效）。post-save rename 的 field 失败不再重要：写盘时名字就是语法名。
 - 实施：新导出 SexCat::AugmentedPhotoSaveAsName(photo, contextId, baseName)（save_hook.cpp，Enabled()/item 有效/BuildAugmentedName(baseName, AugmentNameParts(item), kMaxDialogTitleNameLength=120, true)，候选空回 baseName）；三处对话框默认名包上它（history_view_context_menu.cpp SavePhotoToFile、media_view_overlay_widget.cpp 照片与照片视频分支）。RecordPhotoSaveAttempt 原样保留：预填后候选幂等为空→"photo ... skipped: nothing to add" 属预期，DB 记录走 ResolveHashAndPersist。
 - 验证：四文件括号 lexer 全 depth=0 BALANCED；git diff --check OK。
+- 发布 v7.2.9-ayu.42。
