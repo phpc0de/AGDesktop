@@ -1288,6 +1288,28 @@ QString AugmentedDocumentName(
 		kMaxDialogTitleNameLength);
 }
 
+// Q49: photo save dialogs prefill the captioned name like documents do.
+QString AugmentedPhotoSaveAsName(
+		not_null<PhotoData*> photo,
+		FullMsgId contextId,
+		const QString &baseName) {
+	if (!Enabled()) {
+		return baseName;
+	}
+	const auto item = contextId
+		? photo->owner().message(contextId)
+		: nullptr;
+	if (!item || !item->isRegular()) {
+		return baseName;
+	}
+	const auto candidate = BuildAugmentedName(
+		baseName,
+		AugmentNameParts(item),
+		kMaxDialogTitleNameLength,
+		true);
+	return candidate.isEmpty() ? baseName : candidate;
+}
+
 QString AdjustDocumentSaveTarget(
 		const QString &targetPath,
 		not_null<DocumentData*> document,

@@ -87,6 +87,12 @@ void EnsureDownloadListener();
 	not_null<DocumentData*> document,
 	FullMsgId contextId = {});
 
+// Q49: the save dialog default name, captioned like documents are.
+[[nodiscard]] QString AugmentedPhotoSaveAsName(
+	not_null<PhotoData*> photo,
+	FullMsgId contextId,
+	const QString &baseName);
+
 // Q49: pre-write save target fix. A quick-saved document gets a
 // captioned name before the loader opens the file, so no post-save
 // rename is needed. Returns targetPath unchanged when the naming rules

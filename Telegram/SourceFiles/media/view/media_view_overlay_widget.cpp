@@ -3386,12 +3386,15 @@ void OverlayWidget::saveAs() {
 				_window.get(),
 				tr::lng_save_video(tr::now),
 				filter,
-				filedialogDefaultName(
-					u"photo"_q,
-					u".mp4"_q,
-					QString(),
-					false,
-					_photo->date()),
+				SexCat::AugmentedPhotoSaveAsName(
+					photo,
+					_message ? _message->fullId() : FullMsgId(),
+					filedialogDefaultName(
+						u"photo"_q,
+						u".mp4"_q,
+						QString(),
+						false,
+						_photo->date())),
 				crl::guard(_window, [=](const QString &result) {
 					QFile f(result);
 					if (!result.isEmpty()
@@ -3421,12 +3424,15 @@ void OverlayWidget::saveAs() {
 			_window.get(),
 			tr::lng_save_photo(tr::now),
 			filter,
-			filedialogDefaultName(
-				u"photo"_q,
-				u".jpg"_q,
-				QString(),
-				false,
-				_photo->date()),
+			SexCat::AugmentedPhotoSaveAsName(
+				photo,
+				_message ? _message->fullId() : FullMsgId(),
+				filedialogDefaultName(
+					u"photo"_q,
+					u".jpg"_q,
+					QString(),
+					false,
+					_photo->date())),
 			crl::guard(_window, [=](const QString &result) {
 				if (!result.isEmpty() && _photo == photo) {
 					if (media->saveToFile(result)) {

@@ -617,3 +617,9 @@
 - 修的两处真洞：①overlay 另存为对话框默认名 = location.name()（缓存名）而非语法名（对比 data_file_click_handler.cpp:148 的 Q49 预填）→ 补 AugmentedDocumentName 预填，所有保存对话框统一开在语法名上；②MaybeAugmentedSavePath 的无来源消息分支是命名链唯一无日志 bail → 补 `augment %1 skipped: no source item`（与 BuildCaptionedNameFor 措辞一致），字段级失败从此全可归因。
 - 若实测三路径仍不改名：贴 sexcat 日志（save target augmented / augment ... skipped / photo ... skipped / photo name augmented）即可定位具体分支。
 - 发布 v7.2.9-ayu.41。
+
+## 47. R13 照片另存为对话框预填语法名（m00814 追杀令）
+- 用户（m00814）：另存为的图片还是没有重命名，其他 2 个路径都正常了；"我能看见名字"=对话框默认名还是 photo_日期.jpg，拒绝下载改名不对的文件；日志没照片行=笑话。
+- 结构性根因：照片另存为是唯一全靠 post-save rename 的流程——右键菜单 SavePhotoToFile 与 overlay 两处（照片/圆视频）的对话框默认名仍是 filedialogDefaultName("photo", ...)；文档三路径已由 Q49/Amendment 9 预填（字段验证有效）。post-save rename 的 field 失败不再重要：写盘时名字就是语法名。
+- 实施：新导出 SexCat::AugmentedPhotoSaveAsName(photo, contextId, baseName)（save_hook.cpp，Enabled()/item 有效/BuildAugmentedName(baseName, AugmentNameParts(item), kMaxDialogTitleNameLength=120, true)，候选空回 baseName）；三处对话框默认名包上它（history_view_context_menu.cpp SavePhotoToFile、media_view_overlay_widget.cpp 照片与照片视频分支）。RecordPhotoSaveAttempt 原样保留：预填后候选幂等为空→"photo ... skipped: nothing to add" 属预期，DB 记录走 ResolveHashAndPersist。
+- 验证：四文件括号 lexer 全 depth=0 BALANCED；git diff --check OK。

@@ -341,7 +341,10 @@ void SavePhotoToFile(not_null<PhotoData*> photo, FullMsgId contextId) {
 		Core::App().getFileDialogParent(),
 		tr::lng_save_photo(tr::now),
 		u"JPEG Image (*.jpg);;"_q + FileDialog::AllFilesFilter(),
-		filedialogDefaultName(u"photo"_q, u".jpg"_q),
+		SexCat::AugmentedPhotoSaveAsName(
+			photo,
+			contextId,
+			filedialogDefaultName(u"photo"_q, u".jpg"_q)),
 		crl::guard(&photo->session(), [=](const QString &result) {
 			if (!result.isEmpty() && media->saveToFile(result)) {
 				SexCat::RecordPhotoSaveAttempt(result, photo, contextId);
