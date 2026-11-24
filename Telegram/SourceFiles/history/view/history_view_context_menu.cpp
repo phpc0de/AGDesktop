@@ -335,6 +335,8 @@ void SavePhotoToFile(not_null<PhotoData*> photo, FullMsgId contextId) {
 	if (photo->isNull() || !media || !media->loaded()) {
 		return;
 	}
+	// Q50: prove which entry fired and with what context.
+	SexCat::ReportSaveEntry(u"chat menu photo"_q, contextId);
 
 	const auto image = media->image(Data::PhotoSize::Large)->original(); // clazy:exclude=unused-non-trivial-variable
 	FileDialog::GetWritePath(

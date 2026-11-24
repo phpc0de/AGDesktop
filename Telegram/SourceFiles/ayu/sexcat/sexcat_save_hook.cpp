@@ -972,6 +972,25 @@ void HandleLoadedDownload(not_null<const Data::DownloadedId*> id) {
 
 } // namespace
 
+// Q50: save-as entry breadcrumb. Every dialog entry reports itself once
+// with the context message and the hook state, so a silent failure is
+// always visible in the log and on screen.
+void ReportSaveEntry(const QString &where, FullMsgId contextId) {
+	const auto ctx = contextId
+		? u"msg%1"_q.arg(QString::number(contextId.msg.bare))
+		: u"none"_q;
+	const auto enabled = Enabled();
+	LogFailure(u"save entry: %1 ctx=%2 enabled=%3"_q.arg(
+		where,
+		ctx,
+		enabled ? u"1"_q : u"0"_q));
+	ShowToastText(
+		u"sexcat %1 (%2%3)"_q.arg(
+			where,
+			ctx,
+			enabled ? QString() : u", hook off"_q));
+}
+
 bool ShouldSkipDuplicateDownload(
 		not_null<DocumentData*> document,
 		const QString &toFile) {
@@ -1294,12 +1313,16 @@ QString AugmentedPhotoSaveAsName(
 		FullMsgId contextId,
 		const QString &baseName) {
 	if (!Enabled()) {
+		LogFailure(u"photo %1 skipped: disabled"_q.arg(baseName));
 		return baseName;
 	}
 	const auto item = contextId
 		? photo->owner().message(contextId)
 		: nullptr;
 	if (!item || !item->isRegular()) {
+		LogFailure(u"photo %1 skipped: no source item (ctx %2)"_q.arg(
+			baseName,
+			QString::number(contextId.msg.bare)));
 		return baseName;
 	}
 	const auto candidate = BuildAugmentedName(
@@ -1307,6 +1330,9 @@ QString AugmentedPhotoSaveAsName(
 		AugmentNameParts(item),
 		kMaxDialogTitleNameLength,
 		true);
+	if (candidate.isEmpty()) {
+		LogFailure(u"photo %1 skipped: nothing to add"_q.arg(baseName));
+	}
 	return candidate.isEmpty() ? baseName : candidate;
 }
 

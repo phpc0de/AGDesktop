@@ -3303,6 +3303,10 @@ void OverlayWidget::saveAs() {
 		showPremiumDownloadPromo();
 		return;
 	}
+	// Q50: prove which entry fired and with what context.
+	SexCat::ReportSaveEntry(
+		u"overlay"_q,
+		_message ? _message->fullId() : FullMsgId());
 	QString file;
 	if (_document) {
 		const auto &location = _document->location(true);

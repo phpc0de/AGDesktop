@@ -93,6 +93,10 @@ void EnsureDownloadListener();
 	FullMsgId contextId,
 	const QString &baseName);
 
+// Q50: save-as entry breadcrumb — one log line plus a short toast
+// naming the entry point, the context message and the hook state.
+void ReportSaveEntry(const QString &where, FullMsgId contextId);
+
 // Q49: pre-write save target fix. A quick-saved document gets a
 // captioned name before the loader opens the file, so no post-save
 // rename is needed. Returns targetPath unchanged when the naming rules

@@ -624,3 +624,31 @@
 - 实施：新导出 SexCat::AugmentedPhotoSaveAsName(photo, contextId, baseName)（save_hook.cpp，Enabled()/item 有效/BuildAugmentedName(baseName, AugmentNameParts(item), kMaxDialogTitleNameLength=120, true)，候选空回 baseName）；三处对话框默认名包上它（history_view_context_menu.cpp SavePhotoToFile、media_view_overlay_widget.cpp 照片与照片视频分支）。RecordPhotoSaveAttempt 原样保留：预填后候选幂等为空→"photo ... skipped: nothing to add" 属预期，DB 记录走 ResolveHashAndPersist。
 - 验证：四文件括号 lexer 全 depth=0 BALANCED；git diff --check OK。
 - 发布 v7.2.9-ayu.42。
+
+## 48. R14 "tag在最后"假设否证 + 另存为四入口接线全图 + 日志静默真相（grill）
+- 用户（新代 m00001）：.42 后照片另存为仍不重命名（"任何消息都一样不行"，看见错名就取消不下载）、视频另存为同样服务器原始名；怀疑"标签：行在 caption 末尾"导致解析失败；日志=笑话。
+- 假设否证（静态）：SplitHashtags（sexcat_save_hook.cpp:230-265）全文扫描（Hashtag 实体优先 + Unicode 兜底 `#([^\s#]{1,64})`），与 tag 位置无关；NameBlobFrom(:283) junk 规则 `(标签|標簽|標籤)[:：]\s*(#[^\s#]+\s*)*` 剔除标签行（ wherever）；§39 已用本样例静态仿真产出合法 108u 名（≤120 预算）。R6 之后解析器零改动 → 本样例在 HEAD 必产出语法名。tag 位置不是根因。
+- 四入口接线复核（HEAD 全通）：①聊天右键照片 AddPhotoActions:381 `contextId=item?item->fullId():FullMsgId()`→SavePhotoToFile:388→AugmentedPhotoSaveAsName:344（call site:1915 传 request.item，正常消息非空）；②聊天右键视频 AddSaveDocumentAction→DocumentSaveClickHandler::SaveAndTrack(history_view_save_document_action.cpp:41-52)→Save(data_file_click_handler.cpp:171)——data_file_origin.h:15 `using FileOriginMessage=FullMsgId` ⇒ :104 v::is 命中，contextId 提取成功→预填 :135-141；③overlay 照片/圆视频 :3427/:3389 `_message?_message->fullId():FullMsgId()`；④ayu 消息历史 saveDocumentToFile:1393 `Data::FileOrigin(contextId)` 同型命中（其 savePhotoToFile:1367 未包 AugmentedPhotoSaveAsName——非用户路径，记录待办）。
+- 日志真相表：照片另存为 AugmentedPhotoSaveAsName 三 bail（!Enabled/无 item/候选空）全静默 ⇒ 取消的照片另存为日志零行（"笑话"=R13 设计缺口，非读法错误）；视频另存为必留 ≥1 行：`save: mode=2 explicit=true local=…`（data_file_click_handler.cpp:110-113 无条件）+ `save name augmented` 或 `augment <名> skipped: disabled|no source item|nothing to add`（BuildCaptionedNameFor:903-911）。
+- 新发现：日志 sink = 相对路径 `./tdata/logs/ayu-YYYYMMDD.log`（ayu_log.cpp:14-16）——依赖进程 CWD；快捷方式"起始位置"≠exe 目录时日志落到别处。Enabled 默认 true（ayu_settings.h:678 `_sexcatEnabled = true`，JSON 缺省亦 true），仅显式关闸才 false——而 false 会同时打死批量视频下载（用户 .41 后报好）⇒ Enabled=false 概率低。
+- 判决矩阵（一次视频另存为+取消+读日志 `<安装目录>\tdata\logs\ayu-当日.log`）：无 save: 行⇒日志路径（CWD）/构建/入口错；`save:` + `skipped:<理由>`⇒理由即答案；`save:` + `augmented` 但对话框仍原名⇒预填算出但对话框未用 already（查 DocumentFileNameForSave）。
+- 照片路径判别（无日志可用）：exe 版本号（预填仅 .42 起存在）+ 对话框默认名形状（`photo.jpg` 无日期=右键菜单入口 / `photo 2026-11-23 …jpg` 带日期=overlay 入口）+ 相册第 2+ 项与否（groups().find 失败→parts 全空→静默 bail）。
+- 待用户三答：①About 版本号；②视频另存为后日志行；③照片默认名形状/相册位置 → 定 R15 修复面（候选：AugmentedPhotoSaveAsName 三 bail 补日志；ayu savePhotoToFile 补预填）。
+
+## 49. R15 零日志判决 + 版本号脱钩发现 + 入口自证方案（grill）
+- 用户证词（m00100）：.42 确认；日志只有 restrict 行；照片另存为=photo+日期；视频=服务器原始名；"代码就是没有生效"。
+- restrict 行真相：data_session.cpp:812/:1123——peer/channel 解析带 restriction_reason 时 Ayu::Log（"peer=%1 platform:reason:text"）。日志文件活、sink 正常 ⇒ 日志路径/CWD 论死，用户读的就是真日志。
+- filedialogDefaultName（core/file_utilities.cpp:61-102）永远带日期（fileTime>0→photo 日期；==0→当前时间兜底）⇒ "photo+日期"无法判别入口；R14 的"photo.jpg 无日期=右键菜单"判别式作废（依据错误，收回）。
+- 零日志判决表（.42 源）：视频任何对话框路径必有 ≥1 行 sexcat——DocumentSaveClickHandler::Save :110-113 无条件 `save:` 行（含外部 ToFile、快捷保存）；overlay doc path B :3372→同上；聊天菜单→同上；overlay doc path A :3321 bail 记 skipped、success 则对话框开在语法名。⇒ 服务器原始名视频对话框+零 sexcat 行在 .42 源上唯一可能 = overlay saveAs path A 且 _message==nullptr。
+- overlay 开链复核（item 必达）：history_inner_widget.cpp:5335 → window_session_controller.cpp:3415 openPhoto（item 存在）→ :3429 OpenRequest（media_view_open_common.h:29-42 _item 原样存）→ window_controller.cpp:635 原样 fire → overlay show:4568/:4573 → setContext:7799-7803 ItemContext → _message=item；clearBeforeHide（:8886-8889，仅 hide():4528 与 :5897 调）不会在查看中清。⇒ _message null 无静态机制 ⇒ 剩余自洽世界 = 交付二进制未含 hook 提交。
+- 版本号脱钩发现：release-win-amd64.yml:247-269 版本号来自 GitHub Release **tag 名**，经 set_version.py 注入（"非 x.y.z 形式则保持仓库默认"）；release commit 84f8457686 只动 CONTEXT.md+release notes，version.h:26 恒为 "7.2.9" ⇒ 屏显 "42" 不证明源内容含 hook ⇒ "二进制旧"世界无法从本仓排除。
+- OptionExternalMediaViewer（"external-media-viewer"，window_session_controller.cpp:143-147，默认关、全仓无代码强制开；开启时照片点击=FileNameForSave "photo"+当前日期时间（:3396-3402，无 hook 无日志，然后系统查看器打开），视频点击=Save(ToFile)/File::Launch（:3462-3478））——openPhotoExternal 的照片对话框是全仓唯一无预填无日志的照片保存对话框；openPhotoExternal 签名已带 item（:3382-3385），openPhoto:3426 传入即可用。
+- R16 修复面（待用户开工令）：①入口 breadcrumb+toast：overlay saveAs 入口、setContext ItemContext、openPhotoExternal、openDocument-external 各 1 行 `sexcat entry: …`（含 _message/item/contextId/Enabled/external.value），照片入口 toast 直接显示路径名——用户保存一次即自证路径，不再猜；②openPhotoExternal 照片对话框默认名包 AugmentedPhotoSaveAsName(item->fullId())；③ayu history savePhotoToFile 补预填（遗留待办）。
+
+## 50. R16 另存为入口自证 + 照片 bail 全量日志 + 两个残余无预填入口补齐（.43）
+- 用户令（m00251）：两个 BUG——①图片另存为永远 photo+日期；②部分消息另存为视频无法重命名（EP1-5合集样例）；"静态分析一堆废话，修"。
+- 静态收尾：Groups::find（data_groups.cpp:136-149）单项组不返回、真相册 items 2..N 全命中 ⇒ 相册 caption 回收结构健全，"EP合集=相册丢caption"假说静态上不成立；.42 源上四入口全部应产出语法名 ⇒ 静态已到头，改用运行时自证（R16 方案落地）。
+- 实施（Q50 入口自证）：新导出 SexCat::ReportSaveEntry(where, contextId)（sexcat_save_hook.cpp:975-992，匿名 namespace 之外、Enabled() 同 TU 内取）——一行日志 `save entry: <where> ctx=msg<N>|none enabled=0|1` + toast `sexcat <where> (msg<N>)[, hook off]`；接线 5 处：overlay saveAs（media_view_overlay_widget.cpp:3306-3310）、聊天右键照片（history_view_context_menu.cpp:338-339）、openPhotoExternal 存盘路径（window_session_controller.cpp:3397-3401，File::Launch 命中不响）、openDocument-external 空 filepath 分支（:3475-3479）、ayu 消息历史照片（history_inner.cpp:1374-1375）。toast = 二进制新鲜度证明：.43 前的构建不可能弹。
+- BUG1 修复面：①AugmentedPhotoSaveAsName 三 bail 全部补日志（`photo %1 skipped: disabled|no source item (ctx N)|nothing to add`，sexcat_save_hook.cpp:1315-1336）——照片另存为零行盲区闭合，理由即答案；②openPhotoExternal 照片存盘默认名包 AugmentedPhotoSaveAsName（:3402-3416，全仓最后一个无预填照片存盘口；OptionExternalMediaViewer 开启时点击照片即存盘，此前永远 photo+当前日期）；③ayu 消息历史 savePhotoToFile 补预填（history_inner.cpp:1380-1384，R14 遗留待办闭合）。
+- 验证：6 文件括号 lexer 全 BALANCED；git diff --check OK。
+- 测试协议（用户侧，一次另存为即可自证）：任一照片/视频→另存为→立即应弹 toast（入口名+msg id）；对话框默认名仍 photo+日期/原名时，日志必有 `save entry:` 行 + `photo ... skipped: <理由>` 或 `augment ... skipped: <理由>`——理由行即根因；连 toast 都没有 ⇒ 该入口未走到或二进制仍旧（toast 即判别器）。

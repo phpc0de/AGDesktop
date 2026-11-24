@@ -1371,13 +1371,18 @@ void InnerWidget::savePhotoToFile(
 	if (photo->isNull() || !media || !media->loaded()) {
 		return;
 	}
+	// Q50: prove which entry fired and with what context.
+	SexCat::ReportSaveEntry(u"ayu history photo"_q, contextId);
 
 	auto filter = u"JPEG Image (*.jpg);;"_q + FileDialog::AllFilesFilter();
 	FileDialog::GetWritePath(
 		this,
 		tr::lng_save_photo(tr::now),
 		filter,
-		filedialogDefaultName(u"photo"_q, u".jpg"_q),
+		SexCat::AugmentedPhotoSaveAsName(
+			photo,
+			contextId,
+			filedialogDefaultName(u"photo"_q, u".jpg"_q)),
 		crl::guard(this,
 				   [=](const QString &result)
 				   {

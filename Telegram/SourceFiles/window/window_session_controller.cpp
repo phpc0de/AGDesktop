@@ -132,6 +132,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "ayu/ayu_settings.h"
+#include "ayu/sexcat/sexcat_save_hook.h"
 
 
 namespace Window {
@@ -3393,13 +3394,20 @@ bool SessionController::openPhotoExternal(
 		File::Launch(existing);
 		return true;
 	}
-	const auto filepath = FileNameForSave(
-		&session(),
-		tr::lng_save_photo(tr::now),
-		u"JPEG Image (*.jpg);;"_q + FileDialog::AllFilesFilter(),
-		u"photo"_q,
-		u".jpg"_q,
-		false);
+	// Q50: prove which entry fired and with what context.
+	SexCat::ReportSaveEntry(
+		u"external photo open"_q,
+		item ? item->fullId() : FullMsgId());
+	const auto filepath = SexCat::AugmentedPhotoSaveAsName(
+		photo,
+		item ? item->fullId() : FullMsgId(),
+		FileNameForSave(
+			&session(),
+			tr::lng_save_photo(tr::now),
+			u"JPEG Image (*.jpg);;"_q + FileDialog::AllFilesFilter(),
+			u"photo"_q,
+			u".jpg"_q,
+			false));
 	if (media->loaded()) {
 		if (media->saveToFile(filepath)) {
 			photo->setLocation(Core::FileLocation(filepath));
@@ -3464,6 +3472,10 @@ void SessionController::openDocument(
 			&& !HasSavingRestriction(item)) {
 			const auto filepath = document->filepath();
 			if (filepath.isEmpty()) {
+				// Q50: prove which entry fired and with what context.
+				SexCat::ReportSaveEntry(
+					u"external document open"_q,
+					message.id);
 				if (document->loadedInMediaCache()) {
 					_pendingOpenDocumentId = document->id;
 				}
