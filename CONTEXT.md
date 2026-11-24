@@ -652,3 +652,4 @@
 - BUG1 修复面：①AugmentedPhotoSaveAsName 三 bail 全部补日志（`photo %1 skipped: disabled|no source item (ctx N)|nothing to add`，sexcat_save_hook.cpp:1315-1336）——照片另存为零行盲区闭合，理由即答案；②openPhotoExternal 照片存盘默认名包 AugmentedPhotoSaveAsName（:3402-3416，全仓最后一个无预填照片存盘口；OptionExternalMediaViewer 开启时点击照片即存盘，此前永远 photo+当前日期）；③ayu 消息历史 savePhotoToFile 补预填（history_inner.cpp:1380-1384，R14 遗留待办闭合）。
 - 验证：6 文件括号 lexer 全 BALANCED；git diff --check OK。
 - 测试协议（用户侧，一次另存为即可自证）：任一照片/视频→另存为→立即应弹 toast（入口名+msg id）；对话框默认名仍 photo+日期/原名时，日志必有 `save entry:` 行 + `photo ... skipped: <理由>` 或 `augment ... skipped: <理由>`——理由行即根因；连 toast 都没有 ⇒ 该入口未走到或二进制仍旧（toast 即判别器）。
+- 发布 v7.2.9-ayu.43。
