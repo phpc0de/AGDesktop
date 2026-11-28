@@ -673,3 +673,10 @@
 - 挂账 carry-forward：①.43 实测待用户装包（§50 自证协议，toast=二进制判别器）；②未读回魂 A/B 待裁决（§51 回执：A=取消勾选 Don't Read Messages 零代码；B=本地未读影子层，进 .45 需用户令）。
 - 发布 v7.2.9-ayu.44。
 - 网络（m00562/m00563）：git push 直连 DNS 解析失败（"Could not resolve ..."）；用户供 SOCKS5 代理（vault token [R:40fca62e]:10808，m00563 为准，m00562 作废），`git -c http.proxy=socks5h://<host>:10808 -c https.proxy=socks5h://<host>:10808 push` 成功（dev 142d913f86..2cce37b526 + tag v7.2.9-ayu.44）。以后 push 失败先走该代理。
+
+## 53. R18 grill 立项：Q1 source标签拉黑+聊天折叠 / Q3 批量下载历史行消失 / Q5 置顶本地化；Q2 关闭
+- 用户裁决（m00578）：未读回魂（§51）**不改了**——维持隐身设计行为，A/B 决策作废，open objective 关闭。
+- Q1（新需求）：source 标签（如 #抖音 = sexcat source tags，TagSummaries）可拉黑；source 页加按钮进拉黑列表；聊天中 caption 含被拉黑标签的消息自动折叠图片/视频。静态基础：标签库在 sexcat_database（RecordTag/TagSummaries/RenameTag/DeleteTag/ReplaceSourceTags），无黑名单表；source 页 = ayu/ui/lists_window.cpp "Sow list" 窗口（QTreeWidget，标签上下文菜单已有 Rename/Delete :473-490，页面即加按钮的落点）；聊天侧无现成折叠/隐藏媒体机制（ayu 只有 spoiler 相关代码），落点 = history_view 媒体渲染 hook，caption 匹配黑名单 tag。待裁决：折叠形态（spoiler 模糊/折叠占位条/直接隐藏）、命中范围。
+- Q3（bug）：批量下载（menu_item_download_files.cpp:355 "{count} videos selected" → 指定文件夹全部下载）历史行消失：下载中灰色 = DB pending 行（RecordPendingPosition，sexcat_save_hook.cpp:1014），完成后灰色消失。静态三候选机制（全有 LogFailure 日志行可自证）：①重下已入库内容 → FinishHashedRecord/DedupeOrRecordHashed live 命中 → DropUnhashedRecord + "duplicate content, record skipped"（重下同一文件夹必全灭）；②旧记录文件丢失 → Relink 旧行到新文件 + drop pending + "duplicate content relinked to new copy"；③竞态：data_document.cpp:1108 finishLoad finally → destroyLoader:1126 → ForgetDoctrineSaveAs:1191 先 DropPendingPosition，异步 NotifyDocumentSaved 后至 ConsumePendingPosition 扑空 → PersistRecord 兜底（应留行）。修复方向（待裁决）：dedup 不再静默删行 → 保留行并标 duplicate，下载历史=完整流水。
+- Q5（新需求）：本地保存置顶频道，绕过服务器强制恢复。静态：服务器 sync 每次覆盖本地 pin（data_session.cpp:2835 setPinnedFromEntryList、applyPinnedChats :2848），本地 setChatPinned :2823 只改内存列表不落盘。方案类比未读影子层：本地 pin 快照（ayu.json 或 sexcat 风格 SQLite）+ dialogs sync 时本地优先。待裁决：症状（取消置顶重启回魂？顺序被服务器打乱？）、范围（仅频道 or 全部会话）、语义（全局本地优先 or 仅本地操作过的 peer 覆盖）。
+- open objectives carry-forward：.43/.44 装包实测另存为自证协议（§50，toast+skipped 理由行）仍未回；Q1/Q3/Q5 本轮三问待答。
