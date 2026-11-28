@@ -664,3 +664,11 @@
 - 处置分支（待答后裁决）：若用户不要隐身抑制 → 开关打开即愈，零代码；若用户要隐身但不要"重启回魂" → 需产品级改动（本地未读影子层/重启不回填服务器未读的提示），另行 grill 裁决，不先动码。
 - 挂账 carry-forward：v7.2.9-ayu.43（tag 已 push，CI 出包）待用户装包实测另存为 toast+日志（另存为三 BUG 自证协议，§50）。
 - 回执（m00490）：用户证实**隐身模式开启中**，聊天为频道/群 ⇒ 机制成立，"未读回魂"=隐身模式设计行为（不发已读回执），非版本回归。UI 精确路径定位：设置→AyuGram→Ghost Mode 页 "Ghost essentials" 小节 → 折叠开关里的 **"Don't Read Messages"**（勾=抑制已读回执，即 sendReadMessages=false）与 **"Read on Interact"**（markReadAfterAction，发过言才补读）。处置二选一待裁决：A=取消勾选 Don't Read Messages（零代码即愈）；B=保留隐身+本地未读影子层（服务器 dialog 未读仅在服务器 readInboxMaxId≥本地已读位置时采纳，fork 增强，upstream 无此项，进 .44 需用户令）。
+
+## 52. R17 Q4 偶发闪退修复：日志轮转竞态不再致命（keepStartLog 兜底，.44）
+- 用户（m00507 复发报告）：启动日志以 "Socket connected, this is not the first application instance, sending show command..." → "Could not rename 'G:/AyuGram_7.2.9/log_start0.txt' to 'G:/AyuGram_7.2.9/log.txt' to start new logging: Cannot remove source file" → "FATAL: Could not move logging to 'G:/AyuGram_7.2.9/log.txt'!" 结尾，应用不启动（NotStartedWindow，用户读作闪退）。
+- 机制复确认：上一个实例的退出窗口仍握着 log.txt 句柄（Windows delete-pending 僵尸态，QFileInfo::exists() 可返回 false 但名字仍被占用），二次实例检查转主后 LogsDataFields::reopen（logs.cpp LogDataMain postfix 空分支）轮转失败 → Logs::instanceChecked（logs.cpp:453-462）销毁 LogsData + FATAL → Sandbox::singleInstanceChecked（core/sandbox.cpp:525）new NotStartedWindow()。关键：该路径上 start 文件其实 reopen 成功（旧代码 "Could not rename" 日志仅在 reopenStart 成功时打出）——日志功能完全正常，FATAL 中止毫无必要。
+- 修复（挂账方案 b 落地，logs.cpp:159-186）：轮转三处失败全部改为 keepStartLog 兜底——lambda keepStartLog(reason)：保证 start 文件处于打开态（isOpen() 否则 reopenStart(startName)），成功则 LOG `Logging stays in '%1' (%2), moving to '%3' on next start.` 并 return true（本次启动继续用 start 日志），仅 start 文件也打不开才保留致命路径；三条原有错误日志全保留，"Could not rename" 改为无条件先打（原先只在 reopen 成功时打）；reopenStart lambda 上移到首个使用点之前（remove 失败分支现在也要用）；成功路径（Moved logging + 清理其余 log_startXX）不变；LogsStartIndexChosen 兜底时保持 >=0，下次启动走 start 分支（选不存在序号或最旧文件）正常轮转，无文件堆积（10 名池 + 成功时清理）。注释 1 条 WHY（AGENTS.md 预算）。
+- 验证：git diff --check OK；括号 delta HEAD==worktree==2（checker 对本文件的基线误计，编辑前后平衡不变）。
+- 挂账 carry-forward：①.43 实测待用户装包（§50 自证协议，toast=二进制判别器）；②未读回魂 A/B 待裁决（§51 回执：A=取消勾选 Don't Read Messages 零代码；B=本地未读影子层，进 .45 需用户令）。
+- 发布 v7.2.9-ayu.44。

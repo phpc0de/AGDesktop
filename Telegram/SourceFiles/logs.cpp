@@ -148,29 +148,38 @@ private:
 				const auto startName = files[type]->fileName();
 				const auto targetName = _logsFilePath(type, postfix);
 
-				auto target = QFile(targetName);
-				if (target.exists() && !target.remove()) {
-					LOG(("Could not delete '%1' file to start new logging: %2").arg(targetName, target.errorString()));
-					return false;
-				}
-
-				files[type]->close();
-
 				const auto reopenStart = [&](const QString &name) {
 					files[type]->setFileName(name);
 					return files[type]->open(mode | QIODevice::Append);
 				};
+				// WHY: the previous instance's exit window can still hold log.txt
+				// (Windows delete-pending), failing the rotation and aborting the
+				// launch like a crash; staying on the start log is harmless and
+				// the next launch rotates it normally.
+				const auto keepStartLog = [&](const QString &reason) {
+					const auto reopened = files[type]->isOpen() || reopenStart(startName);
+					if (reopened) {
+						LOG(("Logging stays in '%1' (%2), moving to '%3' on next start.").arg(startName, reason, targetName));
+					}
+					return reopened;
+				};
+
+				auto target = QFile(targetName);
+				if (target.exists() && !target.remove()) {
+					LOG(("Could not delete '%1' file to start new logging: %2").arg(targetName, target.errorString()));
+					return keepStartLog(target.errorString());
+				}
+
+				files[type]->close();
 
 				auto source = QFile(startName);
 				if (!source.rename(targetName)) {
-					if (reopenStart(startName)) {
-						LOG(("Could not rename '%1' to '%2' to start new logging: %3").arg(startName, targetName, source.errorString()));
-					}
-					return false;
+					LOG(("Could not rename '%1' to '%2' to start new logging: %3").arg(startName, targetName, source.errorString()));
+					return keepStartLog(source.errorString());
 				}
 				if (!reopenStart(targetName)) {
 					LOG(("Could not open '%1' file to start new logging: %2").arg(targetName, files[type]->errorString()));
-					return false;
+					return keepStartLog(files[type]->errorString());
 				}
 				LOG(("Moved logging from '%1' to '%2'!").arg(startName, files[type]->fileName()));
 
