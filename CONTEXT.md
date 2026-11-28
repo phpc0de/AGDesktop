@@ -663,3 +663,4 @@
 - 待用户三答：①设置→AyuGram→隐身模式「发送已读回执」状态 + 「发送后标记已读」状态（或 tdata\ayu.json 两字段）；②该聊天是频道/群/私聊？只有这一个回魂还是全部聊天都回魂（判定 per-peer 覆盖 vs 全局）；③是否点过看故事的"建议开启隐身模式"确认框 / 用过 ghost 启动参数（时间线）。
 - 处置分支（待答后裁决）：若用户不要隐身抑制 → 开关打开即愈，零代码；若用户要隐身但不要"重启回魂" → 需产品级改动（本地未读影子层/重启不回填服务器未读的提示），另行 grill 裁决，不先动码。
 - 挂账 carry-forward：v7.2.9-ayu.43（tag 已 push，CI 出包）待用户装包实测另存为 toast+日志（另存为三 BUG 自证协议，§50）。
+- 回执（m00490）：用户证实**隐身模式开启中**，聊天为频道/群 ⇒ 机制成立，"未读回魂"=隐身模式设计行为（不发已读回执），非版本回归。UI 精确路径定位：设置→AyuGram→Ghost Mode 页 "Ghost essentials" 小节 → 折叠开关里的 **"Don't Read Messages"**（勾=抑制已读回执，即 sendReadMessages=false）与 **"Read on Interact"**（markReadAfterAction，发过言才补读）。处置二选一待裁决：A=取消勾选 Don't Read Messages（零代码即愈）；B=保留隐身+本地未读影子层（服务器 dialog 未读仅在服务器 readInboxMaxId≥本地已读位置时采纳，fork 增强，upstream 无此项，进 .44 需用户令）。
