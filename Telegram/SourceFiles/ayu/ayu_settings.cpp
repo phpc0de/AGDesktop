@@ -490,6 +490,23 @@ void AyuSettings::setSpecialRestrictedPeer(uint64 id, bool special) {
 	save();
 }
 
+void AyuSettings::setPinOverride(int64 peerId, bool pinned) {
+	const auto it = _pinOverrides.find(peerId);
+	if (it != end(_pinOverrides) && it->second == pinned) {
+		return;
+	}
+	_pinOverrides[peerId] = pinned;
+	save();
+}
+
+std::optional<bool> AyuSettings::pinOverride(int64 peerId) const {
+	const auto it = _pinOverrides.find(peerId);
+	if (it == end(_pinOverrides)) {
+		return std::nullopt;
+	}
+	return it->second;
+}
+
 std::optional<uint8> AyuSettings::chatGroupMarkColor(uint64 peerId) const {
 	const auto it = _chatGroupMarks.find(peerId);
 	if (it == end(_chatGroupMarks)) {
@@ -1199,6 +1216,11 @@ void to_json(nlohmann::json &j, const AyuSettings &s) {
 		localPeerTags[std::to_string(key)] = value.toStdString();
 	}
 
+	auto pinOverrides = nlohmann::json::object();
+	for (const auto &[key, value] : s._pinOverrides) {
+		pinOverrides[std::to_string(key)] = value;
+	}
+
 	j = nlohmann::json{
 		{"ghostModeSettings", ghostAccounts},
 		{"useGlobalGhostMode", s._useGlobalGhostMode.current()},
@@ -1211,6 +1233,7 @@ void to_json(nlohmann::json &j, const AyuSettings &s) {
 		{"chatGroupMarks", chatGroupMarks},
 		{"chatGroupMarkLabels", chatGroupMarkLabels},
 		{"localPeerTags", localPeerTags},
+		{"pinOverrides", pinOverrides},
 		{"filtersEnabled", s._filtersEnabled.current()},
 		{"filtersEnabledInChats", s._filtersEnabledInChats.current()},
 		{"folderTagsForce", s._folderTagsForce.current()},
@@ -1361,6 +1384,15 @@ void from_json(const nlohmann::json &j, AyuSettings &s) {
 			if (!tags.isEmpty()) {
 				s._localPeerTags[std::stoull(key)] = tags;
 			}
+		}
+	}
+	if (j.contains("pinOverrides") && j["pinOverrides"].is_object()) {
+		s._pinOverrides.clear();
+		for (const auto &[key, value] : j["pinOverrides"].items()) {
+			if (!value.is_boolean()) {
+				continue;
+			}
+			s._pinOverrides[int64(std::stoll(key))] = value.get<bool>();
 		}
 	}
 	s._filtersEnabled = j.value("filtersEnabled", defaults._filtersEnabled.current());

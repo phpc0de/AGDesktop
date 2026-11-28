@@ -1125,7 +1125,9 @@ void DocumentData::destroyLoader() {
 	if (!_loader) {
 		return;
 	}
-	SexCat::ForgetDoctrineSaveAs(this);
+	// Q3: on a normal completion the async NotifyDocumentSaved queued by
+	// finishLoad still needs the pending marker; only a real cancel drops it.
+	SexCat::ForgetDoctrineSaveAs(this, !cancelled());
 	const auto loader = base::take(_loader);
 	if (cancelled()) {
 		loader->cancel();

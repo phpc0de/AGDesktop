@@ -2835,6 +2835,15 @@ void Session::setChatPinned(
 void Session::setPinnedFromEntryList(Dialogs::Key key, bool pinned) {
 	Expects(key.entry()->folderKnown());
 
+	// Q5: a locally pinned/unpinned dialog keeps its local decision
+	// when the server dialogs sync reports the opposite.
+	if (const auto history = key.history()) {
+		if (const auto override = AyuSettings::getInstance().pinOverride(
+				int64(history->peer->id.value))) {
+			pinned = *override;
+		}
+	}
+
 	const auto list = chatsListFor(key.entry())->pinned();
 	if (pinned) {
 		list->addPinned(key);
@@ -2866,6 +2875,31 @@ void Session::applyPinnedChats(
 		});
 	}
 	chatsList(folder)->pinned()->applyList(this, list);
+	if (!folder) {
+		// Q5: enforce local pin decisions after a server reorder.
+		const auto &settings = AyuSettings::getInstance();
+		for (const auto &peer : list) {
+			peer.match([&](const MTPDdialogPeer &data) {
+				const auto history = this->history(peerFromMTP(data.vpeer()));
+				const auto override = settings.pinOverride(
+					int64(history->peer->id.value));
+				if (override && !*override) {
+					chatsList(folder)->pinned()->setPinned(history, false);
+				}
+			}, [&](const MTPDdialogPeerFolder &) {
+			}, [&](const MTPDdialogPeerCommunity &) {
+			});
+		}
+		for (const auto &[peerId, pinned] : settings.pinOverrides()) {
+			const auto history = this->historyLoaded(PeerId(uint64(peerId)));
+			if (!history || !pinned || history->folder()) {
+				continue;
+			}
+			if (!history->isPinnedDialog(FilterId())) {
+				chatsList(folder)->pinned()->addPinned(history);
+			}
+		}
+	}
 	notifyPinnedDialogsOrderUpdated();
 }
 

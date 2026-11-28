@@ -99,6 +99,13 @@ public:
 	[[nodiscard]] std::vector<TagSummary> TagSummaries(int limit);
 	[[nodiscard]] bool RenameTag(const QString &from, const QString &to);
 	[[nodiscard]] bool DeleteTag(const QString &tag);
+	// Q1: blacklisted source tags blur chat media whose caption carries
+	// one of them.
+	bool AddBlockedTag(const QString &tag);
+	bool RemoveBlockedTag(const QString &tag);
+	[[nodiscard]] QStringList BlockedTags();
+	// Returns the first blacklisted tag contained in the caption, or empty.
+	[[nodiscard]] QString MatchedBlockedTag(const QString &caption);
 	// Q81: drop one record by itself, siblings stay untouched.
 	[[nodiscard]] int64 DropRecordByPath(const QString &savedPath);
 	[[nodiscard]] bool DropRecordById(int64 id);

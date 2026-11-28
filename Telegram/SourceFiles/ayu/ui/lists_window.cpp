@@ -474,6 +474,8 @@ private:
 	void showTagContextMenu(const QPoint &pos) {
 		auto *item = _sources->itemAt(pos);
 		if (!item) {
+			// Q1: right-click on empty space manages the blacklist.
+			showBlockedTagsMenu(pos);
 			return;
 		}
 		const auto row = _sources->indexOfTopLevelItem(item);
@@ -489,7 +491,52 @@ private:
 		menu->addAction(u"Delete tag"_q, [=] {
 			deleteTag(tag);
 		});
+		// Q1: blacklisted tags blur chat media whose caption carries them.
+		if (SexCat::Database::instance().BlockedTags().contains(tag)) {
+			menu->addAction(u"Remove from blacklist"_q, [=] {
+				unblockTag(tag);
+			});
+		} else {
+			menu->addAction(u"Blacklist tag"_q, [=] {
+				blockTag(tag);
+			});
+		}
 		menu->popup(_sources->viewport()->mapToGlobal(pos));
+	}
+
+	void showBlockedTagsMenu(const QPoint &pos) {
+		const auto blocked = SexCat::Database::instance().BlockedTags();
+		if (blocked.isEmpty()) {
+			return;
+		}
+		auto menu = new QMenu(this);
+		menu->setAttribute(Qt::WA_DeleteOnClose);
+		menu->addAction(u"Blacklisted tags"_q)->setEnabled(false);
+		for (const auto &tag : blocked) {
+			menu->addAction(u"Remove #%1"_q.arg(tag), [=] {
+				unblockTag(tag);
+			});
+		}
+		menu->popup(_sources->viewport()->mapToGlobal(pos));
+	}
+
+	void blockTag(const QString &tag) {
+		if (!SexCat::Database::instance().AddBlockedTag(tag)) {
+			::Ui::Toast::Show(u"Failed to blacklist tag"_q);
+			return;
+		}
+		::Ui::Toast::Show(
+			u"Blacklisted #%1, matching media is blurred"_q.arg(tag));
+		reload();
+	}
+
+	void unblockTag(const QString &tag) {
+		if (!SexCat::Database::instance().RemoveBlockedTag(tag)) {
+			::Ui::Toast::Show(u"Failed to remove from blacklist"_q);
+			return;
+		}
+		::Ui::Toast::Show(u"Removed #%1 from blacklist"_q.arg(tag));
+		reload();
 	}
 
 	void renameTag(const QString &oldTag) {

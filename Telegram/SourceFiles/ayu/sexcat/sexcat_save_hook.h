@@ -45,7 +45,7 @@ void MarkDocumentSaveAs(
 void NotifyDocumentSaved(
 	const QString &savedPath,
 	not_null<DocumentData*> document);
-void ForgetDoctrineSaveAs(not_null<DocumentData*> document);
+void ForgetDoctrineSaveAs(not_null<DocumentData*> document, bool completed = false);
 
 [[nodiscard]] bool ShouldSkipDuplicateDownload(
 	not_null<DocumentData*> document,

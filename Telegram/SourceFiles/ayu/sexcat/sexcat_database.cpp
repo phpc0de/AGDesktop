@@ -53,6 +53,12 @@ struct SourceTagRow {
 	std::string tag;
 };
 
+struct BlockedTagRow {
+	int64 id = 0;
+	std::string tag;
+	int64 created_at = 0;
+};
+
 // WHY: schema objects are iterated in reverse, so an index must precede
 // its table or sync_schema creates it while the table is still missing.
 auto storage = make_storage(
@@ -79,6 +85,9 @@ auto storage = make_storage(
 	make_index(
 		"idx_source_tag_source",
 		column<SourceTagRow>(&SourceTagRow::source_id)),
+	make_index(
+		"idx_blocked_tag_tag",
+		column<BlockedTagRow>(&BlockedTagRow::tag)),
 	make_table<SavedFileRow>(
 		"saved_file",
 		make_column("id", &SavedFileRow::id, primary_key().autoincrement()),
@@ -111,6 +120,12 @@ auto storage = make_storage(
 		"source_tag",
 		make_column("source_id", &SourceTagRow::source_id),
 		make_column("tag", &SourceTagRow::tag)
+	),
+	make_table<BlockedTagRow>(
+		"blocked_tag",
+		make_column("id", &BlockedTagRow::id, primary_key().autoincrement()),
+		make_column("tag", &BlockedTagRow::tag),
+		make_column("created_at", &BlockedTagRow::created_at)
 	)
 );
 
@@ -989,6 +1004,85 @@ bool Database::DeleteTag(const QString &tag) {
 		LogError(u"Failed to delete tag: %1"_q.arg(QString::fromUtf8(ex.what())));
 		return false;
 	}
+}
+
+// Q1: the blocked list is consulted per rendered media view, so keep a
+// cached copy and rebuild it only when a write changes the table.
+std::optional<QStringList> BlockedTagsCache;
+QStringList Database::BlockedTags() {
+	if (!_enabled) {
+		return {};
+	}
+	if (BlockedTagsCache.has_value()) {
+		return *BlockedTagsCache;
+	}
+	auto result = QStringList();
+	try {
+		std::lock_guard lock(storageMutex);
+		for (const auto &row : storage.get_all<BlockedTagRow>()) {
+			result << QString::fromStdString(row.tag);
+		}
+	} catch (const std::exception &ex) {
+		LogError(u"Failed to read blocked tags: %1"_q.arg(QString::fromUtf8(ex.what())));
+		return {};
+	}
+	BlockedTagsCache = std::move(result);
+	return *BlockedTagsCache;
+}
+
+bool Database::AddBlockedTag(const QString &tag) {
+	if (!_enabled || tag.isEmpty()) {
+		return false;
+	}
+	try {
+		std::lock_guard lock(storageMutex);
+		const auto text = tag.trimmed();
+		const auto existing = storage.get_all<BlockedTagRow>(
+			where(column<BlockedTagRow>(&BlockedTagRow::tag)
+				== text.toStdString()),
+			sqlite_orm::limit(1));
+		if (!existing.empty()) {
+			return true;
+		}
+		auto row = BlockedTagRow();
+		row.tag = text.toStdString();
+		row.created_at = base::unixtime::now();
+		storage.insert(row);
+	} catch (const std::exception &ex) {
+		LogError(u"Failed to add blocked tag: %1"_q.arg(QString::fromUtf8(ex.what())));
+		return false;
+	}
+	BlockedTagsCache.reset();
+	return true;
+}
+
+bool Database::RemoveBlockedTag(const QString &tag) {
+	if (!_enabled || tag.isEmpty()) {
+		return false;
+	}
+	try {
+		std::lock_guard lock(storageMutex);
+		storage.remove_all<BlockedTagRow>(
+			where(column<BlockedTagRow>(&BlockedTagRow::tag)
+				== tag.toStdString()));
+	} catch (const std::exception &ex) {
+		LogError(u"Failed to remove blocked tag: %1"_q.arg(QString::fromUtf8(ex.what())));
+		return false;
+	}
+	BlockedTagsCache.reset();
+	return true;
+}
+
+QString Database::MatchedBlockedTag(const QString &caption) {
+	if (caption.isEmpty()) {
+		return QString();
+	}
+	for (const auto &tag : BlockedTags()) {
+		if (caption.contains(tag, Qt::CaseInsensitive)) {
+			return tag;
+		}
+	}
+	return QString();
 }
 
 int64 Database::DropRecordByPath(const QString &savedPath) {

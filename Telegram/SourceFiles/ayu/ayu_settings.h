@@ -271,6 +271,13 @@ public:
 	[[nodiscard]] bool isSpecialRestrictedPeer(uint64 id) const { return _specialRestrictedPeers.contains(id); }
 	void setSpecialRestrictedPeer(uint64 id, bool special);
 
+	// Q5: local pin decisions win over server dialogs sync.
+	void setPinOverride(int64 peerId, bool pinned);
+	[[nodiscard]] std::optional<bool> pinOverride(int64 peerId) const;
+	[[nodiscard]] const std::map<int64, bool> &pinOverrides() const {
+		return _pinOverrides;
+	}
+
 	[[nodiscard]] std::optional<uint8> chatGroupMarkColor(uint64 peerId) const;
 	void setChatGroupMarkColor(uint64 peerId, std::optional<uint8> colorIndex);
 	[[nodiscard]] std::optional<QString> chatGroupMarkLabel(
@@ -669,6 +676,7 @@ private:
 	std::map<uint64, uint8> _chatGroupMarks;
 	std::map<uint64, QString> _chatGroupMarkLabels;
 	std::map<uint64, QString> _localPeerTags;
+	std::map<int64, bool> _pinOverrides;
 	rpl::event_stream<> _localPeerTagsChanges;
 	rpl::variable<bool> _filtersEnabled = false;
 	rpl::variable<bool> _filtersEnabledInChats = false;

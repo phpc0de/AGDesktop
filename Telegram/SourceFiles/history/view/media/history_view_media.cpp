@@ -37,6 +37,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_chat.h"
 #include "styles/style_chat_helpers.h"
 #include "styles/style_menu_icons.h" // mediaMenuIconStealth.
+#include "ayu/sexcat/sexcat_database.h" // Q1 blocked tag captions.
 
 namespace HistoryView {
 namespace {
@@ -403,9 +404,12 @@ void Media::drawSpoilerTag(
 		auto text = Ui::Text::String();
 		auto iconSkip = 0;
 		if (tag->sensitive) {
-			text.setText(
-				st::semiboldTextStyle,
-				tr::lng_sensitive_tag(tr::now));
+			auto label = tr::lng_sensitive_tag(tr::now);
+			// Q1: second line names the blacklisted source tag.
+			if (!tag->blockedTag.isEmpty()) {
+				label += u"\n#%1"_q.arg(tag->blockedTag);
+			}
+			text.setText(st::semiboldTextStyle, label);
 			iconSkip = st::mediaMenuIconStealth.width() * 1.4;
 		} else {
 			auto price = Ui::Text::Colorized(Ui::CreditsEmoji());
@@ -481,6 +485,14 @@ void Media::setupSpoilerTag(std::unique_ptr<MediaSpoilerTag> &tag) const {
 	if (item->isMediaSensitive()) {
 		tag = std::make_unique<MediaSpoilerTag>();
 		tag->sensitive = 1;
+		// Q1: name the blacklisted tag that caused the blur, if any.
+		if (item->isRegular()) {
+			const auto blocked = SexCat::MatchedBlockedTag(
+				item->originalText().text);
+			if (!blocked.isEmpty()) {
+				tag->blockedTag = blocked;
+			}
+		}
 		return;
 	}
 	const auto media = parent()->data()->media();

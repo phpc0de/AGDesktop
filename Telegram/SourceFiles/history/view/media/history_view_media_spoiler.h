@@ -29,6 +29,9 @@ struct MediaSpoiler {
 struct MediaSpoilerTag {
 	uint64 price : 63 = 0;
 	uint64 sensitive : 1 = 0;
+	// Q1: non-empty when the caption carries a blacklisted source tag;
+	// the tag pill then shows the tag name on a second line.
+	QString blockedTag;
 	QImage cache;
 	QColor darken;
 	QColor fg;

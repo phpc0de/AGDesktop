@@ -1188,10 +1188,16 @@ void NotifyDocumentSaved(
 	RecordSaveAttempt(savedPath, document, contextId, 0, sourceTags);
 }
 
-void ForgetDoctrineSaveAs(not_null<DocumentData*> document) {
+void ForgetDoctrineSaveAs(not_null<DocumentData*> document, bool completed) {
 	// WHY: a cancelled download must not leave its download-start
 	// marker behind, or every later download of that position is
 	// deduped into nothing.
+	if (completed) {
+		// Q3: the async NotifyDocumentSaved queued by finishLoad still
+		// owns this marker; dropping it here deletes the pending history
+		// row before the save is ever recorded.
+		return;
+	}
 	if (const auto i = PendingMap().find(document.get());
 		i != end(PendingMap())) {
 		const auto item = document->owner().message(i->second.contextId);

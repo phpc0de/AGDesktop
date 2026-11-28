@@ -84,6 +84,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "ayu/ayu_settings.h"
+#include "ayu/sexcat/sexcat_database.h"
 #include "ayu/features/filters/filters_controller.h"
 #include "ayu/features/message_shot/message_shot.h"
 #include "ayu/utils/telegram_helpers.h"
@@ -4836,6 +4837,12 @@ QString HistoryItem::computeUnavailableReason() const {
 }
 
 bool HistoryItem::isMediaSensitive() const {
+	// Q1: a caption carrying a blacklisted source tag blurs the media.
+	if (_media
+		&& isRegular()
+		&& !SexCat::MatchedBlockedTag(originalText().text).isEmpty()) {
+		return true;
+	}
 	if (!(_flags & MessageFlag::SensitiveContent)
 		&& !_history->peer->hasSensitiveContent()) {
 		return false;
