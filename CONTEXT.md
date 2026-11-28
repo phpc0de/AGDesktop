@@ -672,3 +672,4 @@
 - 验证：git diff --check OK；括号 delta HEAD==worktree==2（checker 对本文件的基线误计，编辑前后平衡不变）。
 - 挂账 carry-forward：①.43 实测待用户装包（§50 自证协议，toast=二进制判别器）；②未读回魂 A/B 待裁决（§51 回执：A=取消勾选 Don't Read Messages 零代码；B=本地未读影子层，进 .45 需用户令）。
 - 发布 v7.2.9-ayu.44。
+- 网络（m00562/m00563）：git push 直连 DNS 解析失败（"Could not resolve ..."）；用户供 SOCKS5 代理（vault token [R:40fca62e]:10808，m00563 为准，m00562 作废），`git -c http.proxy=socks5h://<host>:10808 -c https.proxy=socks5h://<host>:10808 push` 成功（dev 142d913f86..2cce37b526 + tag v7.2.9-ayu.44）。以后 push 失败先走该代理。
