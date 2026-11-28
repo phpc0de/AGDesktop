@@ -127,4 +127,7 @@ private:
 
 };
 
+// Q1: render-path entry point, feature-gated; see sexcat_database.cpp.
+[[nodiscard]] QString MatchedBlockedTag(const QString &caption);
+
 } // namespace SexCat

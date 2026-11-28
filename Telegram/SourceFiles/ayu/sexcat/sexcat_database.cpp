@@ -8,6 +8,7 @@
 
 #include "ayu/libs/sqlite/sqlite_orm.h"
 #include "ayu/utils/ayu_log.h"
+#include "ayu/ayu_settings.h" // Q1 render-path feature gate.
 #include "base/unixtime.h"
 
 #include <crl/crl.h>
@@ -1197,6 +1198,15 @@ int Database::RetagSource(PeerId peer, MsgId msg, const QString &tag) {
 		LogError(u"Failed to retag source: %1"_q.arg(QString::fromUtf8(ex.what())));
 		return 0;
 	}
+}
+
+// Q1: free wrapper for render-path callers; keeps the feature gate in
+// one place so merely viewing media never opens the storage.
+QString MatchedBlockedTag(const QString &caption) {
+	if (!AyuSettings::getInstance().sexcatEnabled()) {
+		return QString();
+	}
+	return Database::instance().MatchedBlockedTag(caption);
 }
 
 } // namespace SexCat

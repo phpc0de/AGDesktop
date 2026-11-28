@@ -689,3 +689,8 @@
 - LESSON（两次踩坑后固化）：edit 工具 old_string 以换行结尾会把下一行 JOIN 进来（曾打断 chatGroupMarkLabels `continue;` 与 localPeerTags `tags.simplified();`）——块后插入时把【后一行】纳入 old_string 并在 new_string 重复；MTP match 空 lambda 参数不命名（-Wunused-parameter）。
 - 验证：13 文件括号 lexer 全 OK；git diff --check OK（exit 0）。
 - open objectives carry-forward：①.43/.44 装包实测另存为自证协议（§50，toast+skipped 理由行）用户仍未回；②.45 装包实测三件套（下载历史保留 / 本地置顶不回魂 / 标签拉黑模糊）。
+
+## 55. .45 CI 编译失败修复（.46）：MatchedBlockedTag 调用形态错位
+- CI（tag v7.2.9-ayu.45）3 错全在 history_view_media.cpp: `C2039 MatchedBlockedTag is not a member of SexCat` + `C3861 identifier not found`（:490,setupSpoilerTag）+ `C2593 operator = ambiguous`（:493,blocked 为错误类型的连锁）。根因：MatchedBlockedTag 声明为 Database 成员函数，调用处却写成自由函数 `SexCat::MatchedBlockedTag(...)`（history_item.cpp 同形态，MSBuild 失败后未排到该 TU 故未报）。
+- 修复（保留调用点不动，补自由函数层）：sexcat_database.h 类外加自由声明 `[[nodiscard]] QString MatchedBlockedTag(const QString &caption);`；sexcat_database.cpp 实现 = `AyuSettings::getInstance().sexcatEnabled()` 门禁 + `Database::instance().MatchedBlockedTag(caption)` 转发（include ayu_settings.h）。门禁照 data_document.cpp:140 先例：避免纯看图渲染路径给未启用 sexcat 的用户首次触发 Database::instance() 构造（sync_schema+open_forever 开库副作用）。
+- 发布 v7.2.9-ayu.46（新 tag 触发 CI；.45 tag 指向失败 commit 不复用）。
