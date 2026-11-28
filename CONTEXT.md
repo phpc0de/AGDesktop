@@ -653,3 +653,13 @@
 - 验证：6 文件括号 lexer 全 BALANCED；git diff --check OK。
 - 测试协议（用户侧，一次另存为即可自证）：任一照片/视频→另存为→立即应弹 toast（入口名+msg id）；对话框默认名仍 photo+日期/原名时，日志必有 `save entry:` 行 + `photo ... skipped: <理由>` 或 `augment ... skipped: <理由>`——理由行即根因；连 toast 都没有 ⇒ 该入口未走到或二进制仍旧（toast 即判别器）。
 - 发布 v7.2.9-ayu.43。
+
+## 51. R17 grill：未读数重启回魂（"未读50 看完没了 退出重开还是50"）——机制定案，待用户证实开关状态
+- 用户（新 /grill 轮）：疑似 .37 之前就有的问题；聊天未读50，看完全部后角标消失，退出重启后未读50 复活。
+- 机制定案（静态全链验证）：**隐身模式「发送已读回执」关闭时，此现象是 fork 设计行为**。①本地看完全部 → 本地未读角标清零（"看完没了"）✓；②`Histories::sendReadRequests`（data_histories.cpp:700-720）在 `!ghost.sendReadMessages()` 时**静默丢弃全部已读回执**（cancel _readRequestsTimer + 所有 history 的 willReadTill/willReadWhen 归零 + DEBUG_LOG "Don't read messages"）→ 服务器 dialog.unread_count 恒为 50；③重启 → dialogs/getDifference 服务器同步 → 未读50 回魂 ✓。三句话症状逐句对上。
+- 时间线（回答"起码 37 之前"）：gate 自 fork 初始导入即存在——`git log -S "Don't read messages"` 最早命中 `eaba9781a5 upload: import Ayu initial`，与版本号无关、从未改过。
+- sendReadMessages 变 false 的四条路径：①`cGhost()` 命令行 ghost 启动开关（ayu_settings.cpp:408-415 载入时强置 sendReadMessages/sendReadStories/sendOnlinePackets=false）；②设置里隐身模式主开关（setGhostModeEnabled）；③**看故事的"建议开启隐身模式"确认框**（window_controller.cpp:606-631 确认即 setGhostModeEnabled(true)；`suggestGhostModeBeforeViewingStory` 默认 true，ayu_settings.cpp:175）——看一次故事点一次确认即静默全局开启，用户大概率无感；④旧 ayu.json 导入/迁移携带 false（:205/:383 JSON 默认 true，但显式 false 会原样恢复）。
+- 组合语义：`sendReadMessages=false && markReadAfterAction=true` 时只有在该聊天**发过言**后才补读回执（telegram_helpers.cpp:458-468）——纯阅读永远清不掉服务器未读，即使开关页面看起来"半关"。per-peer/分账户 ghost 覆盖存在（AyuSettings::ghost(peerId)，settings_ayu.cpp:390 selectedUserId）。
+- 待用户三答：①设置→AyuGram→隐身模式「发送已读回执」状态 + 「发送后标记已读」状态（或 tdata\ayu.json 两字段）；②该聊天是频道/群/私聊？只有这一个回魂还是全部聊天都回魂（判定 per-peer 覆盖 vs 全局）；③是否点过看故事的"建议开启隐身模式"确认框 / 用过 ghost 启动参数（时间线）。
+- 处置分支（待答后裁决）：若用户不要隐身抑制 → 开关打开即愈，零代码；若用户要隐身但不要"重启回魂" → 需产品级改动（本地未读影子层/重启不回填服务器未读的提示），另行 grill 裁决，不先动码。
+- 挂账 carry-forward：v7.2.9-ayu.43（tag 已 push，CI 出包）待用户装包实测另存为 toast+日志（另存为三 BUG 自证协议，§50）。
